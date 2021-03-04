@@ -57,7 +57,7 @@ def small4M(solver='cplex'):
     for react_name in reversible_reactions:
         model.reactions.get_by_id(react_name).lower_bound = -1000.
 
-    #create reaction weights
+    # create reaction weights
     reaction_weights = {}
     RH_reactions = ['RFG']
     RL_reactions = ['RAB', 'RDE', 'RCF']
@@ -104,7 +104,20 @@ def small4S(solver='cplex'):
     for idx, react_name in enumerate(reaction_names):
         create_reaction(model, react_name, reaction_formulas[idx])
 
-    return model
+    # create reaction weights
+    reaction_weights = {}
+    RH_reactions = ['R2', 'R6', 'R9']
+    RL_reactions = ['R3', 'R7']
+
+    for rname in reaction_names:
+        if rname in RH_reactions:
+            reaction_weights[rname] = 1
+        elif rname in RL_reactions:
+            reaction_weights[rname] = -1
+        else:
+            reaction_weights[rname] = 0
+
+    return model, reaction_weights
 
 
 def dagNet(num_layers, num_metabolites_per_layer, solver='cplex'):
@@ -146,4 +159,10 @@ def dagNet(num_layers, num_metabolites_per_layer, solver='cplex'):
 
     create_reaction(model, 'R_out', {'MetSINK': -1.}, lower_bound=1.)
 
-    return model
+    # create reaction weights
+    # for this simple example, all reactions are lowly expressed
+    reaction_weights = {}
+    for rec in model.reactions:
+        reaction_weights[rec.name] = -1
+
+    return model, reaction_weights

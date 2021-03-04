@@ -5,8 +5,11 @@ if __name__ == '__main__':
     from example_models import small4M, small4S, dagNet
     from iMAT import imat
     from enumeration import rxn_enum
+    import time
 
-    model, reaction_weights = small4M()
+    t0 = time.perf_counter()
+
+    model, reaction_weights = small4S()
     threshold = 1e-3  # threshold to consider whether a reaction is active or not
 
     """
@@ -15,3 +18,6 @@ if __name__ == '__main__':
     """
 
     solution = rxn_enum(model, reaction_weights, threshold=threshold)
+
+    t1 = time.perf_counter()
+    print('total time: ', t1-t0)
