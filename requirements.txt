@@ -1,0 +1,4 @@
+cobra
+numpy
+six
+sympy
