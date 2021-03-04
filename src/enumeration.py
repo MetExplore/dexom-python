@@ -5,7 +5,8 @@ import numpy as np
 
 
 class EnumSolution(object):
-    def __init__(self, all_solutions, unique_solutions, all_binary, unique_binary, all_reactions=None, unique_reactions=None):
+    def __init__(self,
+                 all_solutions, unique_solutions, all_binary, unique_binary, all_reactions=None, unique_reactions=None):
         self.all_solutions = all_solutions
         self.unique_solutions = unique_solutions
         self.all_binary = all_binary
@@ -49,8 +50,7 @@ def rxn_enum(model, reaction_weights=None, epsilon=0.1, threshold=1e-3):
                     unique_solutions.append(temp_sol)
                     unique_solutions_binary.append(temp_sol_bin)
                     unique_reactions.append(reaction.id)
-    # solution = {'all': all_solutions, 'all binary': all_solutions_binary, 'unique': unique_solutions, 'unique binary':
-    #             unique_solutions_binary, 'all reactions': all_reactions, 'unique reactions': unique_reactions}
+
     solution = EnumSolution(all_solutions, unique_solutions, all_solutions_binary, unique_solutions_binary,
-                               all_reactions, unique_reactions)
+                            all_reactions, unique_reactions)
     return solution

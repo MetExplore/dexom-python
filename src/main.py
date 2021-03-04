@@ -17,6 +17,9 @@ if __name__ == '__main__':
     binary_solution = [1 if np.abs(flux) >= threshold else 0 for flux in solution.fluxes]
     """
 
+    reaction_weights['R2'] = 3
+    reaction_weights['R3'] = -2
+    reaction_weights['R9'] = 3
     solution = rxn_enum(model, reaction_weights, threshold=threshold)
 
     t1 = time.perf_counter()

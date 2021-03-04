@@ -26,6 +26,10 @@ def imat(model, reaction_weights=None, epsilon=0.1, *args, **kwargs):
     y_variables = list()
     x_variables = list()
     constraints = list()
+
+    y_weights = list()
+    x_weights = list()
+
     try:
 
         for rid, weight in six.iteritems(reaction_weights):
@@ -46,6 +50,8 @@ def imat(model, reaction_weights=None, epsilon=0.1, *args, **kwargs):
 
                 constraints.extend([pos_constraint, neg_constraint])
 
+                y_weights.append(weight)
+
             elif weight < 0:
                 reaction = model.reactions.get_by_id(rid)
                 x = model.solver.interface.Variable("x_%s" % rid, type="binary")
@@ -61,6 +67,8 @@ def imat(model, reaction_weights=None, epsilon=0.1, *args, **kwargs):
 
                 constraints.extend([pos_constraint, neg_constraint])
 
+                x_weights.append(abs(weight))
+
         for variable in x_variables:
             model.solver.add(variable)
 
@@ -71,8 +79,9 @@ def imat(model, reaction_weights=None, epsilon=0.1, *args, **kwargs):
         for constraint in constraints:
             model.solver.add(constraint)
 
-        objective = model.solver.interface.Objective(Add(*[(y[0] + y[1]) for y in y_variables]) + Add(*x_variables),
-                                                     direction="max")
+        rh_objective = [(y[0] + y[1]) * y_weights[idx] for idx, y in enumerate(y_variables)]
+        rl_objective = [x * x_weights[idx] for idx, x in enumerate(x_variables)]
+        objective = model.solver.interface.Objective(Add(*rh_objective) + Add(*rl_objective), direction="max")
 
         with model:
             model.objective = objective
