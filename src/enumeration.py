@@ -36,20 +36,38 @@ def rxn_enum(model, reaction_weights=None, epsilon=0.1, threshold=1e-3):
             if initial_solution_binary[idx] == 1:
                 rxn.bounds = (0., 0.)
             else:
+                upper_bound_temp = rxn.upper_bound
                 if rxn.lower_bound < 0.:
                     # for reversible fluxes
-                    pass
-                rxn.lower_bound = threshold
-            temp_sol = imat(model_temp, reaction_weights, epsilon)
-            temp_sol_bin = [1 if np.abs(flux) >= threshold else 0 for flux in temp_sol.fluxes]
-            if temp_sol.objective_value == optimal_objective_value:
-                all_solutions.append(temp_sol)
-                all_solutions_binary.append(temp_sol_bin)
-                all_reactions.append(reaction.id)
-                if temp_sol_bin not in unique_solutions_binary:
-                    unique_solutions.append(temp_sol)
-                    unique_solutions_binary.append(temp_sol_bin)
-                    unique_reactions.append(reaction.id)
+                    try:
+                        rxn.upper_bound = -epsilon
+                        temp_sol = imat(model_temp, reaction_weights, epsilon)
+                        temp_sol_bin = [1 if np.abs(flux) >= threshold else 0 for flux in temp_sol.fluxes]
+                        if temp_sol.objective_value == optimal_objective_value:
+                            all_solutions.append(temp_sol)
+                            all_solutions_binary.append(temp_sol_bin)
+                            all_reactions.append(reaction.id+"_backwards")
+                            if temp_sol_bin not in unique_solutions_binary:
+                                unique_solutions.append(temp_sol)
+                                unique_solutions_binary.append(temp_sol_bin)
+                                unique_reactions.append(reaction.id+"_backwards")
+                    except:
+                        print("An error occured with reaction %s_backwards. Check feasibility of the model" % reaction.id)
+                rxn.upper_bound = upper_bound_temp
+                rxn.lower_bound = epsilon
+            try:
+                temp_sol = imat(model_temp, reaction_weights, epsilon)
+                temp_sol_bin = [1 if np.abs(flux) >= threshold else 0 for flux in temp_sol.fluxes]
+                if temp_sol.objective_value == optimal_objective_value:
+                    all_solutions.append(temp_sol)
+                    all_solutions_binary.append(temp_sol_bin)
+                    all_reactions.append(reaction.id)
+                    if temp_sol_bin not in unique_solutions_binary:
+                        unique_solutions.append(temp_sol)
+                        unique_solutions_binary.append(temp_sol_bin)
+                        unique_reactions.append(reaction.id)
+            except:
+                print("An error occured with reaction %s. Check feasibility of the model" % reaction.id)
 
     solution = EnumSolution(all_solutions, unique_solutions, all_solutions_binary, unique_solutions_binary,
                             all_reactions, unique_reactions)
