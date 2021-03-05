@@ -16,7 +16,21 @@ class EnumSolution(object):
 
 
 def rxn_enum(model, reaction_weights=None, epsilon=0.1, threshold=1e-3):
+    """
+    Reaction enumeration method
 
+    Parameters
+    ----------
+    model: cobrapy Model
+    reaction_weights: dict with keys = reactions and values = weights
+    epsilon: float, activation threshold in imat
+    threshold: float, detection threshold of activated reactions
+
+    Returns
+    -------
+    solution: EnumSolution object
+
+    """
     assert isinstance(model, Model)
 
     initial_solution = imat(model, reaction_weights, epsilon)
@@ -52,7 +66,7 @@ def rxn_enum(model, reaction_weights=None, epsilon=0.1, threshold=1e-3):
                                 unique_solutions_binary.append(temp_sol_bin)
                                 unique_reactions.append(reaction.id+"_backwards")
                     except:
-                        print("An error occured with reaction %s_backwards. Check feasibility of the model" % reaction.id)
+                        print("An error occurred with reaction %s_backwards. Check feasibility of the model" % reaction.id)
                 rxn.upper_bound = upper_bound_temp
                 rxn.lower_bound = epsilon
             try:
@@ -67,8 +81,30 @@ def rxn_enum(model, reaction_weights=None, epsilon=0.1, threshold=1e-3):
                         unique_solutions_binary.append(temp_sol_bin)
                         unique_reactions.append(reaction.id)
             except:
-                print("An error occured with reaction %s. Check feasibility of the model" % reaction.id)
+                print("An error occurred with reaction %s. Check feasibility of the model" % reaction.id)
 
     solution = EnumSolution(all_solutions, unique_solutions, all_solutions_binary, unique_solutions_binary,
                             all_reactions, unique_reactions)
     return solution
+
+
+def icut(model, reaction_weights=None, epsilon=0.1, threshold=1e-3, maxiter = 100, maxsolutions = 100, maxunique = 5):
+
+    assert isinstance(model, Model)
+
+    previous_solution = imat(model, reaction_weights, epsilon)
+    previous_solution_binary = [1 if np.abs(flux) >= threshold else 0 for flux in initial_solution.fluxes]
+    optimal_objective_value = previous_solution.objective_value
+
+    all_solutions = [previous_solution]
+    all_solutions_binary = [previous_solution_binary]
+    unique_solutions = [previous_solution]
+    unique_solutions_binary = [previous_solution_binary]
+
+    iter = 0
+    numsol = 1
+    numuni = 1
+    while iter < maxiter and numsol < maxsolutions and numuni < maxunique:
+        iter += 1
+
+    return 0

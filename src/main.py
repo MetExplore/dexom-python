@@ -1,7 +1,6 @@
 
 if __name__ == '__main__':
     import numpy as np
-
     from example_models import small4M, small4S, dagNet
     from iMAT import imat
     from enumeration import rxn_enum
@@ -9,7 +8,7 @@ if __name__ == '__main__':
 
     t0 = time.perf_counter()
 
-    model, reaction_weights = small4S()
+    model, reaction_weights = small4M()
 
     epsilon = 0.1  # threshold of activity for highly expressed reactions in imat, and for bounds in rxn_enum
     threshold = 1e-3  # threshold of activity for computing binary solution

@@ -67,8 +67,6 @@ def small4M(solver='cplex'):
             reaction_weights[rname] = 1.
         elif rname in RL_reactions:
             reaction_weights[rname] = -1.
-        else:
-            reaction_weights[rname] = 0.
 
     return model, reaction_weights
 
@@ -114,8 +112,6 @@ def small4S(solver='cplex'):
             reaction_weights[rname] = 1.
         elif rname in RL_reactions:
             reaction_weights[rname] = -1.
-        else:
-            reaction_weights[rname] = 0.
 
     return model, reaction_weights
 
