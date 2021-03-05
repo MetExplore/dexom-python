@@ -64,11 +64,11 @@ def small4M(solver='cplex'):
 
     for rname in reaction_names:
         if rname in RH_reactions:
-            reaction_weights[rname] = 1
+            reaction_weights[rname] = 1.
         elif rname in RL_reactions:
-            reaction_weights[rname] = -1
+            reaction_weights[rname] = -1.
         else:
-            reaction_weights[rname] = 0
+            reaction_weights[rname] = 0.
 
     return model, reaction_weights
 
@@ -111,11 +111,11 @@ def small4S(solver='cplex'):
 
     for rname in reaction_names:
         if rname in RH_reactions:
-            reaction_weights[rname] = 1
+            reaction_weights[rname] = 1.
         elif rname in RL_reactions:
-            reaction_weights[rname] = -1
+            reaction_weights[rname] = -1.
         else:
-            reaction_weights[rname] = 0
+            reaction_weights[rname] = 0.
 
     return model, reaction_weights
 
@@ -163,6 +163,6 @@ def dagNet(num_layers, num_metabolites_per_layer, solver='cplex'):
     # for this simple example, all reactions are lowly expressed
     reaction_weights = {}
     for rec in model.reactions:
-        reaction_weights[rec.name] = -1
+        reaction_weights[rec.name] = -1.
 
     return model, reaction_weights
