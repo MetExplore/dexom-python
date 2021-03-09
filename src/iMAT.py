@@ -2,7 +2,7 @@
 from cobra import Model
 import six
 from sympy import Add
-
+from numpy import abs
 
 def imat(model, reaction_weights=None, epsilon=0.1, threshold = 1e-3, *args, **kwargs):
     """
@@ -36,13 +36,16 @@ def imat(model, reaction_weights=None, epsilon=0.1, threshold = 1e-3, *args, **k
             if "x_"+rxn.id not in model.solver.variables:
                 rid = rxn.id
                 bin_var = model.solver.interface.Variable("x_%s" % rid, type="binary")
-                bin_upp = model.solver.interface.Constraint(
-                    rxn.lower_bound * bin_var - rxn.flux_expression, ub=threshold, name="x_%s_upper" % rid)
-                bin_low = model.solver.interface.Constraint(
-                    rxn.upper_bound * bin_var - rxn.flux_expression, lb=-threshold, name="x_%s_lower" % rid)
                 model.solver.add(bin_var)
+                bin_upp = model.solver.interface.Constraint(
+                    rxn.lower_bound * bin_var - rxn.flux_expression, ub=threshold/2, name="x_%s_upper" % rid)
+                bin_low = model.solver.interface.Constraint(
+                    rxn.upper_bound * bin_var - rxn.flux_expression, lb=-threshold/2, name="x_%s_lower" % rid)
+                bin_zero = model.solver.interface.Constraint(
+                    bin_var - rxn.flux_expression / threshold, ub=0., name="x_%s_zero" % rid)
                 model.solver.add(bin_upp)
                 model.solver.add(bin_low)
+                model.solver.add(bin_zero)
 
         for rid, weight in six.iteritems(reaction_weights):
             if weight > 0:  # the rh_rid variables represent the highly expressed reactions
@@ -101,9 +104,6 @@ def imat(model, reaction_weights=None, epsilon=0.1, threshold = 1e-3, *args, **k
             return solution
 
     finally:
-        #model.solver.remove([var for var in binary_variables if var in model.solver.variables])
-        #model.solver.remove([const for const in binary_constraints if const in model.solver.constraints])
-
         model.solver.remove([var for var in x_variables if var in model.solver.variables])
         model.solver.remove([var for pair in y_variables for var in pair if var in model.solver.variables])
         model.solver.remove([const for const in constraints if const in model.solver.constraints])

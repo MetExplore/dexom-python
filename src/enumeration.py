@@ -47,17 +47,24 @@ def rxn_enum(model, reaction_weights=None, epsilon=0.1, threshold=1e-3):
     for idx, reaction in enumerate(model.reactions):
         with model as model_temp:
             rxn = model_temp.reactions.get_by_id(reaction.id)
+            # for active fluxes, check inactivation
             if initial_solution_binary[idx] == 1:
                 rxn.bounds = (0., 0.)
+            # for inactive fluxes, check activation
             else:
                 upper_bound_temp = rxn.upper_bound
+                # for inactive reversible fluxes, check activation in backwards direction
                 if rxn.lower_bound < 0.:
-                    # for reversible fluxes, check activity in backwards direction
                     try:
                         rxn.upper_bound = -epsilon
+                        constraint_name = "x_"+rxn.id+"_zero"
+                        model_temp.solver.constraints[constraint_name].ub = - rxn.lower_bound / threshold
+                        model_temp.solver.constraints[constraint_name].lb = 0.
+
                         temp_sol = imat(model_temp, reaction_weights, epsilon, threshold)
                         temp_sol_bin = [1 if np.abs(flux) >= threshold else 0 for flux in temp_sol.fluxes]
-                        if temp_sol.objective_value == optimal_objective_value:
+
+                        if temp_sol.objective_value >= optimal_objective_value:
                             all_solutions.append(temp_sol)
                             all_solutions_binary.append(temp_sol_bin)
                             all_reactions.append(reaction.id+"_backwards")
@@ -68,14 +75,18 @@ def rxn_enum(model, reaction_weights=None, epsilon=0.1, threshold=1e-3):
                     except:
                         print("An error occurred with reaction %s_backwards. "
                               "Check feasibility of the model when this reaction is irreversible." % reaction.id)
-
-                rxn.upper_bound = upper_bound_temp
+                    finally:
+                        rxn.upper_bound = upper_bound_temp
+                        constraint_name = "x_"+rxn.id+"_zero"
+                        model_temp.solver.constraints[constraint_name].ub = 0.
+                        model_temp.solver.constraints[constraint_name].lb = - rxn.upper_bound / threshold
+                # for all inactive fluxes, check activation in forwards direction
                 rxn.lower_bound = epsilon
-            # for all fluxes: check activity in forards direction
+            # for all fluxes: compute solution with new bounds
             try:
                 temp_sol = imat(model_temp, reaction_weights, epsilon, threshold)
                 temp_sol_bin = [1 if np.abs(flux) >= threshold else 0 for flux in temp_sol.fluxes]
-                if temp_sol.objective_value == optimal_objective_value:
+                if temp_sol.objective_value >= optimal_objective_value:
                     all_solutions.append(temp_sol)
                     all_solutions_binary.append(temp_sol_bin)
                     all_reactions.append(reaction.id)
@@ -92,7 +103,7 @@ def rxn_enum(model, reaction_weights=None, epsilon=0.1, threshold=1e-3):
     return solution
 
 
-def icut(model, reaction_weights=None, epsilon=0.1, threshold=1e-3, maxiter=10):
+def icut(model, reaction_weights=None, epsilon=0.1, threshold=1e-3, maxiter=100):
 
     assert isinstance(model, Model)
 
@@ -110,7 +121,6 @@ def icut(model, reaction_weights=None, epsilon=0.1, threshold=1e-3, maxiter=10):
         for idx, rxn in enumerate(model.reactions):
             expr += cvector[idx] * model.solver.variables["x_"+rxn.id]
         newconst = model.solver.interface.Constraint(expr, ub=newbound, name="icut_"+str(i))
-        print(newconst)
         model.solver.add(newconst)
 
         new_solution = imat(model, reaction_weights, epsilon, threshold)
@@ -123,5 +133,5 @@ def icut(model, reaction_weights=None, epsilon=0.1, threshold=1e-3, maxiter=10):
             break
 
     solution = EnumSolution(all_solutions, all_solutions, all_solutions_binary, all_solutions_binary)
-
+    print("number of iterations: ", i)
     return solution
