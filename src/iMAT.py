@@ -38,11 +38,12 @@ def imat(model, reaction_weights=None, epsilon=0.1, threshold = 1e-3, *args, **k
                 bin_var = model.solver.interface.Variable("x_%s" % rid, type="binary")
                 model.solver.add(bin_var)
                 bin_upp = model.solver.interface.Constraint(
-                    rxn.lower_bound * bin_var - rxn.flux_expression, ub=threshold/2, name="x_%s_upper" % rid)
+                    rxn.lower_bound * bin_var - rxn.flux_expression, ub=threshold/4, name="x_%s_upper" % rid)
                 bin_low = model.solver.interface.Constraint(
-                    rxn.upper_bound * bin_var - rxn.flux_expression, lb=-threshold/2, name="x_%s_lower" % rid)
+                    rxn.upper_bound * bin_var - rxn.flux_expression, lb=-threshold/4, name="x_%s_lower" % rid)
                 bin_zero = model.solver.interface.Constraint(
-                    bin_var - rxn.flux_expression / threshold, ub=0., name="x_%s_zero" % rid)
+                    bin_var - (rxn.forward_variable + rxn.reverse_variable) / threshold, ub=0.,
+                    name="x_%s_zero" % rid)
                 model.solver.add(bin_upp)
                 model.solver.add(bin_low)
                 model.solver.add(bin_zero)

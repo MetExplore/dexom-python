@@ -8,12 +8,12 @@ if __name__ == '__main__':
 
     model, reaction_weights = small4M()
 
-    epsilon = 0.1  # threshold of activity for highly expressed reactions in imat, and for bounds in rxn_enum
-    threshold = 1e-3  # threshold of activity for computing binary solution
+    epsilon = 1  # threshold of activity for highly expressed reactions in imat, and for bounds in rxn_enum
+    threshold = 1e-1  # threshold of activity for computing binary solution
 
     t0 = time.perf_counter()
 
-    imat_solution = imat(model, reaction_weights)
+    imat_solution = imat(model, reaction_weights, epsilon=epsilon, threshold=threshold)
     imat_solution_binary = [1 if np.abs(flux) >= threshold else 0 for flux in imat_solution.fluxes]
 
     t1 = time.perf_counter()
@@ -22,7 +22,7 @@ if __name__ == '__main__':
 
     t2 = time.perf_counter()
 
-    icut_solution = icut(model, reaction_weights, epsilon=epsilon, threshold=threshold)
+    icut_solution = icut(model, reaction_weights, epsilon=epsilon, threshold=threshold, maxiter=10)
 
     t3 = time.perf_counter()
 
