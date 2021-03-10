@@ -103,7 +103,7 @@ def rxn_enum(model, reaction_weights=None, epsilon=0.1, threshold=1e-3):
     return solution
 
 
-def icut(model, reaction_weights=None, epsilon=0.1, threshold=1e-3, maxiter=10):
+def full_icut(model, reaction_weights=None, epsilon=0.1, threshold=1e-3, maxiter=10):
 
     assert isinstance(model, Model)
 

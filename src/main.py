@@ -3,7 +3,7 @@ if __name__ == '__main__':
     import numpy as np
     from example_models import small4M, small4S, dagNet
     from iMAT import imat
-    from enumeration import rxn_enum, icut
+    from enumeration import rxn_enum, full_icut
     import time
 
     model, reaction_weights = small4M()
@@ -22,7 +22,7 @@ if __name__ == '__main__':
 
     t2 = time.perf_counter()
 
-    icut_solution = icut(model, reaction_weights, epsilon=epsilon, threshold=threshold, maxiter=20)
+    icut_solution = full_icut(model, reaction_weights, epsilon=epsilon, threshold=threshold, maxiter=20)
 
     t3 = time.perf_counter()
 

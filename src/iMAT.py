@@ -117,6 +117,3 @@ def imat(model, reaction_weights=None, epsilon=0.1, threshold = 1e-3, *args, **k
 
     finally:
         pass
-        #model.solver.remove([var for var in x_variables if var in model.solver.variables])
-        #model.solver.remove([var for pair in y_variables for var in pair if var in model.solver.variables])
-        #model.solver.remove([const for const in constraints if const in model.solver.constraints])
