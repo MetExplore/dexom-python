@@ -3,6 +3,8 @@ from cobra import Model
 from iMAT import imat
 import numpy as np
 from sympy import sympify
+import six
+
 
 class EnumSolution(object):
     def __init__(self,
@@ -120,6 +122,53 @@ def full_icut(model, reaction_weights=None, epsilon=0.1, threshold=1e-3, maxiter
         expr = sympify("1")
         for idx, rxn in enumerate(model.reactions):
             expr += cvector[idx] * model.solver.variables["x_"+rxn.id]
+        newconst = model.solver.interface.Constraint(expr, ub=newbound, name="icut_"+str(i))
+        model.solver.add(newconst)
+
+        new_solution = imat(model, reaction_weights, epsilon, threshold)
+
+        if new_solution.objective_value >= optimal_objective_value:
+            all_solutions.append(new_solution)
+            new_solution_binary = [1 if np.abs(flux) >= threshold else 0 for flux in new_solution.fluxes]
+            all_solutions_binary.append(new_solution_binary)
+        else:
+            break
+
+    solution = EnumSolution(all_solutions, all_solutions, all_solutions_binary, all_solutions_binary)
+    print("number of iterations: ", i+1)
+    return solution
+
+
+def partial_icut(model, reaction_weights=None, epsilon=0.1, threshold=1e-3, maxiter=10):
+
+    assert isinstance(model, Model)
+
+    new_solution = imat(model, reaction_weights, epsilon, threshold)
+    new_solution_binary = [1 if np.abs(flux) >= threshold else 0 for flux in new_solution.fluxes]
+    optimal_objective_value = new_solution.objective_value
+
+    all_solutions = [new_solution]
+    all_solutions_binary = [new_solution_binary]
+
+    for i in range(maxiter):
+        expr = sympify("1")
+        newbound = 0
+        for rid, weight in six.iteritems(reaction_weights):
+            if weight > 0.:
+                if new_solution.fluxes[rid] >= epsilon:
+                    expr += model.solver.variables ["rh_"+rid+"_pos"] - model.solver.variables ["rh_"+rid+"_neg"]
+                    newbound += 1
+                elif new_solution.fluxes[rid] <= -epsilon:
+                    expr += model.solver.variables["rh_" + rid + "_neg"] - model.solver.variables["rh_" + rid + "_pos"]
+                    newbound += 1
+                else:
+                    expr += - model.solver.variables ["rh_"+rid+"_pos"] - model.solver.variables ["rh_"+rid+"_neg"]
+            elif weight < 0.:
+                if np.abs(new_solution.fluxes[rid]) < threshold:
+                    expr += model.solver.variables ["rl_"+rid]
+                    newbound += 1
+                else:
+                    expr += - model.solver.variables ["rl_"+rid]
         newconst = model.solver.interface.Constraint(expr, ub=newbound, name="icut_"+str(i))
         model.solver.add(newconst)
 
