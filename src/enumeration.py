@@ -3,6 +3,7 @@ from cobra import Model
 from iMAT import imat
 import numpy as np
 from sympy import sympify
+import six
 
 class EnumSolution(object):
     def __init__(self,
@@ -115,11 +116,24 @@ def icut(model, reaction_weights=None, epsilon=0.1, threshold=1e-3, maxiter=10):
     all_solutions_binary = [new_solution_binary]
 
     for i in range(maxiter):
-        newbound = sum(new_solution_binary)
-        cvector = [1 if x else -1 for x in new_solution_binary]
         expr = sympify("1")
-        for idx, rxn in enumerate(model.reactions):
-            expr += cvector[idx] * model.solver.variables["x_"+rxn.id]
+        newbound = 0
+        for rid, weight in six.iteritems(reaction_weights):
+            if weight > 0.:
+                if new_solution.fluxes[rid] >= epsilon:
+                    expr += model.solver.variables ["rh_"+rid+"_pos"] - model.solver.variables ["rh_"+rid+"_neg"]
+                    newbound += 1
+                elif new_solution.fluxes[rid] <= -epsilon:
+                    expr += model.solver.variables["rh_" + rid + "_neg"] - model.solver.variables["rh_" + rid + "_pos"]
+                    newbound += 1
+                else:
+                    expr += - model.solver.variables ["rh_"+rid+"_pos"] - model.solver.variables ["rh_"+rid+"_neg"]
+            elif weight < 0.:
+                if np.abs(new_solution.fluxes[rid]) < threshold:
+                    expr += model.solver.variables ["rl_"+rid]
+                    newbound += 1
+                else:
+                    expr += - model.solver.variables ["rl_"+rid]
         newconst = model.solver.interface.Constraint(expr, ub=newbound, name="icut_"+str(i))
         model.solver.add(newconst)
 

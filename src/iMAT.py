@@ -31,69 +31,55 @@ def imat(model, reaction_weights=None, epsilon=0.1, threshold = 1e-3, *args, **k
     x_weights = list()
 
     try:
-        # the x_rid variables represent a binary condition of flux activation
-        for rxn in model.reactions:
-            if "x_"+rxn.id not in model.solver.variables:
-                rid = rxn.id
-                bin_var = model.solver.interface.Variable("x_%s" % rid, type="binary")
-                model.solver.add(bin_var)
-                bin_upp = model.solver.interface.Constraint(
-                    rxn.lower_bound * bin_var - rxn.flux_expression, ub=threshold/4, name="x_%s_upper" % rid)
-                bin_low = model.solver.interface.Constraint(
-                    rxn.upper_bound * bin_var - rxn.flux_expression, lb=-threshold/4, name="x_%s_lower" % rid)
-                bin_zero = model.solver.interface.Constraint(
-                    bin_var - (rxn.forward_variable + rxn.reverse_variable) / threshold, ub=0.,
-                    name="x_%s_zero" % rid)
-                model.solver.add(bin_upp)
-                model.solver.add(bin_low)
-                model.solver.add(bin_zero)
-
         for rid, weight in six.iteritems(reaction_weights):
             if weight > 0:  # the rh_rid variables represent the highly expressed reactions
-                reaction = model.reactions.get_by_id(rid)
-                y_pos = model.solver.interface.Variable("rh_%s_pos" % rid, type="binary")
-                y_neg = model.solver.interface.Variable("rh_%s_neg" % rid, type="binary")
+                if "rh_"+rid+"_pos" not in model.solver.variables:
+                    reaction = model.reactions.get_by_id(rid)
+                    y_pos = model.solver.interface.Variable("rh_%s_pos" % rid, type="binary")
+                    y_neg = model.solver.interface.Variable("rh_%s_neg" % rid, type="binary")
 
+                    pos_constraint = model.solver.interface.Constraint(
+                        reaction.flux_expression + y_pos * (reaction.lower_bound - epsilon),
+                        lb=reaction.lower_bound, name="rh_%s_pos_bound" % rid)
+                    neg_constraint = model.solver.interface.Constraint(
+                        reaction.flux_expression + y_neg * (reaction.upper_bound + epsilon),
+                        ub=reaction.upper_bound, name="rh_%s_neg_bound" % rid)
+                    model.solver.add(y_pos)
+                    model.solver.add(y_neg)
+                    model.solver.add(pos_constraint)
+                    model.solver.add(neg_constraint)
+
+                else:
+                    y_neg = model.solver.variables["rh_"+rid+"_neg"]
+                    y_pos = model.solver.variables["rh_"+rid+"_pos"]
+                    pos_constraint = model.solver.constraints["rh_"+rid+"_pos_bound"]
+                    neg_constraint = model.solver.constraints["rh_" + rid + "_neg_bound"]
                 y_variables.append([y_neg, y_pos])
-
-                pos_constraint = model.solver.interface.Constraint(
-                    reaction.flux_expression + y_pos * (reaction.lower_bound - epsilon),
-                    lb=reaction.lower_bound, name="rh_%s_pos_bound" % rid)
-
-                neg_constraint = model.solver.interface.Constraint(
-                    reaction.flux_expression + y_neg * (reaction.upper_bound + epsilon),
-                    ub=reaction.upper_bound, name="rh_%s_neg_bound" % rid)
-
                 constraints.extend([pos_constraint, neg_constraint])
-
                 y_weights.append(weight)
 
             elif weight < 0:  # the rl_rid variables represent the lowly expressed reactions
-                reaction = model.reactions.get_by_id(rid)
-                x = model.solver.interface.Variable("rl_%s" % rid, type="binary")
+                if "rl_"+rid not in model.solver.variables:
+                    reaction = model.reactions.get_by_id(rid)
+                    x = model.solver.interface.Variable("rl_%s" % rid, type="binary")
+
+                    pos_constraint = model.solver.interface.Constraint(
+                        (1 - x) * reaction.upper_bound - reaction.flux_expression,
+                        lb=0, name="rl_%s_upper" % rid)
+                    neg_constraint = model.solver.interface.Constraint(
+                        (1 - x) * reaction.lower_bound - reaction.flux_expression,
+                        ub=0, name="rl_%s_lower" % rid)
+                    model.solver.add(x)
+                    model.solver.add(pos_constraint)
+                    model.solver.add(neg_constraint)
+
+                else:
+                    x = model.solver.variables["rl_"+rid]
+                    pos_constraint = model.solver.constraints["rl_" + rid + "_upper"]
+                    neg_constraint = model.solver.constraints["rl_" + rid + "_lower"]
                 x_variables.append(x)
-
-                pos_constraint = model.solver.interface.Constraint(
-                    (1 - x) * reaction.upper_bound - reaction.flux_expression,
-                    lb=0, name="rl_%s_upper" % rid)
-
-                neg_constraint = model.solver.interface.Constraint(
-                    (1 - x) * reaction.lower_bound - reaction.flux_expression,
-                    ub=0, name="rl_%s_lower" % rid)
-
                 constraints.extend([pos_constraint, neg_constraint])
-
                 x_weights.append(abs(weight))
-
-        for variable in x_variables:
-            model.solver.add(variable)
-
-        for variables in y_variables:
-            model.solver.add(variables[0])
-            model.solver.add(variables[1])
-
-        for constraint in constraints:
-            model.solver.add(constraint)
 
         rh_objective = [(y[0] + y[1]) * y_weights[idx] for idx, y in enumerate(y_variables)]
         rl_objective = [x * x_weights[idx] for idx, x in enumerate(x_variables)]
@@ -105,6 +91,7 @@ def imat(model, reaction_weights=None, epsilon=0.1, threshold = 1e-3, *args, **k
             return solution
 
     finally:
-        model.solver.remove([var for var in x_variables if var in model.solver.variables])
-        model.solver.remove([var for pair in y_variables for var in pair if var in model.solver.variables])
-        model.solver.remove([const for const in constraints if const in model.solver.constraints])
+        pass
+        #model.solver.remove([var for var in x_variables if var in model.solver.variables])
+        #model.solver.remove([var for pair in y_variables for var in pair if var in model.solver.variables])
+        #model.solver.remove([const for const in constraints if const in model.solver.constraints])
