@@ -22,7 +22,7 @@ if __name__ == '__main__':
 
     t2 = time.perf_counter()
 
-    icut_solution = icut(model, reaction_weights, epsilon=epsilon, threshold=threshold, maxiter=10)
+    icut_solution = icut(model, reaction_weights, epsilon=epsilon, threshold=threshold, maxiter=20)
 
     t3 = time.perf_counter()
 

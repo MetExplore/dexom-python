@@ -35,18 +35,26 @@ def imat(model, reaction_weights=None, epsilon=0.1, threshold = 1e-3, *args, **k
         for rxn in model.reactions:
             if "x_"+rxn.id not in model.solver.variables:
                 rid = rxn.id
-                bin_var = model.solver.interface.Variable("x_%s" % rid, type="binary")
-                model.solver.add(bin_var)
-                bin_upp = model.solver.interface.Constraint(
-                    rxn.lower_bound * bin_var - rxn.flux_expression, ub=threshold/4, name="x_%s_upper" % rid)
-                bin_low = model.solver.interface.Constraint(
-                    rxn.upper_bound * bin_var - rxn.flux_expression, lb=-threshold/4, name="x_%s_lower" % rid)
-                bin_zero = model.solver.interface.Constraint(
-                    bin_var - (rxn.forward_variable + rxn.reverse_variable) / threshold, ub=0.,
-                    name="x_%s_zero" % rid)
-                model.solver.add(bin_upp)
-                model.solver.add(bin_low)
-                model.solver.add(bin_zero)
+                xtot = model.solver.interface.Variable("x_%s" % rid, type="binary")
+                xf = model.solver.interface.Variable("xf_%s" % rid, type="binary")
+                xr = model.solver.interface.Variable("xr_%s" % rid, type="binary")
+                model.solver.add(xtot)
+                model.solver.add(xf)
+                model.solver.add(xr)
+                xtot_def = model.solver.interface.Constraint(xtot - xf - xr, lb=0., ub=0., name="x_%s_def" % rid)
+                xf_upper = model.solver.interface.Constraint(
+                    rxn.forward_variable - rxn.upper_bound * xf, ub=0., name="xr_%s_upper" % rid)
+                xr_upper = model.solver.interface.Constraint(
+                    rxn.reverse_variable + rxn.lower_bound * xr, ub=0., name="xf_%s_upper" % rid)
+                xf_lower = model.solver.interface.Constraint(
+                    rxn.forward_variable - threshold * xf, lb=0., name="xf_%s_lower" % rid)
+                xr_lower = model.solver.interface.Constraint(
+                    rxn.reverse_variable - threshold * xr, lb=0., name="xr_%s_lower" % rid)
+                model.solver.add(xtot_def)
+                model.solver.add(xf_upper)
+                model.solver.add(xr_upper)
+                model.solver.add(xf_lower)
+                model.solver.add(xr_lower)
 
         for rid, weight in six.iteritems(reaction_weights):
             if weight > 0:  # the rh_rid variables represent the highly expressed reactions
