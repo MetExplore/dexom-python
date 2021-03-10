@@ -17,7 +17,7 @@ class EnumSolution(object):
         self.unique_reactions = unique_reactions
 
 
-def rxn_enum(model, reaction_weights=None, epsilon=0.1, threshold=1e-3):
+def rxn_enum(model, reaction_weights=None, epsilon=1., threshold=1e-1):
     """
     Reaction enumeration method
 
@@ -105,7 +105,7 @@ def rxn_enum(model, reaction_weights=None, epsilon=0.1, threshold=1e-3):
     return solution
 
 
-def full_icut(model, reaction_weights=None, epsilon=0.1, threshold=1e-3, maxiter=10):
+def full_icut(model, reaction_weights=None, epsilon=1., threshold=1e-1, maxiter=10):
 
     assert isinstance(model, Model)
 
@@ -115,6 +115,7 @@ def full_icut(model, reaction_weights=None, epsilon=0.1, threshold=1e-3, maxiter
 
     all_solutions = [new_solution]
     all_solutions_binary = [new_solution_binary]
+    icut_constraints = []
 
     for i in range(maxiter):
         newbound = sum(new_solution_binary)
@@ -124,6 +125,7 @@ def full_icut(model, reaction_weights=None, epsilon=0.1, threshold=1e-3, maxiter
             expr += cvector[idx] * model.solver.variables["x_"+rxn.id]
         newconst = model.solver.interface.Constraint(expr, ub=newbound, name="icut_"+str(i))
         model.solver.add(newconst)
+        icut_constraints.append(newconst)
 
         new_solution = imat(model, reaction_weights, epsilon, threshold)
 
@@ -134,8 +136,9 @@ def full_icut(model, reaction_weights=None, epsilon=0.1, threshold=1e-3, maxiter
         else:
             break
 
+    model.solver.remove([const for const in icut_constraints if const in model.solver.constraints])
     solution = EnumSolution(all_solutions, all_solutions, all_solutions_binary, all_solutions_binary)
-    print("number of iterations: ", i+1)
+    print("full_icut iterations: ", i+1)
     return solution
 
 
@@ -149,6 +152,7 @@ def partial_icut(model, reaction_weights=None, epsilon=0.1, threshold=1e-3, maxi
 
     all_solutions = [new_solution]
     all_solutions_binary = [new_solution_binary]
+    icut_constraints = []
 
     for i in range(maxiter):
         expr = sympify("1")
@@ -171,6 +175,7 @@ def partial_icut(model, reaction_weights=None, epsilon=0.1, threshold=1e-3, maxi
                     expr += - model.solver.variables ["rl_"+rid]
         newconst = model.solver.interface.Constraint(expr, ub=newbound, name="icut_"+str(i))
         model.solver.add(newconst)
+        icut_constraints.append(newconst)
 
         new_solution = imat(model, reaction_weights, epsilon, threshold)
 
@@ -181,6 +186,7 @@ def partial_icut(model, reaction_weights=None, epsilon=0.1, threshold=1e-3, maxi
         else:
             break
 
+    model.solver.remove([const for const in icut_constraints if const in model.solver.constraints])
     solution = EnumSolution(all_solutions, all_solutions, all_solutions_binary, all_solutions_binary)
-    print("number of iterations: ", i+1)
+    print("partial_icut iterations: ", i+1)
     return solution

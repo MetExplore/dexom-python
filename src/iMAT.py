@@ -4,7 +4,7 @@ import six
 from sympy import Add
 from numpy import abs
 
-def imat(model, reaction_weights=None, epsilon=0.1, threshold = 1e-3, *args, **kwargs):
+def imat(model, reaction_weights=None, epsilon=1., threshold = 1e-1, *args, **kwargs):
     """
     Integrative Metabolic Analysis Tool
 
