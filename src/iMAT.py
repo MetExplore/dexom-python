@@ -3,6 +3,7 @@ from cobra import Model
 import six
 from sympy import Add
 from numpy import abs
+import argparse
 
 def imat(model, reaction_weights=None, epsilon=1., threshold = 1e-1, *args, **kwargs):
     """
@@ -47,9 +48,9 @@ def imat(model, reaction_weights=None, epsilon=1., threshold = 1e-1, *args, **kw
                 xr_upper = model.solver.interface.Constraint(
                     rxn.reverse_variable + rxn.lower_bound * xr, ub=0., name="xf_%s_upper" % rid)
                 xf_lower = model.solver.interface.Constraint(
-                    rxn.forward_variable - threshold * xf, lb=0., name="xf_%s_lower" % rid)
+                    rxn.forward_variable - 2*threshold * xf, lb=0., name="xf_%s_lower" % rid)
                 xr_lower = model.solver.interface.Constraint(
-                    rxn.reverse_variable - threshold * xr, lb=0., name="xr_%s_lower" % rid)
+                    rxn.reverse_variable - 2*threshold * xr, lb=0., name="xr_%s_lower" % rid)
                 model.solver.add(xtot_def)
                 model.solver.add(xf_upper)
                 model.solver.add(xr_upper)
@@ -114,6 +115,14 @@ def imat(model, reaction_weights=None, epsilon=1., threshold = 1e-1, *args, **kw
             model.objective = objective
             solution = model.optimize()
             return solution
-
     finally:
         pass
+
+if __name__ == "__main__":
+    description = "Performs the iMAT algorithm"
+
+    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
+    parser.add_argument("-m", "--model", help="Metabolic model in python format")
+    parser.add_argument("-r", "--reactionweights", default=None, help="Reaction weights in dict format")
+    parser.add_argument("-e", "--epsilon", default=1., help="Activation threshold for highly expressed reactions")
+    parser.add_argument("-t", "--threshold", default=1e-1, help="Activation threshold for all reactions")

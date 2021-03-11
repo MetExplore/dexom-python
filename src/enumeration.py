@@ -5,7 +5,6 @@ import numpy as np
 from sympy import sympify
 import six
 
-
 class EnumSolution(object):
     def __init__(self,
                  all_solutions, unique_solutions, all_binary, unique_binary, all_reactions=None, unique_reactions=None):
@@ -119,17 +118,16 @@ def icut(model, reaction_weights=None, epsilon=1., threshold=1e-1, tolerance=1e-
         if full:
             newbound = sum(new_solution_binary)
             cvector = [1 if x else -1 for x in new_solution_binary]
-            expr = sympify("1")
             for idx, rxn in enumerate(model.reactions):
                 expr += cvector[idx] * model.solver.variables["x_" + rxn.id]
         else:
             newbound = 0
             for rid, weight in six.iteritems(reaction_weights):
                 if weight > 0.:
-                    if new_solution.fluxes[rid] >= epsilon:
+                    if new_solution.fluxes[rid] >= threshold:
                         expr += model.solver.variables["rh_"+rid+"_pos"] - model.solver.variables["rh_"+rid+"_neg"]
                         newbound += 1
-                    elif new_solution.fluxes[rid] <= -epsilon:
+                    elif new_solution.fluxes[rid] <= -threshold:
                         expr += model.solver.variables["rh_" + rid + "_neg"] - model.solver.variables["rh_" + rid + "_pos"]
                         newbound += 1
                     else:
@@ -140,11 +138,19 @@ def icut(model, reaction_weights=None, epsilon=1., threshold=1e-1, tolerance=1e-
                         newbound += 1
                     else:
                         expr += - model.solver.variables["rl_"+rid]
+        if expr.evalf() == 1 and not full:
+            print("No reactions were found in reaction_weights when attempting to create an icut constraint")
+            break
+
         newconst = model.solver.interface.Constraint(expr, ub=newbound, name="icut_"+str(i))
         model.solver.add(newconst)
         icut_constraints.append(newconst)
 
-        new_solution = imat(model, reaction_weights, epsilon, threshold)
+        try:
+            new_solution = imat(model, reaction_weights, epsilon, threshold)
+        except:
+            print("An error occured in iteration %i of icut, perhaps the model is unfeasible" % (i+1))
+            break
 
         if new_solution.objective_value >= optimal_objective_value:
             all_solutions.append(new_solution)
