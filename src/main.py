@@ -3,13 +3,14 @@ if __name__ == '__main__':
     import numpy as np
     from example_models import small4M, small4S, dagNet
     from iMAT import imat
-    from enumeration import rxn_enum, full_icut, partial_icut
+    from enumeration import rxn_enum, icut
     import time
 
     model, reaction_weights = small4M()
 
     epsilon = 1  # threshold of activity for highly expressed reactions in imat, and for bounds in rxn_enum
-    threshold = 1e-1  # threshold of activity for computing binary solution
+    threshold = 1e-2  # threshold of activity for computing binary solution
+    tolerance = 1e-5  # variance allowed for the objective_value
 
     t0 = time.perf_counter()
 
@@ -18,19 +19,21 @@ if __name__ == '__main__':
 
     t1 = time.perf_counter()
 
-    rxn_solution = rxn_enum(model, reaction_weights, epsilon=epsilon, threshold=threshold)
+    rxn_solution = rxn_enum(model, reaction_weights, epsilon=epsilon, threshold=threshold, tolerance=tolerance)
 
     t2 = time.perf_counter()
 
-    full_icut_solution = full_icut(model, reaction_weights, epsilon=epsilon, threshold=threshold, maxiter=20)
+    part_icut_solution = icut(model, reaction_weights, epsilon=epsilon, threshold=threshold, tolerance=tolerance,
+                              maxiter=100, full=False)
 
     t3 = time.perf_counter()
 
-    part_icut_solution = partial_icut(model, reaction_weights, epsilon=epsilon, threshold=threshold, maxiter=20)
+    full_icut_solution = icut(model, reaction_weights, epsilon=epsilon, threshold=threshold, tolerance=tolerance,
+                              maxiter=100, full=True)
 
     t4 = time.perf_counter()
 
     print('imat time: ', t1-t0)
     print('rxn-enum time: ', t2 - t1)
-    print('full icut time: ', t3 - t2)
-    print('partial icut time: ', t4 - t3)
+    print('partial icut time: ', t3 - t2)
+    print('full icut time: ', t4 - t3)
