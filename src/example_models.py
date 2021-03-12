@@ -19,14 +19,15 @@ def small4M(solver='cplex'):
     Creates the small4M example model
     returns a cobra.Model instance
     """
-
+    print("in small4M, before Model call")
     model = Model('small4M_python')
+    print("in small4M, before solver call")
     model.solver = solver
-
+    print("in small4M, before metabolites")
     metabolite_names = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'T', 'X', 'Y', 'Z']
     metabolites = [Metabolite(m) for m in metabolite_names]
     model.add_metabolites(metabolites)
-
+    print("in small4M, before reactions")
     reaction_names = ['EX_A', 'EX_D', 'EX_X', 'EX_C', 'EX_Z', 'EX_G', 'EX_Y', 'EX_T', 'RAB', 'RBC', 'RFG', 'RCF',
                       'RDE', 'REF1', 'REF2', 'REF3', 'RBE']
     reaction_formulas = [

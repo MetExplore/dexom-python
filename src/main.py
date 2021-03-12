@@ -1,14 +1,12 @@
-
 if __name__ == '__main__':
     import numpy as np
     from example_models import small4M, small4S, dagNet
     from iMAT import imat
     from enumeration import rxn_enum, icut
     import time
-
+    print("in main, before model call")
     model, reaction_weights = small4M()
-    reaction_weights = {}
-
+    print("in main, after model call")
     epsilon = 1  # threshold of activity for highly expressed reactions in imat, and for bounds in rxn_enum
     threshold = 1e-4  # threshold of activity for computing binary solution
     tolerance = 1e-4  # variance allowed for the objective_value
