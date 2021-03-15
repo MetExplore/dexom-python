@@ -128,19 +128,25 @@ def icut(model, reaction_weights=None, epsilon=1., threshold=1e-1, tolerance=1e-
             for rid, weight in six.iteritems(reaction_weights):
                 if weight > 0.:
                     if new_solution.fluxes[rid] >= threshold:
-                        expr += model.solver.variables["rh_"+rid+"_pos"] - model.solver.variables["rh_"+rid+"_neg"]
+                        expr += model.solver.variables["xf_"+rid] - model.solver.variables["xr_"+rid]
+                        #expr += model.solver.variables["rh_"+rid+"_pos"] - model.solver.variables["rh_"+rid+"_neg"]
                         newbound += 1
                     elif new_solution.fluxes[rid] <= -threshold:
-                        expr += model.solver.variables["rh_" + rid + "_neg"] - model.solver.variables["rh_" + rid + "_pos"]
+                        expr += model.solver.variables["xr_" + rid] - model.solver.variables["xf_" + rid]
+                        #expr += model.solver.variables["rh_" + rid + "_neg"] - model.solver.variables["rh_" + rid + "_pos"]
                         newbound += 1
                     else:
-                        expr += - model.solver.variables["rh_"+rid+"_pos"] - model.solver.variables["rh_"+rid+"_neg"]
+                        expr += - model.solver.variables["xf_"+rid] - model.solver.variables["xr_"+rid]
+                        #expr += - model.solver.variables["rh_"+rid+"_pos"] - model.solver.variables["rh_"+rid+"_neg"]
                 elif weight < 0.:
                     if np.abs(new_solution.fluxes[rid]) < threshold:
-                        expr += model.solver.variables["rl_"+rid]
-                        newbound += 1
+                        expr += - model.solver.variables["x_"+rid]
+                        #expr += model.solver.variables["rl_"+rid]
+                        #newbound += 1
                     else:
-                        expr += - model.solver.variables["rl_"+rid]
+                        expr += model.solver.variables["x_"+rid]
+                        newbound += 1
+                        #expr += - model.solver.variables["rl_"+rid]
         if expr.evalf() == 1 and not full:
             print("No reactions were found in reaction_weights when attempting to create an icut constraint")
             break

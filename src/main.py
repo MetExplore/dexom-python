@@ -18,7 +18,7 @@ if __name__ == '__main__':
         reaction_weights[rname] = -1.
 
     epsilon = 1  # threshold of activity for highly expressed reactions in imat, and for bounds in rxn_enum
-    threshold = 1e-1  # threshold of activity for all reactions
+    threshold = epsilon  # threshold of activity for computing binary solution
     tolerance = 1e-4  # variance allowed for the objective_value
 
     t0 = time.perf_counter()
@@ -33,7 +33,7 @@ if __name__ == '__main__':
     t2 = time.perf_counter()
 
     part_icut_solution = icut(model, reaction_weights, epsilon=epsilon, threshold=threshold, tolerance=tolerance,
-                              maxiter=200, full=False)
+                              maxiter=8, full=False)
 
     t3 = time.perf_counter()
 
