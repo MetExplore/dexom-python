@@ -5,7 +5,8 @@ from sympy import Add
 from numpy import abs
 import argparse
 
-def imat(model, reaction_weights=None, epsilon=1., threshold = 1e-1, *args, **kwargs):
+
+def imat(model, reaction_weights=None, epsilon=1., threshold=1e-1, *args, **kwargs):
     """
     Integrative Metabolic Analysis Tool
 
@@ -117,6 +118,7 @@ def imat(model, reaction_weights=None, epsilon=1., threshold = 1e-1, *args, **kw
             return solution
     finally:
         pass
+
 
 if __name__ == "__main__":
     description = "Performs the iMAT algorithm"

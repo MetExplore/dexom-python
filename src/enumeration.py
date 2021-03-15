@@ -6,6 +6,7 @@ from sympy import sympify
 import six
 import time
 
+
 class EnumSolution(object):
     def __init__(self,
                  all_solutions, unique_solutions, all_binary, unique_binary, all_reactions=None, unique_reactions=None):
