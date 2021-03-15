@@ -27,8 +27,6 @@ def imat(model, reaction_weights=None, epsilon=1., threshold=1e-1, *args, **kwar
 
     y_variables = list()
     x_variables = list()
-    constraints = list()
-
     y_weights = list()
     x_weights = list()
 
@@ -78,11 +76,8 @@ def imat(model, reaction_weights=None, epsilon=1., threshold=1e-1, *args, **kwar
                 else:
                     y_neg = model.solver.variables["rh_"+rid+"_neg"]
                     y_pos = model.solver.variables["rh_"+rid+"_pos"]
-                    pos_constraint = model.solver.constraints["rh_"+rid+"_pos_bound"]
-                    neg_constraint = model.solver.constraints["rh_" + rid + "_neg_bound"]
 
                 y_variables.append([y_neg, y_pos])
-                constraints.extend([pos_constraint, neg_constraint])
                 y_weights.append(weight)
 
             elif weight < 0:  # the rl_rid variables represent the lowly expressed reactions
@@ -101,11 +96,8 @@ def imat(model, reaction_weights=None, epsilon=1., threshold=1e-1, *args, **kwar
 
                 else:
                     x = model.solver.variables["rl_"+rid]
-                    pos_constraint = model.solver.constraints["rl_" + rid + "_upper"]
-                    neg_constraint = model.solver.constraints["rl_" + rid + "_lower"]
 
                 x_variables.append(x)
-                constraints.extend([pos_constraint, neg_constraint])
                 x_weights.append(abs(weight))
 
         rh_objective = [(y[0] + y[1]) * y_weights[idx] for idx, y in enumerate(y_variables)]

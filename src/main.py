@@ -4,9 +4,21 @@ if __name__ == '__main__':
     from iMAT import imat
     from enumeration import rxn_enum, icut
     import time
-    model, reaction_weights = small4M()
+    from cobra.io import load_json_model
+
+    # model, reaction_weights = small4M()
+    model = load_json_model("small4M.json")
+
+    reaction_weights = {}
+    RH_reactions = ['RFG']
+    RL_reactions = ['RAB', 'RDE', 'RCF']
+    for rname in RH_reactions:
+        reaction_weights[rname] = 1.
+    for rname in RL_reactions:
+        reaction_weights[rname] = -1.
+
     epsilon = 1  # threshold of activity for highly expressed reactions in imat, and for bounds in rxn_enum
-    threshold = 1e-1  # threshold of activity for computing binary solution
+    threshold = 1e-1  # threshold of activity for all reactions
     tolerance = 1e-4  # variance allowed for the objective_value
 
     t0 = time.perf_counter()
