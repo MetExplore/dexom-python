@@ -1,11 +1,12 @@
 #!/bin/bash
-#SBATCH -J test
+#SBATCH -J main_script
 #SBATCH -p workq
 #SBATCH -o mainout.out
 #SBATCH -e mainerr.out
 #SBATCH --mail-type=ALL
-#SBATCH --mem=2G
-#SBATCH -t 01:00:00
+#SBATCH --mem=64G
+#SBATCH -c 16
+#SBATCH -t 00:50:00
 
 cd $SLURM_SUBMIT_DIR
 

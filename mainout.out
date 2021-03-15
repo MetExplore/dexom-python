@@ -1,3 +1,33 @@
 :/home/mstingl/work/CPLEX_Studio1210/cplex/python/3.7/x86-64_linux
 in main, before model call
-in small4M, before Model call
+in main, after model call
+[0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0]
+An error occurred with reaction RCF_backwards. Check feasibility of the model when this reaction is irreversible.
+[[0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0], [1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1], [0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0], [0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0], [0, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
+time for iteration 1:  0.03728003799915314
+time for iteration 2:  0.06869709305465221
+time for iteration 3:  16.390223792754114
+time for iteration 4:  17.32050224300474
+partial icut iterations:  4
+[[1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1], [0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0]]
+time for iteration 1:  7.765247167088091
+time for iteration 2:  20.2548219691962
+time for iteration 3:  19.65365340001881
+time for iteration 4:  20.641311461571604
+time for iteration 5:  19.51036798628047
+time for iteration 6:  24.695063616149127
+time for iteration 7:  31.33890108205378
+time for iteration 8:  33.12636172398925
+time for iteration 9:  32.442838605027646
+time for iteration 10:  34.84250659029931
+time for iteration 11:  37.70442508999258
+time for iteration 12:  38.94513006415218
+time for iteration 13:  40.59219924174249
+time for iteration 14:  37.73075848584995
+time for iteration 15:  39.1004909100011
+time for iteration 16:  41.65999880200252
+full icut iterations:  16
+imat time:  0.7475390490144491
+rxn-enum time:  2.2675671759061515
+partial icut time:  33.82564418017864
+full icut time:  480.01806828193367

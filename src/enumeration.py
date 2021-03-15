@@ -4,7 +4,7 @@ from iMAT import imat
 import numpy as np
 from sympy import sympify
 import six
-
+import time
 
 class EnumSolution(object):
     def __init__(self,
@@ -105,7 +105,7 @@ def rxn_enum(model, reaction_weights=None, epsilon=1., threshold=1e-1, tolerance
 def icut(model, reaction_weights=None, epsilon=1., threshold=1e-1, tolerance=1e-5, maxiter=10, full=False):
 
     assert isinstance(model, Model)
-
+    
     new_solution = imat(model, reaction_weights, epsilon, threshold)
     new_solution_binary = [1 if np.abs(flux) >= threshold else 0 for flux in new_solution.fluxes]
     optimal_objective_value = new_solution.objective_value - tolerance
@@ -115,6 +115,7 @@ def icut(model, reaction_weights=None, epsilon=1., threshold=1e-1, tolerance=1e-
     icut_constraints = []
 
     for i in range(maxiter):
+        t0 = time.perf_counter()
         expr = sympify("1")
         if full:
             newbound = sum(new_solution_binary)
@@ -152,6 +153,8 @@ def icut(model, reaction_weights=None, epsilon=1., threshold=1e-1, tolerance=1e-
         except:
             print("An error occured in iteration %i of icut, perhaps the model is unfeasible" % (i+1))
             break
+        t1 = time.perf_counter()
+        print("time for iteration "+str(i+1)+": ", t1-t0)
 
         if new_solution.objective_value >= optimal_objective_value:
             all_solutions.append(new_solution)

@@ -9,7 +9,7 @@ def create_reaction(model, rname, formula, gene_rule=None, fullname=None, lower_
     rxn.name = rname if fullname is None else fullname
     rxn.gene_reaction_rule = rname if gene_rule is None else gene_rule
     rxn.add_metabolites(formula)
-    rxn.bounds = (lower_bound,upper_bound)
+    rxn.bounds = (lower_bound, upper_bound)
 
     return model
 
@@ -20,7 +20,7 @@ def small4M(solver='cplex'):
     returns a cobra.Model instance
     """
     print("in small4M, before Model call")
-    model = Model('small4M_python')
+    model = Model(id_or_model="small4M", name="small4M_python")
     print("in small4M, before solver call")
     model.solver = solver
     print("in small4M, before metabolites")

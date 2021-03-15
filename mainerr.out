@@ -1,1 +1,2 @@
-slurmstepd: error: *** JOB 23602385 ON node135 CANCELLED AT 2021-03-12T12:08:01 DUE TO TIME LIMIT ***
+/work/mstingl/dexom_py/env/lib/python3.7/site-packages/cobra/util/solver.py:508: UserWarning: Solver status is 'infeasible'.
+  warn(f"Solver status is '{status}'.", UserWarning)
