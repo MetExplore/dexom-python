@@ -4,6 +4,7 @@ import six
 from sympy import Add
 from numpy import abs
 import argparse
+from sympy import sympify
 
 
 def imat(model, reaction_weights=None, epsilon=1., threshold=1e-1, *args, **kwargs):
@@ -60,7 +61,7 @@ def imat(model, reaction_weights=None, epsilon=1., threshold=1e-1, *args, **kwar
 
         for rid, weight in six.iteritems(reaction_weights):
             if weight > 0:  # the rh_rid variables represent the highly expressed reactions
-                if "rh_" + rid + "_pos" not in model.solver.variables:
+                if 0 == 1 and "rh_" + rid + "_pos" not in model.solver.variables:
                     reaction = model.reactions.get_by_id(rid)
                     y_pos = model.solver.interface.Variable("rh_%s_pos" % rid, type="binary")
                     y_neg = model.solver.interface.Variable("rh_%s_neg" % rid, type="binary")
@@ -74,19 +75,20 @@ def imat(model, reaction_weights=None, epsilon=1., threshold=1e-1, *args, **kwar
                     model.solver.add(y_neg)
                     model.solver.add(pos_constraint)
                     model.solver.add(neg_constraint)
-
-                else:
+                elif 0 == 1 and epsilon == 10:
                     y_neg = model.solver.variables["rh_"+rid+"_neg"]
                     y_pos = model.solver.variables["rh_"+rid+"_pos"]
                     pos_constraint = model.solver.constraints["rh_"+rid+"_pos_bound"]
                     neg_constraint = model.solver.constraints["rh_" + rid + "_neg_bound"]
 
+                y_pos = model.solver.variables["xf_"+rid]
+                y_neg = model.solver.variables["xr_"+rid]
                 y_variables.append([y_neg, y_pos])
-                constraints.extend([pos_constraint, neg_constraint])
+                #constraints.extend([pos_constraint, neg_constraint])
                 y_weights.append(weight)
 
             elif weight < 0:  # the rl_rid variables represent the lowly expressed reactions
-                if "rl_" + rid not in model.solver.variables:
+                if 0 == 1 and "rl_" + rid not in model.solver.variables:
                     reaction = model.reactions.get_by_id(rid)
                     x = model.solver.interface.Variable("rl_%s" % rid, type="binary")
                     pos_constraint = model.solver.interface.Constraint(
@@ -98,14 +100,13 @@ def imat(model, reaction_weights=None, epsilon=1., threshold=1e-1, *args, **kwar
                     model.solver.add(x)
                     model.solver.add(pos_constraint)
                     model.solver.add(neg_constraint)
-
-                else:
+                elif 0 == 1 and epsilon == 10:
                     x = model.solver.variables["rl_"+rid]
                     pos_constraint = model.solver.constraints["rl_" + rid + "_upper"]
                     neg_constraint = model.solver.constraints["rl_" + rid + "_lower"]
-
+                x = sympify("1") - model.solver.variables["x_"+rid]
                 x_variables.append(x)
-                constraints.extend([pos_constraint, neg_constraint])
+                #constraints.extend([pos_constraint, neg_constraint])
                 x_weights.append(abs(weight))
 
         rh_objective = [(y[0] + y[1]) * y_weights[idx] for idx, y in enumerate(y_variables)]
