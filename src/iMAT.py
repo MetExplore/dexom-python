@@ -9,7 +9,7 @@ from cobra.io import load_json_model
 from sympy import sympify
 
 
-def imat(model, reaction_weights={}, epsilon=1., threshold=1e-1, full = False, *args, **kwargs):
+def imat(model, reaction_weights={}, epsilon=1., threshold=1e-1, full=False, *args, **kwargs):
     """
     Integrative Metabolic Analysis Tool
 
@@ -33,7 +33,7 @@ def imat(model, reaction_weights={}, epsilon=1., threshold=1e-1, full = False, *
     x_weights = list()
 
     try:
-        if full:
+        if full:  # for the full_icut implementation
             # the x_rid variables represent a binary condition of flux activation
             for rxn in model.reactions:
                 if "x_"+rxn.id not in model.solver.variables:
@@ -69,6 +69,7 @@ def imat(model, reaction_weights={}, epsilon=1., threshold=1e-1, full = False, *
                     x = sympify("1") - model.solver.variables["x_" + rid]
                     x_variables.append(x)
                     x_weights.append(abs(weight))
+
         else:
             for rid, weight in six.iteritems(reaction_weights):
                 if weight > 0:  # the rh_rid variables represent the highly expressed reactions

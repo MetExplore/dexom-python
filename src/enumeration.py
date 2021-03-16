@@ -18,7 +18,7 @@ class EnumSolution(object):
         self.unique_reactions = unique_reactions
 
 
-def rxn_enum(model, reaction_weights=None, threshold=1., tolerance=1e-5):
+def rxn_enum(model, reaction_weights=None, epsilon=1., threshold=1e-1, tolerance=1e-5):
     """
     Reaction enumeration method
 
@@ -40,7 +40,7 @@ def rxn_enum(model, reaction_weights=None, threshold=1., tolerance=1e-5):
     """
     assert isinstance(model, Model)
 
-    initial_solution = imat(model, reaction_weights, threshold)
+    initial_solution = imat(model, reaction_weights, epsilon, threshold)
     initial_solution_binary = [1 if np.abs(flux) >= threshold else 0 for flux in initial_solution.fluxes]
     optimal_objective_value = initial_solution.objective_value - tolerance
 
@@ -64,7 +64,7 @@ def rxn_enum(model, reaction_weights=None, threshold=1., tolerance=1e-5):
                 if rxn.lower_bound < 0.:
                     try:
                         rxn.upper_bound = -threshold
-                        temp_sol = imat(model_temp, reaction_weights, threshold)
+                        temp_sol = imat(model_temp, reaction_weights, epsilon, threshold)
                         temp_sol_bin = [1 if np.abs(flux) >= threshold else 0 for flux in temp_sol.fluxes]
 
                         if temp_sol.objective_value >= optimal_objective_value:
@@ -84,7 +84,7 @@ def rxn_enum(model, reaction_weights=None, threshold=1., tolerance=1e-5):
                 rxn.lower_bound = threshold
             # for all fluxes: compute solution with new bounds
             try:
-                temp_sol = imat(model_temp, reaction_weights, threshold)
+                temp_sol = imat(model_temp, reaction_weights, epsilon, threshold)
                 temp_sol_bin = [1 if np.abs(flux) >= threshold else 0 for flux in temp_sol.fluxes]
                 if temp_sol.objective_value >= optimal_objective_value:
                     all_solutions.append(temp_sol)
@@ -103,11 +103,11 @@ def rxn_enum(model, reaction_weights=None, threshold=1., tolerance=1e-5):
     return solution
 
 
-def icut(model, reaction_weights=None, threshold=1., tolerance=1e-5, maxiter=10, full=False):
+def icut(model, reaction_weights=None, epsilon=1., threshold=1e-1, tolerance=1e-5, maxiter=10, full=False):
 
     assert isinstance(model, Model)
     
-    new_solution = imat(model, reaction_weights, threshold)
+    new_solution = imat(model, reaction_weights, epsilon, threshold, full)
     new_solution_binary = [1 if np.abs(flux) >= threshold else 0 for flux in new_solution.fluxes]
     optimal_objective_value = new_solution.objective_value - tolerance
 
@@ -128,19 +128,19 @@ def icut(model, reaction_weights=None, threshold=1., tolerance=1e-5, maxiter=10,
             for rid, weight in six.iteritems(reaction_weights):
                 if weight > 0.:
                     if new_solution.fluxes[rid] >= threshold:
-                        expr += model.solver.variables["xf_"+rid] - model.solver.variables["xr_"+rid]
+                        expr += model.solver.variables["rh_"+rid+"_pos"] - model.solver.variables["rh_"+rid+"_neg"]
                         newbound += 1
                     elif new_solution.fluxes[rid] <= -threshold:
-                        expr += model.solver.variables["xr_" + rid] - model.solver.variables["xf_" + rid]
+                        expr += model.solver.variables["rh_" + rid + "_neg"] - model.solver.variables["rh_" + rid + "_pos"]
                         newbound += 1
                     else:
-                        expr += - model.solver.variables["xf_"+rid] - model.solver.variables["xr_"+rid]
+                        expr += - model.solver.variables["rh_"+rid+"_pos"] - model.solver.variables["rh_"+rid+"_neg"]
                 elif weight < 0.:
                     if np.abs(new_solution.fluxes[rid]) < threshold:
-                        expr += - model.solver.variables["x_"+rid]
-                    else:
-                        expr += model.solver.variables["x_"+rid]
+                        expr += model.solver.variables["rl_"+rid]
                         newbound += 1
+                    else:
+                        expr += - model.solver.variables["rl_"+rid]
         if expr.evalf() == 1 and not full:
             print("No reactions were found in reaction_weights when attempting to create an icut constraint")
             break
@@ -150,7 +150,7 @@ def icut(model, reaction_weights=None, threshold=1., tolerance=1e-5, maxiter=10,
         icut_constraints.append(newconst)
 
         try:
-            new_solution = imat(model, reaction_weights, threshold)
+            new_solution = imat(model, reaction_weights, epsilon, threshold, full)
         except:
             print("An error occured in iteration %i of icut, perhaps the model is unfeasible" % (i+1))
             break
