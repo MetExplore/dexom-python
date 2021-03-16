@@ -5,9 +5,9 @@ from sympy import Add, sympify
 from numpy import abs
 
 import argparse
-from cobra.io import load_json_model
+from cobra.io import load_json_model, read_sbml_model
 from models import load_reaction_weights, write_solution
-
+from pathlib import Path
 
 def imat(model, reaction_weights={}, epsilon=1., threshold=1e-1, full=False, *args, **kwargs):
     """
@@ -133,15 +133,23 @@ if __name__ == "__main__":
     description = "Performs the iMAT algorithm"
 
     parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument("-m", "--model", help="Metabolic model in json format")
-    parser.add_argument("-r", "--reaction_weights", default={}, help="Reaction weights in csv format (first row: reaction names, second row: weights)")
+    parser.add_argument("-m", "--model", help="Metabolic model in sbml or json format")
+    parser.add_argument("-r", "--reaction_weights", default={},
+                        help="Reaction weights in csv format (first row: reaction names, second row: weights)")
     parser.add_argument("-e", "--epsilon", default=1., help="Activation threshold for highly expressed reactions")
     parser.add_argument("-t", "--threshold", default=1e-1, help="Activation threshold for all reactions")
     parser.add_argument("-o", "--output", default="imat_solution.txt", help="Name of the output file")
 
     args = parser.parse_args()
 
-    model = load_json_model(args.model)
+    fileformat = Path(args.model).suffix
+    if fileformat == ".sbml" or fileformat == ".xml":
+        model = read_sbml_model(args.model)
+    elif fileformat == '.json':
+        model = load_json_model(args.model)
+    else:
+        print("Only SBML and JSON formats are supported for the models")
+        model = None
 
     reaction_weights = {}
     if args.reaction_weights:

@@ -3,7 +3,7 @@ if __name__ == '__main__':
     import time
     from cobra.io import load_json_model
 
-    from models import clean_model, load_reaction_weights
+    from models import clean_model, load_reaction_weights, read_solution
     from iMAT import imat
     from enumeration import rxn_enum, icut
 
@@ -34,13 +34,11 @@ if __name__ == '__main__':
 
     t3 = time.perf_counter()
 
-    full_icut_solution = icut(model, reaction_weights, epsilon=epsilon, threshold=threshold, tolerance=tolerance,
-                              maxiter=200, full=True)
-    clean_model(model, full=True)
+    #full_icut_solution = icut(model, reaction_weights, epsilon=epsilon, threshold=threshold, tolerance=tolerance,
+    #                          maxiter=200, full=True)
+    #clean_model(model, full=True)
 
-    t4 = time.perf_counter()
 
     print('imat time: ', t1-t0)
     print('rxn-enum time: ', t2 - t1)
     print('partial icut time: ', t3 - t2)
-    print('full icut time: ', t4 - t3)

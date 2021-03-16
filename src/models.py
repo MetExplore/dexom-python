@@ -2,6 +2,9 @@
 import six
 from csv import DictReader
 import numpy as np
+import pandas
+from cobra import Solution
+from csv import DictWriter
 
 
 def clean_model(model, reaction_weights={}, full=False):
@@ -78,7 +81,34 @@ def write_solution(solution, threshold, filename):
     solution_binary = [1 if np.abs(flux) >= threshold else 0 for flux in solution.fluxes]
 
     with open(filename, "w+") as file:
-        file.write("reaction,flux,binary\n")
+        file.write(",fluxes,binary\n")
         for i, v in enumerate(solution.fluxes):
             file.write(solution.fluxes.index[i]+","+str(v)+","+str(solution_binary[i])+"\n")
-        file.write("objective value: %f\r\n" % solution.objective_value)
+        file.write("objective value: %f\n" % solution.objective_value)
+        file.write("solver status: %s" % solution.status)
+
+
+def read_solution(filename):
+
+    df = pandas.read_csv(filename, index_col=0, skipfooter=2, engine="python")
+    with open(filename, "r") as file:
+        reader = file.read().split("\n")
+        objective_value = float(reader[-2].split()[-1])
+        status = reader[-1].split()[-1]
+    solution = Solution(objective_value, status, df["fluxes"])
+    binary = df["binary"].to_list()
+
+    return solution, binary
+
+
+if __name__=="__main__":
+    from cobra.io import read_sbml_model
+    #model = read_sbml_model("min_iMM1865/min_iMM1865.xml")
+    df = pandas.read_csv("min_iMM1865/rxn_scores.csv", index_col=1)
+    dict_p53 = df["3f"].to_dict()
+    """
+    with open('min_iMM1865/min_iMM1865_3f_weights.csv', 'w+', newline='') as csvfile:
+        writer = DictWriter(csvfile, fieldnames=dict_p53.keys())
+        writer.writeheader()
+        writer.writerow(dict_p53)
+    """
