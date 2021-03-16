@@ -121,6 +121,7 @@ if __name__ == "__main__":
     parser.add_argument("-r", "--reaction_weights", default={}, help="Reaction weights in csv format (first row: reaction names, second row: weights)")
     parser.add_argument("-e", "--epsilon", default=1., help="Activation threshold for highly expressed reactions")
     parser.add_argument("-t", "--threshold", default=1e-1, help="Activation threshold for all reactions")
+    parser.add_argument("-o", "--output", default="imat_solution.txt", help="Name of the output file")
 
     args = parser.parse_args()
 
@@ -136,7 +137,7 @@ if __name__ == "__main__":
 
     solution = imat(model, reaction_weights, args.epsilon, args.threshold)
 
-    solution.fluxes.to_csv("imat_solution.txt", sep="\t")
-    with open("imat_solution.txt", "a+") as file:
+    solution.fluxes.to_csv(args.output, sep="\t")
+    with open(args.output, "a+") as file:
         file.write("objective value: %f\r\n" % solution.objective_value)
 
