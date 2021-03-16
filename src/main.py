@@ -5,17 +5,16 @@ if __name__ == '__main__':
     from enumeration import rxn_enum, icut
     import time
     from cobra.io import load_json_model
+    import csv
 
-    # model, reaction_weights = small4M()
     model = load_json_model("small4M.json")
 
-    reaction_weights = {}
-    RH_reactions = ['RFG']
-    RL_reactions = ['RAB', 'RDE', 'RCF']
-    for rname in RH_reactions:
-        reaction_weights[rname] = 1.
-    for rname in RL_reactions:
-        reaction_weights[rname] = -1.
+    with open("small4M_weights.csv", newline="") as file:
+        read = csv.DictReader(file)
+        for row in read:
+            reaction_weights = row
+    for k, v in reaction_weights.items():
+        reaction_weights[k] = float(v)
 
     epsilon = 1  # threshold of activity for highly expressed reactions in imat, and for bounds in rxn_enum
     threshold = 1e-1  # threshold of activity for all reactions

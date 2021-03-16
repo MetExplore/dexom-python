@@ -4,9 +4,11 @@ import six
 from sympy import Add
 from numpy import abs
 import argparse
+import csv
+from cobra.io import load_json_model
 
 
-def imat(model, reaction_weights=None, epsilon=1., threshold=1e-1, *args, **kwargs):
+def imat(model, reaction_weights={}, epsilon=1., threshold=1e-1, *args, **kwargs):
     """
     Integrative Metabolic Analysis Tool
 
@@ -23,7 +25,6 @@ def imat(model, reaction_weights=None, epsilon=1., threshold=1e-1, *args, **kwar
     """
 
     assert isinstance(model, Model)
-    assert isinstance(reaction_weights, dict)
 
     y_variables = list()
     x_variables = list()
@@ -116,7 +117,26 @@ if __name__ == "__main__":
     description = "Performs the iMAT algorithm"
 
     parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument("-m", "--model", help="Metabolic model in python format")
-    parser.add_argument("-r", "--reactionweights", default=None, help="Reaction weights in dict format")
+    parser.add_argument("-m", "--model", help="Metabolic model in json format")
+    parser.add_argument("-r", "--reaction_weights", default={}, help="Reaction weights in csv format (first row: reaction names, second row: weights)")
     parser.add_argument("-e", "--epsilon", default=1., help="Activation threshold for highly expressed reactions")
     parser.add_argument("-t", "--threshold", default=1e-1, help="Activation threshold for all reactions")
+
+    args = parser.parse_args()
+
+    model = load_json_model(args.model)
+
+    if args.reaction_weights:
+        with open(args.reaction_weights, newline="") as file:
+            read = csv.DictReader(file)
+            for row in read:
+                reaction_weights = row
+        for k, v in reaction_weights.items():
+            reaction_weights[k] = float(v)
+
+    solution = imat(model, reaction_weights, args.epsilon, args.threshold)
+
+    solution.fluxes.to_csv("imat_solution.txt", sep="\t")
+    with open("imat_solution.txt", "a+") as file:
+        file.write("objective value: %f\r\n" % solution.objective_value)
+
