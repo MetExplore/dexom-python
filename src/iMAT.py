@@ -1,12 +1,12 @@
 
 from cobra import Model
 import six
-from sympy import Add
+from sympy import Add, sympify
 from numpy import abs
+
 import argparse
-import csv
 from cobra.io import load_json_model
-from sympy import sympify
+from models import load_reaction_weights, write_solution
 
 
 def imat(model, reaction_weights={}, epsilon=1., threshold=1e-1, full=False, *args, **kwargs):
@@ -23,6 +23,8 @@ def imat(model, reaction_weights={}, epsilon=1., threshold=1e-1, full=False, *ar
         activation threshold for highly expressed reactions
     threshold: float
         activation threshold for all reactions
+    full: bool
+        if True, apply constraints on all reactions. if False, only on reactions with non-zero weights
     """
 
     assert isinstance(model, Model)
@@ -59,18 +61,18 @@ def imat(model, reaction_weights={}, epsilon=1., threshold=1e-1, full=False, *ar
                     model.solver.add(xf_lower)
                     model.solver.add(xr_lower)
             for rid, weight in six.iteritems(reaction_weights):
-                if weight > 0:  # the rh_rid variables represent the highly expressed reactions
+                if weight > 0:
                     y_pos = model.solver.variables["xf_" + rid]
                     y_neg = model.solver.variables["xr_" + rid]
                     y_variables.append([y_neg, y_pos])
                     y_weights.append(weight)
 
-                elif weight < 0:  # the rl_rid variables represent the lowly expressed reactions
+                elif weight < 0:
                     x = sympify("1") - model.solver.variables["x_" + rid]
                     x_variables.append(x)
                     x_weights.append(abs(weight))
 
-        else:
+        else:  # for the driven imat implementation
             for rid, weight in six.iteritems(reaction_weights):
                 if weight > 0:  # the rh_rid variables represent the highly expressed reactions
                     if "rh_" + rid + "_pos" not in model.solver.variables:
@@ -141,17 +143,10 @@ if __name__ == "__main__":
 
     model = load_json_model(args.model)
 
+    reaction_weights = {}
     if args.reaction_weights:
-        with open(args.reaction_weights, newline="") as file:
-            read = csv.DictReader(file)
-            for row in read:
-                reaction_weights = row
-        for k, v in reaction_weights.items():
-            reaction_weights[k] = float(v)
+        reaction_weights = load_reaction_weights(args.reaction_weights)
 
     solution = imat(model, reaction_weights, args.epsilon, args.threshold)
 
-    solution.fluxes.to_csv(args.output, sep="\t")
-    with open(args.output, "a+") as file:
-        file.write("objective value: %f\r\n" % solution.objective_value)
-
+    write_solution(solution, args.threshold, args.output)

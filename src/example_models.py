@@ -18,8 +18,19 @@ def create_reaction(model, rname, formula, gene_rule=None, fullname=None, lower_
 
 def small4M(export=False, solver='cplex'):
     """
-    Creates the small4M example model
-    returns a cobra.Model instance
+    creates the small4M model
+
+    Parameters
+    ----------
+    export: bool
+        if True, exports the model as .json and the reaction weights as .csv
+    solver: str
+        a valid cobrapy solver
+
+    Returns
+    -------
+    model: cobra.Model
+    reaction_weights: dict
     """
     model = Model(id_or_model="small4M", name="small4M_python")
     model.solver = solver
@@ -59,13 +70,13 @@ def small4M(export=False, solver='cplex'):
 
     # create reaction weights
     reaction_weights = {}
-    RH_reactions = ['RFG']
-    RL_reactions = ['RAB', 'RDE', 'RCF']
+    rh_reactions = ['RFG']
+    rl_reactions = ['RAB', 'RDE', 'RCF']
 
     for rname in reaction_names:
-        if rname in RH_reactions:
+        if rname in rh_reactions:
             reaction_weights[rname] = 1.
-        elif rname in RL_reactions:
+        elif rname in rl_reactions:
             reaction_weights[rname] = -1.
 
     if export:
@@ -80,8 +91,19 @@ def small4M(export=False, solver='cplex'):
 
 def small4S(export=False, solver='cplex'):
     """
-    Creates the small4S example model
-    returns a cobra.Model instance
+    creates the small4S model
+
+    Parameters
+    ----------
+    export: bool
+        if True, exports the model as .json and the reaction weights as .csv
+    solver: str
+        a valid cobrapy solver
+
+    Returns
+    -------
+    model: cobra.Model
+    reaction_weights: dict
     """
 
     model = Model('small4S_python')
@@ -111,13 +133,13 @@ def small4S(export=False, solver='cplex'):
 
     # create reaction weights
     reaction_weights = {}
-    RH_reactions = ['R2', 'R6', 'R9']
-    RL_reactions = ['R3', 'R7']
+    rh_reactions = ['R2', 'R6', 'R9']
+    rl_reactions = ['R3', 'R7']
 
     for rname in reaction_names:
-        if rname in RH_reactions:
+        if rname in rh_reactions:
             reaction_weights[rname] = 1.
-        elif rname in RL_reactions:
+        elif rname in rl_reactions:
             reaction_weights[rname] = -1.
 
     if export:
@@ -133,11 +155,23 @@ def small4S(export=False, solver='cplex'):
 def dagNet(num_layers, num_metabolites_per_layer, export=False, solver='cplex'):
     """
     Creates a dagNet model where the metabolites of successive layers are all interconnected
-    :param num_layers: umber of layers
-    :param num_metabolites_per_layer: number of metabolites per layer
-    :param solver: a valid solver for cobrapy
-    :return: cobra.Model instance
+    Parameters
+    ----------
+    num_layers: int
+        number of layers
+    num_metabolites_per_layer: int
+        number of metabolites per layer
+    export: bool
+        if True, exports the model as .json and the reaction weights as .csv
+    solver: str
+        a valid cobrapy solver
+
+    Returns
+    -------
+    model: cobra.Model
+    reaction_weights: dict
     """
+
     model = Model("dagNet_python")
     model.solver = solver
     nl = num_layers + 2

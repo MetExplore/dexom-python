@@ -1,10 +1,11 @@
 
 from cobra import Model
-from iMAT import imat
 import numpy as np
 from sympy import sympify
 import six
 import time
+
+from iMAT import imat
 
 
 class EnumSolution(object):
@@ -33,6 +34,7 @@ def rxn_enum(model, reaction_weights=None, epsilon=1., threshold=1e-1, tolerance
         detection threshold of activated reactions
     tolerance: float
         variance allowed in the objective_values of the solutions
+
     Returns
     -------
     solution: EnumSolution object
@@ -104,6 +106,30 @@ def rxn_enum(model, reaction_weights=None, epsilon=1., threshold=1e-1, tolerance
 
 
 def icut(model, reaction_weights=None, epsilon=1., threshold=1e-1, tolerance=1e-5, maxiter=10, full=False):
+    """
+    integer-cut method
+
+    Parameters
+    ----------
+    model: cobrapy Model
+    reaction_weights: dict
+        keys = reactions and values = weights
+    epsilon: float
+        activation threshold in imat
+    threshold: float
+        detection threshold of activated reactions
+    tolerance: float
+        variance allowed in the objective_values of the solutions
+    maxiter: foat
+        maximum number of solutions to check for
+    full: bool
+        if True, carries out integer-cut on all reactions; if False, only on reactions with non-zero weights
+
+    Returns
+    -------
+    solution: EnumSolution object
+        In the case of integer-cut, all_solutions and unique_solutions are identical
+    """
 
     assert isinstance(model, Model)
     
