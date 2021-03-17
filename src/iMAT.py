@@ -136,8 +136,8 @@ if __name__ == "__main__":
     parser.add_argument("-m", "--model", help="Metabolic model in sbml or json format")
     parser.add_argument("-r", "--reaction_weights", default={},
                         help="Reaction weights in csv format (first row: reaction names, second row: weights)")
-    parser.add_argument("-e", "--epsilon", default=1., help="Activation threshold for highly expressed reactions")
-    parser.add_argument("-t", "--threshold", default=1e-1, help="Activation threshold for all reactions")
+    parser.add_argument("-e", "--epsilon", type=float, default=1., help="Activation threshold for highly expressed reactions")
+    parser.add_argument("-t", "--threshold", type=float, default=1e-1, help="Activation threshold for all reactions")
     parser.add_argument("-o", "--output", default="imat_solution.txt", help="Name of the output file")
 
     args = parser.parse_args()

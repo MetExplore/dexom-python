@@ -6,6 +6,7 @@ if __name__ == '__main__':
     from models import clean_model, load_reaction_weights, read_solution
     from iMAT import imat
     from enumeration import rxn_enum, icut
+    from permutation_test import permutation_test
 
     model = load_json_model("small4M.json")
 
@@ -23,22 +24,12 @@ if __name__ == '__main__':
 
     t1 = time.perf_counter()
 
-    rxn_solution = rxn_enum(model, reaction_weights, epsilon=epsilon, threshold=threshold, tolerance=tolerance)
+    bin, wei = permutation_test(model, reaction_weights, nperm=3, epsilon=epsilon, threshold=threshold)
     clean_model(model, reaction_weights)
-
     t2 = time.perf_counter()
 
-    part_icut_solution = icut(model, reaction_weights, epsilon=epsilon, threshold=threshold, tolerance=tolerance,
-                              maxiter=200, full=False)
-    clean_model(model, reaction_weights)
-
-    t3 = time.perf_counter()
-
-    #full_icut_solution = icut(model, reaction_weights, epsilon=epsilon, threshold=threshold, tolerance=tolerance,
-    #                          maxiter=200, full=True)
-    #clean_model(model, full=True)
-
+    print(bin)
+    print(wei)
 
     print('imat time: ', t1-t0)
-    print('rxn-enum time: ', t2 - t1)
-    print('partial icut time: ', t3 - t2)
+    print('permutation time: ', t2 - t1)
