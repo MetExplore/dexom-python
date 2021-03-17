@@ -5,6 +5,7 @@ from models import load_reaction_weights, read_solution, write_solution
 from iMAT import imat
 import numpy as np
 from pathlib import Path
+import time
 
 
 def permutation_test(model, reaction_weights={}, nperm = 10, epsilon=1., threshold=1e-1):
@@ -12,6 +13,7 @@ def permutation_test(model, reaction_weights={}, nperm = 10, epsilon=1., thresho
     permutation_weights = []
     permutation_solutions = []
     for i in range(nperm):
+        t1 = time.perf_counter()
         weights = np.array(list(reaction_weights.values()))
         weights[weights != 0] = rng.permutation(weights[weights != 0])
         reaction_weights = dict(zip(reaction_weights.keys(), list(weights)))
@@ -19,6 +21,8 @@ def permutation_test(model, reaction_weights={}, nperm = 10, epsilon=1., thresho
         solution_binary = [1 if np.abs(flux) >= threshold else 0 for flux in solution.fluxes]
         permutation_solutions.append(solution_binary)
         permutation_weights.append(list(weights))
+        t2 = time.perf_counter()
+        print("iteration %i time: " % i, t2-t1)
 
     return permutation_solutions, permutation_weights
 
