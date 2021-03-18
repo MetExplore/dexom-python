@@ -1,35 +1,40 @@
 if __name__ == '__main__':
     import numpy as np
     import time
-    from cobra.io import load_json_model
+    from cobra.io import load_json_model, read_sbml_model
 
     from models import clean_model, load_reaction_weights, read_solution
     from iMAT import imat
     from enumeration import rxn_enum, icut
     from permutation_test import permutation_test
 
+    t3 = time.perf_counter()
+
     model = load_json_model("small4M.json")
+    #model = read_sbml_model("min_iMM1865/min_iMM1865.xml")
 
     reaction_weights = load_reaction_weights("small4M_weights.csv")
+    #reaction_weights = load_reaction_weights("min_iMM1865/min_iMM1865_3f_weights.csv")
 
     epsilon = 1.  # threshold of activity for highly expressed reactions
     threshold = 1e-1  # threshold of activity for all reactions
-    tolerance = 1e-4  # variance allowed for the objective_value
+    obj_tol = 1e-5  # variance allowed for the objective_value
+    timelimit = 1  # time limit (in seconds) for the imat model.optimisation() call
+    tolerance = 1e-7  # tolerance for the solver
 
     t0 = time.perf_counter()
 
-    imat_solution = imat(model, reaction_weights, epsilon=epsilon, threshold=threshold)
+    imat_solution = imat(model, reaction_weights, epsilon=epsilon, threshold=threshold, timelimit=timelimit)
     imat_solution_binary = [1 if np.abs(flux) >= threshold else 0 for flux in imat_solution.fluxes]
     clean_model(model, reaction_weights)
 
     t1 = time.perf_counter()
 
-    bin, wei = permutation_test(model, reaction_weights, nperm=3, epsilon=epsilon, threshold=threshold)
-    clean_model(model, reaction_weights)
+    #binary, weight = permutation_test(model, reaction_weights, nperm=3, epsilon=epsilon, threshold=threshold)
+    #clean_model(model, reaction_weights)
     t2 = time.perf_counter()
 
-    print(bin)
-    print(wei)
 
     print('imat time: ', t1-t0)
-    print('permutation time: ', t2 - t1)
+    print('import time: ', t0 - t3)
+

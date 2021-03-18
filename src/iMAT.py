@@ -9,7 +9,8 @@ from cobra.io import load_json_model, read_sbml_model
 from models import load_reaction_weights, write_solution
 from pathlib import Path
 
-def imat(model, reaction_weights={}, epsilon=1., threshold=1e-1, full=False, *args, **kwargs):
+
+def imat(model, reaction_weights={}, epsilon=1., threshold=1e-1, timelimit=None, tolerance=1e-7, full=False):
     """
     Integrative Metabolic Analysis Tool
 
@@ -23,6 +24,10 @@ def imat(model, reaction_weights={}, epsilon=1., threshold=1e-1, full=False, *ar
         activation threshold for highly expressed reactions
     threshold: float
         activation threshold for all reactions
+    timelimit: int
+        time limit (in seconds) for the model.optimize() call
+    tolerance: float
+        tolerance for feasibility, integrality and optimality of the solution
     full: bool
         if True, apply constraints on all reactions. if False, only on reactions with non-zero weights
     """
@@ -120,9 +125,15 @@ def imat(model, reaction_weights={}, epsilon=1., threshold=1e-1, full=False, *ar
         rh_objective = [(y[0] + y[1]) * y_weights[idx] for idx, y in enumerate(y_variables)]
         rl_objective = [x * x_weights[idx] for idx, x in enumerate(x_variables)]
         objective = model.solver.interface.Objective(Add(*rh_objective) + Add(*rl_objective), direction="max")
+        model.objective = objective
+
+        config = model.solver.interface.Configuration(problem=model.solver, timeout=timelimit)
+        model.solver.configuration = config
+        model.problem.configuration = config
+
+        model.tolerance = tolerance
 
         with model:
-            model.objective = objective
             solution = model.optimize()
             return solution
     finally:
@@ -136,8 +147,10 @@ if __name__ == "__main__":
     parser.add_argument("-m", "--model", help="Metabolic model in sbml or json format")
     parser.add_argument("-r", "--reaction_weights", default={},
                         help="Reaction weights in csv format (first row: reaction names, second row: weights)")
-    parser.add_argument("-e", "--epsilon", type=float, default=1., help="Activation threshold for highly expressed reactions")
-    parser.add_argument("-t", "--threshold", type=float, default=1e-1, help="Activation threshold for all reactions")
+    parser.add_argument("--epsilon", type=float, default=1., help="Activation threshold for highly expressed reactions")
+    parser.add_argument("--threshold", type=float, default=1e-1, help="Activation threshold for all reactions")
+    parser.add_argument("-t", "--timelimit", type=int, default=None, help="Solver time limit")
+    parser.add_argument("--tol", type=float, default=1e-7, help="Solver tolerance")
     parser.add_argument("-o", "--output", default="imat_solution.txt", help="Name of the output file")
 
     args = parser.parse_args()
@@ -155,6 +168,6 @@ if __name__ == "__main__":
     if args.reaction_weights:
         reaction_weights = load_reaction_weights(args.reaction_weights)
 
-    solution = imat(model, reaction_weights, args.epsilon, args.threshold)
+    solution = imat(model, reaction_weights, epsilon=args.epsilon, threshold=args.threshold, timelimit=args.timelimit, tolerance=args.tol)
 
     write_solution(solution, args.threshold, args.output)

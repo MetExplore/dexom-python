@@ -19,7 +19,7 @@ class EnumSolution(object):
         self.unique_reactions = unique_reactions
 
 
-def rxn_enum(model, reaction_weights=None, epsilon=1., threshold=1e-1, tolerance=1e-5):
+def rxn_enum(model, reaction_weights=None, epsilon=1., threshold=1e-1, tl=None, tol=1e-7, obj_tol=1e-5):
     """
     Reaction enumeration method
 
@@ -32,7 +32,7 @@ def rxn_enum(model, reaction_weights=None, epsilon=1., threshold=1e-1, tolerance
         activation threshold in imat
     threshold: float
         detection threshold of activated reactions
-    tolerance: float
+    obj_tol: float
         variance allowed in the objective_values of the solutions
 
     Returns
@@ -42,9 +42,9 @@ def rxn_enum(model, reaction_weights=None, epsilon=1., threshold=1e-1, tolerance
     """
     assert isinstance(model, Model)
 
-    initial_solution = imat(model, reaction_weights, epsilon, threshold)
+    initial_solution = imat(model, reaction_weights, epsilon=epsilon, threshold=threshold, timelimit=tl, tolerance=tol)
     initial_solution_binary = [1 if np.abs(flux) >= threshold else 0 for flux in initial_solution.fluxes]
-    optimal_objective_value = initial_solution.objective_value - tolerance
+    optimal_objective_value = initial_solution.objective_value - obj_tol
 
     all_solutions = [initial_solution]
     all_solutions_binary = [initial_solution_binary]
@@ -66,7 +66,7 @@ def rxn_enum(model, reaction_weights=None, epsilon=1., threshold=1e-1, tolerance
                 if rxn.lower_bound < 0.:
                     try:
                         rxn.upper_bound = -threshold
-                        temp_sol = imat(model_temp, reaction_weights, epsilon, threshold)
+                        temp_sol = imat(model_temp, reaction_weights, epsilon=epsilon, threshold=threshold, timelimit=tl, tolerance=tol)
                         temp_sol_bin = [1 if np.abs(flux) >= threshold else 0 for flux in temp_sol.fluxes]
 
                         if temp_sol.objective_value >= optimal_objective_value:
@@ -86,7 +86,7 @@ def rxn_enum(model, reaction_weights=None, epsilon=1., threshold=1e-1, tolerance
                 rxn.lower_bound = threshold
             # for all fluxes: compute solution with new bounds
             try:
-                temp_sol = imat(model_temp, reaction_weights, epsilon, threshold)
+                temp_sol = imat(model_temp, reaction_weights, epsilon=epsilon, threshold=threshold, timelimit=tl, tolerance=tol)
                 temp_sol_bin = [1 if np.abs(flux) >= threshold else 0 for flux in temp_sol.fluxes]
                 if temp_sol.objective_value >= optimal_objective_value:
                     all_solutions.append(temp_sol)
@@ -105,7 +105,7 @@ def rxn_enum(model, reaction_weights=None, epsilon=1., threshold=1e-1, tolerance
     return solution
 
 
-def icut(model, reaction_weights=None, epsilon=1., threshold=1e-1, tolerance=1e-5, maxiter=10, full=False):
+def icut(model, reaction_weights=None, epsilon=1., threshold=1e-1, tl=None, tol=1e-7, obj_tol=1e-5, maxiter=10, full=False):
     """
     integer-cut method
 
@@ -118,7 +118,7 @@ def icut(model, reaction_weights=None, epsilon=1., threshold=1e-1, tolerance=1e-
         activation threshold in imat
     threshold: float
         detection threshold of activated reactions
-    tolerance: float
+    obj_tol: float
         variance allowed in the objective_values of the solutions
     maxiter: foat
         maximum number of solutions to check for
@@ -133,9 +133,9 @@ def icut(model, reaction_weights=None, epsilon=1., threshold=1e-1, tolerance=1e-
 
     assert isinstance(model, Model)
     
-    new_solution = imat(model, reaction_weights, epsilon, threshold, full)
+    new_solution = imat(model, reaction_weights, epsilon=epsilon, threshold=threshold, timelimit=tl, tolerance=tol, full=full)
     new_solution_binary = [1 if np.abs(flux) >= threshold else 0 for flux in new_solution.fluxes]
-    optimal_objective_value = new_solution.objective_value - tolerance
+    optimal_objective_value = new_solution.objective_value - obj_tol
 
     all_solutions = [new_solution]
     all_solutions_binary = [new_solution_binary]
@@ -176,7 +176,7 @@ def icut(model, reaction_weights=None, epsilon=1., threshold=1e-1, tolerance=1e-
         icut_constraints.append(newconst)
 
         try:
-            new_solution = imat(model, reaction_weights, epsilon, threshold, full)
+            new_solution = imat(model, reaction_weights, epsilon=epsilon, threshold=threshold, timelimit=tl, tolerance=tol, full=full)
         except:
             print("An error occured in iteration %i of icut, perhaps the model is unfeasible" % (i+1))
             break
