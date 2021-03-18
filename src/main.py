@@ -16,21 +16,21 @@ if __name__ == '__main__':
     reaction_weights = load_reaction_weights("small4M_weights.csv")
     #reaction_weights = load_reaction_weights("min_iMM1865/min_iMM1865_3f_weights.csv")
 
-    epsilon = 1.  # threshold of activity for highly expressed reactions
-    threshold = 1e-1  # threshold of activity for all reactions
+    eps = 1.  # threshold of activity for highly expressed reactions
+    thr = 1e-1  # threshold of activity for all reactions
     obj_tol = 1e-5  # variance allowed for the objective_value
-    timelimit = 1  # time limit (in seconds) for the imat model.optimisation() call
-    tolerance = 1e-7  # tolerance for the solver
+    tlim = 100  # time limit (in seconds) for the imat model.optimisation() call
+    tol = 1e-7  # tolerance for the solver
 
     t0 = time.perf_counter()
 
-    imat_solution = imat(model, reaction_weights, epsilon=epsilon, threshold=threshold, timelimit=timelimit)
-    imat_solution_binary = [1 if np.abs(flux) >= threshold else 0 for flux in imat_solution.fluxes]
+    imat_solution = imat(model, reaction_weights, epsilon=eps, threshold=thr, timelimit=tlim, tolerance=tol)
+    imat_solution_binary = [1 if np.abs(flux) >= thr else 0 for flux in imat_solution.fluxes]
     clean_model(model, reaction_weights)
 
     t1 = time.perf_counter()
 
-    #binary, weight = permutation_test(model, reaction_weights, nperm=3, epsilon=epsilon, threshold=threshold)
+    #binary, weight = permutation_test(model, reaction_weights, nperm=3, epsilon=eps, threshold=thr)
     #clean_model(model, reaction_weights)
     t2 = time.perf_counter()
 

@@ -19,7 +19,7 @@ class EnumSolution(object):
         self.unique_reactions = unique_reactions
 
 
-def rxn_enum(model, reaction_weights=None, epsilon=1., threshold=1e-1, tl=None, tol=1e-7, obj_tol=1e-5):
+def rxn_enum(model, reaction_weights=None, epsilon=1., threshold=1e-1, tlim=None, tol=1e-7, obj_tol=1e-5):
     """
     Reaction enumeration method
 
@@ -42,7 +42,7 @@ def rxn_enum(model, reaction_weights=None, epsilon=1., threshold=1e-1, tl=None, 
     """
     assert isinstance(model, Model)
 
-    initial_solution = imat(model, reaction_weights, epsilon=epsilon, threshold=threshold, timelimit=tl, tolerance=tol)
+    initial_solution = imat(model, reaction_weights, epsilon=epsilon, threshold=threshold, timelimit=tlim, tolerance=tol)
     initial_solution_binary = [1 if np.abs(flux) >= threshold else 0 for flux in initial_solution.fluxes]
     optimal_objective_value = initial_solution.objective_value - obj_tol
 
@@ -66,7 +66,7 @@ def rxn_enum(model, reaction_weights=None, epsilon=1., threshold=1e-1, tl=None, 
                 if rxn.lower_bound < 0.:
                     try:
                         rxn.upper_bound = -threshold
-                        temp_sol = imat(model_temp, reaction_weights, epsilon=epsilon, threshold=threshold, timelimit=tl, tolerance=tol)
+                        temp_sol = imat(model_temp, reaction_weights, epsilon=epsilon, threshold=threshold, timelimit=tlim, tolerance=tol)
                         temp_sol_bin = [1 if np.abs(flux) >= threshold else 0 for flux in temp_sol.fluxes]
 
                         if temp_sol.objective_value >= optimal_objective_value:
@@ -105,7 +105,7 @@ def rxn_enum(model, reaction_weights=None, epsilon=1., threshold=1e-1, tl=None, 
     return solution
 
 
-def icut(model, reaction_weights=None, epsilon=1., threshold=1e-1, tl=None, tol=1e-7, obj_tol=1e-5, maxiter=10, full=False):
+def icut(model, reaction_weights=None, epsilon=1., threshold=1e-1, tlim=None, tol=1e-7, obj_tol=1e-5, maxiter=10, full=False):
     """
     integer-cut method
 
@@ -133,7 +133,7 @@ def icut(model, reaction_weights=None, epsilon=1., threshold=1e-1, tl=None, tol=
 
     assert isinstance(model, Model)
     
-    new_solution = imat(model, reaction_weights, epsilon=epsilon, threshold=threshold, timelimit=tl, tolerance=tol, full=full)
+    new_solution = imat(model, reaction_weights, epsilon=epsilon, threshold=threshold, timelimit=tlim, tolerance=tol, full=full)
     new_solution_binary = [1 if np.abs(flux) >= threshold else 0 for flux in new_solution.fluxes]
     optimal_objective_value = new_solution.objective_value - obj_tol
 
@@ -176,7 +176,7 @@ def icut(model, reaction_weights=None, epsilon=1., threshold=1e-1, tl=None, tol=
         icut_constraints.append(newconst)
 
         try:
-            new_solution = imat(model, reaction_weights, epsilon=epsilon, threshold=threshold, timelimit=tl, tolerance=tol, full=full)
+            new_solution = imat(model, reaction_weights, epsilon=epsilon, threshold=threshold, timelimit=tlim, tolerance=tol, full=full)
         except:
             print("An error occured in iteration %i of icut, perhaps the model is unfeasible" % (i+1))
             break

@@ -36,10 +36,11 @@ if __name__=="__main__":
     parser.add_argument("-r", "--reaction_weights", default={},
                         help="Reaction weights in csv format (first row: reaction names, second row: weights)")
     parser.add_argument("-n", "--num_permutations", type=int, default=10, help="number of permutations to perform")
-    parser.add_argument("-e", "--epsilon", type=float, default=1.,
-                        help="Activation threshold for highly expressed reactions")
-    parser.add_argument("-t", "--threshold", type=float, default=1e-1, help="Activation threshold for all reactions")
-    parser.add_argument("-o", "--output", default="permutation.txt", help="Name of the output file")
+    parser.add_argument("--epsilon", type=float, default=1., help="Activation threshold for highly expressed reactions")
+    parser.add_argument("--threshold", type=float, default=1e-1, help="Activation threshold for all reactions")
+    parser.add_argument("-t", "--timelimit", type=int, default=None, help="Solver time limit")
+    parser.add_argument("--tol", type=float, default=1e-7, help="Solver tolerance")
+    parser.add_argument("-o", "--output", default="imat_solution.txt", help="Name of the output file")
 
     args = parser.parse_args()
 
@@ -66,9 +67,13 @@ if __name__=="__main__":
     out_solution = outname+"_solutions."+outsuffix
     out_weights = outname+"_weights."+outsuffix
 
+    reaction_list = [rxn.id for rxn in model.reactions]
+
     with open(out_solution, "w+") as file:
-        for s in perm_sol:
-            file.write(str(s)+"\n")
+        file.write(",".join(map(str, reaction_list))+"\n")
+        for sol in perm_sol:
+            file.write(",".join(map(str, sol))+"\n")
     with open(out_weights, "w+") as file:
-        for w in perm_weights:
-            file.write(str(w)+"\n")
+        file.write(",".join(map(str, reaction_list)) + "\n")
+        for wei in perm_weights:
+            file.write(",".join(map(str, wei))+"\n")
