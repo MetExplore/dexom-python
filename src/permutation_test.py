@@ -8,7 +8,7 @@ from pathlib import Path
 import time
 
 
-def permutation_test(model, reaction_weights={}, nperm = 10, epsilon=1., threshold=1e-1):
+def permutation_test(model, reaction_weights={}, nperm = 10, epsilon=1., threshold=1e-1, timelimit=None, tolerance=1e-7):
     rng = np.random.default_rng()
     permutation_weights = []
     permutation_solutions = []
@@ -17,10 +17,13 @@ def permutation_test(model, reaction_weights={}, nperm = 10, epsilon=1., thresho
         weights = np.array(list(reaction_weights.values()))
         weights[weights != 0] = rng.permutation(weights[weights != 0])
         reaction_weights = dict(zip(reaction_weights.keys(), list(weights)))
-        solution = imat(model, reaction_weights, epsilon, threshold)
-        solution_binary = [1 if np.abs(flux) >= threshold else 0 for flux in solution.fluxes]
-        permutation_solutions.append(solution_binary)
-        permutation_weights.append(list(weights))
+        try:
+            solution = imat(model, reaction_weights, epsilon, threshold, timelimit, tolerance)
+            solution_binary = [1 if np.abs(flux) >= threshold else 0 for flux in solution.fluxes]
+            permutation_solutions.append(solution_binary)
+            permutation_weights.append(list(weights))
+        except:
+            print("iteration %i failed"%i)
         t2 = time.perf_counter()
         print("iteration %i time: " % i, t2-t1)
 
@@ -58,7 +61,7 @@ if __name__=="__main__":
         reaction_weights = load_reaction_weights(args.reaction_weights)
 
     perm_sol, perm_weights = permutation_test(model, reaction_weights, args.num_permutations,
-                                              args.epsilon, args.threshold)
+                                              args.epsilon, args.threshold, args.timelimit, args.tol)
 
     name = args.output.split(".")
     outname = name.pop(0)

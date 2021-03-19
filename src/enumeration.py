@@ -32,6 +32,10 @@ def rxn_enum(model, reaction_weights=None, epsilon=1., threshold=1e-1, tlim=None
         activation threshold in imat
     threshold: float
         detection threshold of activated reactions
+    tlim: int
+        time limit for imat
+    tol: float
+        tolerance for imat
     obj_tol: float
         variance allowed in the objective_values of the solutions
 
@@ -86,7 +90,7 @@ def rxn_enum(model, reaction_weights=None, epsilon=1., threshold=1e-1, tlim=None
                 rxn.lower_bound = threshold
             # for all fluxes: compute solution with new bounds
             try:
-                temp_sol = imat(model_temp, reaction_weights, epsilon=epsilon, threshold=threshold, timelimit=tl, tolerance=tol)
+                temp_sol = imat(model_temp, reaction_weights, epsilon=epsilon, threshold=threshold, timelimit=tlim, tolerance=tol)
                 temp_sol_bin = [1 if np.abs(flux) >= threshold else 0 for flux in temp_sol.fluxes]
                 if temp_sol.objective_value >= optimal_objective_value:
                     all_solutions.append(temp_sol)
@@ -118,6 +122,10 @@ def icut(model, reaction_weights=None, epsilon=1., threshold=1e-1, tlim=None, to
         activation threshold in imat
     threshold: float
         detection threshold of activated reactions
+    tlim: int
+        time limit for imat
+    tol: float
+        tolerance for imat
     obj_tol: float
         variance allowed in the objective_values of the solutions
     maxiter: foat
