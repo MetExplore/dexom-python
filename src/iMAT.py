@@ -129,7 +129,7 @@ def imat(model, reaction_weights={}, epsilon=1., threshold=1e-1, timelimit=None,
 
         config = model.solver.interface.Configuration(problem=model.solver, timeout=timelimit)
         model.solver.configuration = config
-        model.problem.configuration = config
+        model.problem.Configuration = config
 
         model.tolerance = tolerance
 
@@ -163,6 +163,11 @@ if __name__ == "__main__":
     else:
         print("Only SBML and JSON formats are supported for the models")
         model = None
+
+    try:
+        model.solver = 'cplex'
+    except:
+        print("cplex is not available or not properly installed")
 
     reaction_weights = {}
     if args.reaction_weights:
