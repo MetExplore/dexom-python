@@ -127,10 +127,10 @@ def imat(model, reaction_weights={}, epsilon=1., threshold=1e-1, timelimit=None,
         objective = model.solver.interface.Objective(Add(*rh_objective) + Add(*rl_objective), direction="max")
         model.objective = objective
 
-        config = model.solver.interface.Configuration(problem=model.solver, timeout=timelimit)
-        model.solver.configuration = config
-        model.problem.Configuration = config
-
+        # config = model.solver.interface.Configuration(problem=model.solver, timeout=timelimit)
+        # model.solver.configuration = config
+        # model.problem.Configuration = config
+        model.solver.configuration.timeout = timelimit
         model.tolerance = tolerance
 
         with model:
