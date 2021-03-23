@@ -1,10 +1,10 @@
 
 import six
-from csv import DictReader
+from csv import DictReader, DictWriter
 import numpy as np
-import pandas
+import pandas as pd
+from pathlib import Path
 from cobra import Solution
-from csv import DictWriter
 
 
 def clean_model(model, reaction_weights={}, full=False):
@@ -71,7 +71,7 @@ def load_reaction_weights(filename):
 
 def write_solution(solution, threshold, filename):
     """
-    writes an imat solution as a txt file
+    Writes an imat solution as a txt file. The solution is written in a column format
     Parameters
     ----------
     solution: cobra.Solution
@@ -89,8 +89,7 @@ def write_solution(solution, threshold, filename):
 
 
 def read_solution(filename):
-
-    df = pandas.read_csv(filename, index_col=0, skipfooter=2, engine="python")
+    df = pd.read_csv(filename, index_col=0, skipfooter=2, engine="python")
     with open(filename, "r") as file:
         reader = file.read().split("\n")
         objective_value = float(reader[-2].split()[-1])
@@ -101,14 +100,82 @@ def read_solution(filename):
     return solution, binary
 
 
-if __name__=="__main__":
-    from cobra.io import read_sbml_model
-    #model = read_sbml_model("min_iMM1865/min_iMM1865.xml")
-    df = pandas.read_csv("min_iMM1865/rxn_scores.csv", index_col=1)
-    dict_p53 = df["3f"].to_dict()
+def write_dict_from_frame(df, out_file="dict.txt"):
     """
-    with open('min_iMM1865/min_iMM1865_3f_weights.csv', 'w+', newline='') as csvfile:
-        writer = DictWriter(csvfile, fieldnames=dict_p53.keys())
+    When given a pandas DataFrame, writes it into a file as a dictionary (row 1: index, row 2: values, etc.)
+
+    Parameters
+    ----------
+    df: pandas DataFrame or Series
+    out_file: string
+    """
+    dictionary = df.to_dict()
+
+    with open(out_file, 'w+', newline='') as csvfile:
+        writer = DictWriter(csvfile, fieldnames=dictionary.keys())
         writer.writeheader()
-        writer.writerow(dict_p53)
+        writer.writerow(dictionary)
+
+
+def analyze_permutation(all_files, out_name="", sub_frame=None, sub_list=[]):
     """
+
+    Parameters
+    ----------
+    all_files: Path or list of paths
+        files containing imat binary solutions in rows
+    out_name: string
+        name of the output file (!! should not contain a suffix !!)
+    sub_frame: pandas DataFrame or Series
+        a series in which each reaction is associated to a pathway
+    sub_list: list
+        a list of all pathways present in the model
+
+    Returns
+    -------
+    full_results: pandas DataFrame
+        header: reaction names
+        row 0: subsystem/pathway
+        rows 1+: binary solutions
+    """
+    all_list = []
+    if isinstance(sub_frame, pd.DataFrame):
+        all_list.append(sub_frame)
+    for filename in all_files:
+        df = pd.read_csv(filename, index_col=None, header=0)
+        all_list.append(df)
+
+    full_results = pd.concat(all_list, axis=0, ignore_index=True)
+
+    sol_per_rxn = full_results[1:].sum()
+    sol_per_rxn /= len(full_results-1)
+
+    # sub_list = full_results.T.agg(pd.unique)[0]
+    # sub_list = [x for x in subsystems if x==x]
+
+    sol_per_path = {}
+    for sub in sub_list:
+        rxns = full_results[full_results.isin([sub])].stack()[0].index
+        sol_per_path[sub] = sol_per_rxn[rxns].sum()
+    sol_per_path = pd.Series(list(sol_per_path.values()), index=list(sol_per_path.keys()))
+
+    sol_per_rxn.to_csv("min_iMM1865/permutation_analysis/"+out_name+"_reactions.txt")
+    sol_per_path.to_csv("min_iMM1865/permutation_analysis/"+out_name+"_pathways.txt")
+
+    return full_results
+
+
+if __name__=="__main__":
+
+    # df = pd.read_csv("min_iMM1865/rxn_scores.csv", index_col=1)
+    # write_dict_to_frame(df["subsystem"], out_file = "min_iMM1865_subsystem.csv"
+
+
+    subs = pd.read_csv("min_iMM1865/min_iMM1865_subsystem.csv")
+    all_files = Path("min_iMM1865/perms_to_be_analyzed").glob("*.txt")
+
+    with open("min_iMM1865/permutation_analysis/subsystems.txt", "r") as file:
+        subsystems = file.read().split(";")
+
+    full_results = analyze_permutation(all_files, out_name="p53", sub_frame=subs, sub_list=subsystems)
+
