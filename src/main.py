@@ -26,13 +26,13 @@ if __name__ == '__main__':
     eps = 1.  # threshold of activity for highly expressed reactions
     thr = 1e-1  # threshold of activity for all reactions
     obj_tol = 1e-5  # variance allowed for the objective_value
-    tlim = 1  # time limit (in seconds) for the imat model.optimisation() call
+    tlim = 100  # time limit (in seconds) for the imat model.optimisation() call
     tol = 1e-5  # tolerance for the solver
 
     t0 = time.perf_counter()
     print('import time: ', t0 - t3)
 
-    imat_solution = imat(model, reaction_weights, epsilon=eps, threshold=thr, timelimit=tlim, tolerance=tol)
+    imat_solution = imat(model, reaction_weights, epsilon=eps, threshold=thr, timelimit=tlim, tolerance=tol, full=True)
     imat_solution_binary = [1 if np.abs(flux) >= thr else 0 for flux in imat_solution.fluxes]
     clean_model(model, reaction_weights)
 
