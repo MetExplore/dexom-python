@@ -56,10 +56,14 @@ def imat(model, reaction_weights={}, epsilon=1., threshold=1e-1, timelimit=None,
                         rxn.forward_variable - rxn.upper_bound * xf, ub=0., name="xr_%s_upper" % rid)
                     xr_upper = model.solver.interface.Constraint(
                         rxn.reverse_variable + rxn.lower_bound * xr, ub=0., name="xf_%s_upper" % rid)
+                    temp = threshold
+                    if rid in reaction_weights:
+                        if reaction_weights[rid] > 0.:
+                            temp = epsilon
                     xf_lower = model.solver.interface.Constraint(
-                        rxn.forward_variable - threshold * xf, lb=0., name="xf_%s_lower" % rid)
+                        rxn.forward_variable - temp * xf, lb=0., name="xf_%s_lower" % rid)
                     xr_lower = model.solver.interface.Constraint(
-                        rxn.reverse_variable - threshold * xr, lb=0., name="xr_%s_lower" % rid)
+                        rxn.reverse_variable - temp * xr, lb=0., name="xr_%s_lower" % rid)
                     model.solver.add(xtot_def)
                     model.solver.add(xf_upper)
                     model.solver.add(xr_upper)
