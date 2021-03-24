@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 from cobra import Solution
+import matplotlib.pyplot as plt
 
 
 def clean_model(model, reaction_weights={}, full=False):
@@ -92,6 +93,8 @@ def read_solution(filename):
     df = pd.read_csv(filename, index_col=0, skipfooter=2, engine="python")
     with open(filename, "r") as file:
         reader = file.read().split("\n")
+        if reader[-1] == '':
+            reader.pop(-1)
         objective_value = float(reader[-2].split()[-1])
         status = reader[-1].split()[-1]
     solution = Solution(objective_value, status, df["fluxes"])
@@ -147,21 +150,21 @@ def analyze_permutation(all_files, out_name="", sub_frame=None, sub_list=[]):
 
     full_results = pd.concat(all_list, axis=0, ignore_index=True)
 
-    sol_per_rxn = full_results[1:].sum()
-    sol_per_rxn /= len(full_results-1)
+    # sol_per_rxn = full_results[1:].sum()
+    # sol_per_rxn /= len(full_results)-1
+    #
+    # # sub_list = full_results.T.agg(pd.unique)[0]
+    # # sub_list = [x for x in subsystems if x==x]
+    #
+    # sol_per_path = {}
+    # for sub in sub_list:
+    #     rxns = full_results[full_results.isin([sub])].stack()[0].index
+    #     sol_per_path[sub] = sol_per_rxn[rxns].sum()
+    # sol_per_path = pd.Series(list(sol_per_path.values()), index=list(sol_per_path.keys()))
 
-    # sub_list = full_results.T.agg(pd.unique)[0]
-    # sub_list = [x for x in subsystems if x==x]
-
-    sol_per_path = {}
-    for sub in sub_list:
-        rxns = full_results[full_results.isin([sub])].stack()[0].index
-        sol_per_path[sub] = sol_per_rxn[rxns].sum()
-    sol_per_path = pd.Series(list(sol_per_path.values()), index=list(sol_per_path.keys()))
-
-    sol_per_rxn.to_csv("min_iMM1865/permutation_analysis/"+out_name+"_reactions.txt")
-    sol_per_path.to_csv("min_iMM1865/permutation_analysis/"+out_name+"_pathways.txt")
-
+    # sol_per_rxn.to_csv("min_iMM1865/permutation_analysis/"+out_name+"_reactions.txt")
+    # sol_per_path.to_csv("min_iMM1865/permutation_analysis/"+out_name+"_pathways.txt")
+    # full_results.to_csv("p53_new_full.txt", index=0)
     return full_results
 
 
@@ -170,12 +173,58 @@ if __name__=="__main__":
     # df = pd.read_csv("min_iMM1865/rxn_scores.csv", index_col=1)
     # write_dict_to_frame(df["subsystem"], out_file = "min_iMM1865_subsystem.csv"
 
-
     subs = pd.read_csv("min_iMM1865/min_iMM1865_subsystem.csv")
     all_files = Path("min_iMM1865/perms_to_be_analyzed").glob("*.txt")
 
     with open("min_iMM1865/permutation_analysis/subsystems.txt", "r") as file:
         subsystems = file.read().split(";")
 
-    full_results = analyze_permutation(all_files, out_name="p53", sub_frame=subs, sub_list=subsystems)
+    full_results = analyze_permutation(all_files, out_name="p53_new", sub_frame=subs, sub_list=subsystems)
 
+    hist_pathways = pd.DataFrame()
+
+    solution, binary = read_solution("min_iMM1865/imat_p53.txt")
+    newsolution, newbinary = read_solution("min_iMM1865/imat_p53_new.txt")
+
+    binary = pd.Series(binary, index=solution.fluxes.index)
+    newbinary = pd.Series(newbinary, index=newsolution.fluxes.index)
+
+    sol_pathways = pd.Series(dtype=float)
+    newsol_pathways = pd.Series(dtype=float)
+
+    perms = len(full_results) - 1
+    pvalues = pd.DataFrame(index=subsystems, columns=["normal", "-log10(p)"], dtype=float)
+    newpvalues = pd.DataFrame(index=subsystems, columns=["normal", "-log10(p)"], dtype=float)
+
+    for sub in subsystems:
+        plt.clf()
+        rxns = full_results[full_results.isin([sub])].stack()[0].index
+
+        data = full_results[1:][rxns].sum(axis=1)
+        hist_pathways[sub] = data.values
+        sub = sub.replace("/", "")
+        # data.hist(bins=np.arange(min(data), max(data) + 1)).get_figure().savefig("histograms/"+sub+".png")
+
+        sol_pathways[sub] = binary[rxns].sum()
+        newsol_pathways[sub] = newbinary[rxns].sum()
+
+        pvalues["normal"][sub] = (sol_pathways[sub] - data.mean()) / data.std()
+        newpvalues["normal"][sub] = (newsol_pathways[sub] - data.mean()) / data.std()
+
+        temp = min(data[data <= sol_pathways[sub]].count() / perms, data[data >= sol_pathways[sub]].count() / perms)
+        newtemp = min(data[data <= newsol_pathways[sub]].count() / perms, data[data >= newsol_pathways[sub]].count() / perms)
+        if temp == 0.:
+            temp = 0.001
+        if newtemp == 0.:
+            newtemp = 0.001
+        pvalues["-log10(p)"][sub] = -np.log10(temp)
+        newpvalues["-log10(p)"][sub] = -np.log10(newtemp)
+
+    plt.clf()
+    ax = pvalues.plot.scatter(0, 1, figsize=(20, 20))
+    newax = newpvalues.plot.scatter(0, 1, figsize=(20, 20))
+    for i in range(len(pvalues)):
+        ax.annotate(pvalues.index[i], (pvalues["normal"][i], pvalues["-log10(p)"][i]))
+        newax.annotate(newpvalues.index[i], (newpvalues["normal"][i], newpvalues["-log10(p)"][i]))
+    ax.get_figure().savefig("scatterplot")
+    newax.get_figure().savefig("scatterplot_new")
