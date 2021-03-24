@@ -1,7 +1,7 @@
 
 from cobra import Model
 import numpy as np
-from sympy import sympify
+from sympy import sympify, Add
 import six
 import time
 
@@ -204,4 +204,65 @@ def icut(model, reaction_weights=None, epsilon=1., threshold=1e-1, tlim=None, to
         print("full icut iterations: ", i+1)
     else:
         print("partial icut iterations: ", i+1)
+    return solution
+
+def maxdist(prev_sol, model, reaction_weights, epsilon=1., threshold=1e-1, tlim=None, tol=1e-7, obj_tol=1e-5, maxiter=10):
+
+    icut_constraints = []
+    all_solutions = [prev_sol]
+    prev_sol_bin = [1 if np.abs(flux) >= threshold else 0 for flux in prev_sol.fluxes]
+    all_binary = [prev_sol_bin]
+
+    # adding the optimality constraint: the new objective value must be equal to the previous objetive value
+    y_variables = []
+    y_weights = []
+    x_variables = []
+    x_weights = []
+
+    for rid, weight in six.iteritems(reaction_weights):
+        if weight > 0:
+            y_pos = model.solver.variables["xf_" + rid]
+            y_neg = model.solver.variables["xr_" + rid]
+            y_variables.append([y_neg, y_pos])
+            y_weights.append(weight)
+
+        elif weight < 0:
+            x = sympify("1") - model.solver.variables["x_" + rid]
+            x_variables.append(x)
+            x_weights.append(abs(weight))
+
+    lower_opt = prev_sol.objective_value - obj_tol
+    upper_opt = prev_sol.objective_value + obj_tol
+
+    rh_objective = [(y[0] + y[1]) * y_weights[idx] for idx, y in enumerate(y_variables)]
+    rl_objective = [x * x_weights[idx] for idx, x in enumerate(x_variables)]
+    opt_const = model.solver.interface.Constraint(Add(*rh_objective) + Add(*rl_objective),
+                                              lb=lower_opt, ub=upper_opt, name="optimality")
+    model.solver.add(opt_const)
+
+    for i in range(maxiter):
+        #adding the icut constraint to prevent the algorithm from finding the same solutions
+        expr = sympify("1")
+        newbound = sum(prev_sol.binary)
+        cvector = [1 if x else -1 for x in prev_sol_bin]
+        for idx, rxn in enumerate(model.reactions):
+            expr += cvector[idx] * model.solver.variables["x_" + rxn.id]
+        newconst = model.solver.interface.Constraint(expr, ub=newbound, name="icut_" + str(i))
+        model.solver.add(newconst)
+        icut_constraints.append(newconst)
+
+        # defining the objective
+        # TODO: function which maximizes distance to previous solution
+        objective = model.solver.interface.Objective(0., direction="max")
+        model.objective = objective
+
+        with model:
+            prev_sol = model.optimize
+        prev_sol_bin = [1 if np.abs(flux) >= threshold else 0 for flux in prev_sol.fluxes]
+        all_solutions.append(prev_sol)
+        all_binary.append(prev_sol_bin)
+
+    model.solver.remove([const for const in icut_constraints if const in model.solver.constraints])
+    solution = EnumSolution(all_solutions, all_solutions, all_binary, all_binary)
+
     return solution
