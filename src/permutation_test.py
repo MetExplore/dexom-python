@@ -1,14 +1,14 @@
 
 import argparse
 from cobra.io import load_json_model, read_sbml_model
-from models import load_reaction_weights, read_solution, write_solution
+from models import load_reaction_weights, read_solution, write_solution, clean_model
 from iMAT import imat
 import numpy as np
 from pathlib import Path
 import time
 
 
-def permutation_test(model, reaction_weights={}, nperm = 10, epsilon=1., threshold=1e-1, timelimit=None, tolerance=1e-7):
+def permutation_test(model, reaction_weights={}, nperm=10, epsilon=1., threshold=1e-1, timelimit=None, tolerance=1e-7):
     rng = np.random.default_rng()
     permutation_weights = []
     permutation_solutions = []
@@ -23,9 +23,10 @@ def permutation_test(model, reaction_weights={}, nperm = 10, epsilon=1., thresho
             permutation_solutions.append(solution_binary)
             permutation_weights.append(list(weights))
         except:
-            print("iteration %i failed"%i)
+            print("iteration %i failed" % i)
         t2 = time.perf_counter()
         print("iteration %i time: " % i, t2-t1)
+        clean_model(model)
 
     return permutation_solutions, permutation_weights
 
