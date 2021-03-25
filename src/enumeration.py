@@ -109,6 +109,36 @@ def rxn_enum(model, reaction_weights=None, epsilon=1., threshold=1e-1, tlim=None
     return solution
 
 
+def create_icut_constraint(model, reaction_weights, threshold, prev_sol, prev_sol_binary, full):
+
+    expr = sympify("1")
+    if full:
+        newbound = sum(prev_sol_binary)
+        cvector = [1 if x else -1 for x in prev_sol_binary]
+        for idx, rxn in enumerate(model.reactions):
+            expr += cvector[idx] * model.solver.variables["x_" + rxn.id]
+    else:
+        newbound = 0
+        for rid, weight in six.iteritems(reaction_weights):
+            if weight > 0.:
+                if prev_sol.fluxes[rid] >= threshold:
+                    expr += model.solver.variables["rh_" + rid + "_pos"] - model.solver.variables["rh_" + rid + "_neg"]
+                    newbound += 1
+                elif prev_sol.fluxes[rid] <= -threshold:
+                    expr += model.solver.variables["rh_" + rid + "_neg"] - model.solver.variables["rh_" + rid + "_pos"]
+                    newbound += 1
+                else:
+                    expr += - model.solver.variables["rh_" + rid + "_pos"] - model.solver.variables[
+                        "rh_" + rid + "_neg"]
+            elif weight < 0.:
+                if np.abs(prev_sol.fluxes[rid]) < threshold:
+                    expr += model.solver.variables["rl_" + rid]
+                    newbound += 1
+                else:
+                    expr += - model.solver.variables["rl_" + rid]
+    return expr, newbound
+
+
 def icut(model, reaction_weights=None, epsilon=1., threshold=1e-1, tlim=None, tol=1e-7, obj_tol=1e-5, maxiter=10, full=False):
     """
     integer-cut method
@@ -151,30 +181,8 @@ def icut(model, reaction_weights=None, epsilon=1., threshold=1e-1, tlim=None, to
 
     for i in range(maxiter):
         t0 = time.perf_counter()
-        expr = sympify("1")
-        if full:
-            newbound = sum(new_solution_binary)
-            cvector = [1 if x else -1 for x in new_solution_binary]
-            for idx, rxn in enumerate(model.reactions):
-                expr += cvector[idx] * model.solver.variables["x_" + rxn.id]
-        else:
-            newbound = 0
-            for rid, weight in six.iteritems(reaction_weights):
-                if weight > 0.:
-                    if new_solution.fluxes[rid] >= threshold:
-                        expr += model.solver.variables["rh_"+rid+"_pos"] - model.solver.variables["rh_"+rid+"_neg"]
-                        newbound += 1
-                    elif new_solution.fluxes[rid] <= -threshold:
-                        expr += model.solver.variables["rh_" + rid + "_neg"] - model.solver.variables["rh_" + rid + "_pos"]
-                        newbound += 1
-                    else:
-                        expr += - model.solver.variables["rh_"+rid+"_pos"] - model.solver.variables["rh_"+rid+"_neg"]
-                elif weight < 0.:
-                    if np.abs(new_solution.fluxes[rid]) < threshold:
-                        expr += model.solver.variables["rl_"+rid]
-                        newbound += 1
-                    else:
-                        expr += - model.solver.variables["rl_"+rid]
+
+        expr, newbound = create_icut_constraint(model, reaction_weights, threshold, new_solution, new_solution_binary, full)
         if expr.evalf() == 1 and not full:
             print("No reactions were found in reaction_weights when attempting to create an icut constraint")
             break
@@ -186,7 +194,7 @@ def icut(model, reaction_weights=None, epsilon=1., threshold=1e-1, tlim=None, to
         try:
             new_solution = imat(model, reaction_weights, epsilon=epsilon, threshold=threshold, timelimit=tlim, tolerance=tol, full=full)
         except:
-            print("An error occured in iteration %i of icut, perhaps the model is unfeasible" % (i+1))
+            print("An error occured in iteration %i of icut, check if all feasible solutions have been found" % (i+1))
             break
         t1 = time.perf_counter()
         print("time for iteration "+str(i+1)+": ", t1-t0)
@@ -206,29 +214,34 @@ def icut(model, reaction_weights=None, epsilon=1., threshold=1e-1, tlim=None, to
         print("partial icut iterations: ", i+1)
     return solution
 
-def maxdist(prev_sol, model, reaction_weights, epsilon=1., threshold=1e-1, tlim=None, tol=1e-7, obj_tol=1e-5, maxiter=10):
+
+def maxdist(model, reaction_weights, epsilon=1., threshold=1e-4, tlim=None, tol=1e-7, obj_tol=1e-3, maxiter=10):
+
+    full = False
+    prev_sol = imat(model, reaction_weights, epsilon=epsilon, threshold=threshold, timelimit=tlim, tolerance=tol, full=full)
 
     icut_constraints = []
     all_solutions = [prev_sol]
     prev_sol_bin = [1 if np.abs(flux) >= threshold else 0 for flux in prev_sol.fluxes]
     all_binary = [prev_sol_bin]
 
-    # adding the optimality constraint: the new objective value must be equal to the previous objetive value
+    # adding the optimality constraint: the new objective value must be equal to the previous objective value
+    # possibility: count the number of ones in the vector, instead of using the reaction weights
+
     y_variables = []
     y_weights = []
     x_variables = []
     x_weights = []
 
     for rid, weight in six.iteritems(reaction_weights):
-        if weight > 0:
-            y_pos = model.solver.variables["xf_" + rid]
-            y_neg = model.solver.variables["xr_" + rid]
+        if weight > 0:  # the rh_rid variables represent the highly expressed reactions
+            y_neg = model.solver.variables["rh_" + rid + "_neg"]
+            y_pos = model.solver.variables["rh_" + rid + "_pos"]
             y_variables.append([y_neg, y_pos])
             y_weights.append(weight)
 
-        elif weight < 0:
-            x = sympify("1") - model.solver.variables["x_" + rid]
-            x_variables.append(x)
+        elif weight < 0:  # the rl_rid variables represent the lowly expressed reactions
+            x_variables.append(model.solver.variables["rl_" + rid])
             x_weights.append(abs(weight))
 
     lower_opt = prev_sol.objective_value - obj_tol
@@ -242,27 +255,39 @@ def maxdist(prev_sol, model, reaction_weights, epsilon=1., threshold=1e-1, tlim=
 
     for i in range(maxiter):
         #adding the icut constraint to prevent the algorithm from finding the same solutions
-        expr = sympify("1")
-        newbound = sum(prev_sol.binary)
-        cvector = [1 if x else -1 for x in prev_sol_bin]
-        for idx, rxn in enumerate(model.reactions):
-            expr += cvector[idx] * model.solver.variables["x_" + rxn.id]
+
+        expr, newbound = create_icut_constraint(model, reaction_weights, threshold, prev_sol, prev_sol_bin, full)
         newconst = model.solver.interface.Constraint(expr, ub=newbound, name="icut_" + str(i))
         model.solver.add(newconst)
         icut_constraints.append(newconst)
 
-        # defining the objective
-        # TODO: function which maximizes distance to previous solution
-        objective = model.solver.interface.Objective(0., direction="max")
+        # defining the objective: minimize the number of overlapping ones
+        expr = sympify("0")
+        for rid, weight in six.iteritems(reaction_weights):
+            rid_loc = prev_sol.fluxes.index.get_loc(rid)
+            if weight > 0:
+                y_neg = model.solver.variables["rh_" + rid + "_neg"]
+                y_pos = model.solver.variables["rh_" + rid + "_pos"]
+                expr += (y_neg + y_pos) * prev_sol_bin[rid_loc]
+            elif weight < 0:
+                x = model.solver.variables["rl_" + rid]
+                expr += x * prev_sol_bin[rid_loc]
+        objective = model.solver.interface.Objective(expr, direction="min")
         model.objective = objective
+        try:
+            with model:
+                prev_sol = model.optimize()
+            prev_sol_bin = [1 if np.abs(flux) >= threshold else 0 for flux in prev_sol.fluxes]
+            all_solutions.append(prev_sol)
+            all_binary.append(prev_sol_bin)
+        except:
+            print("An error occured in iteration %i of maxdist, check if all feasible solutions have been found" % (i+1))
+            break
 
-        with model:
-            prev_sol = model.optimize
-        prev_sol_bin = [1 if np.abs(flux) >= threshold else 0 for flux in prev_sol.fluxes]
-        all_solutions.append(prev_sol)
-        all_binary.append(prev_sol_bin)
 
     model.solver.remove([const for const in icut_constraints if const in model.solver.constraints])
+    model.solver.remove(opt_const)
+
     solution = EnumSolution(all_solutions, all_solutions, all_binary, all_binary)
 
     return solution
