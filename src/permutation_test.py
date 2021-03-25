@@ -8,8 +8,10 @@ from pathlib import Path
 import time
 
 
-def permutation_test(model, reaction_weights={}, nperm=10, epsilon=1., threshold=1e-1, timelimit=None, tolerance=1e-7):
+def permutation_test(model, reaction_weights=None, nperm=10, epsilon=1, threshold=1e-2, timelimit=None, tolerance=1e-7):
     rng = np.random.default_rng()
+    if not reaction_weights:
+        reaction_weights = {}
     permutation_weights = []
     permutation_solutions = []
     for i in range(nperm):
@@ -29,7 +31,6 @@ def permutation_test(model, reaction_weights={}, nperm=10, epsilon=1., threshold
         clean_model(model)
 
     return permutation_solutions, permutation_weights
-
 
 
 if __name__=="__main__":
