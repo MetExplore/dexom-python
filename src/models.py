@@ -8,7 +8,7 @@ from cobra import Solution
 import matplotlib.pyplot as plt
 
 
-def clean_model(model, reaction_weights={}, full=False):
+def clean_model(model, reaction_weights=None, full=False):
     """
     removes variables and constraints added to the model.solver during imat
 
@@ -120,15 +120,17 @@ def write_dict_from_frame(df, out_file="dict.txt"):
         writer.writerow(dictionary)
 
 
-def analyze_permutation(all_files, out_name="", sub_frame=None, sub_list=[]):
+def analyze_permutation(perm_sols, imat_sol, out_path="permutation", sub_frame=None, sub_list=None):
     """
 
     Parameters
     ----------
-    all_files: Path or list of paths
+    perm_sols: Path or list of paths
         files containing imat binary solutions in rows
-    out_name: string
-        name of the output file (!! should not contain a suffix !!)
+    imat_sol: path or string
+        path to an imat solution file created with write_solution()
+    out_path: path or string
+        path and name of output file
     sub_frame: pandas DataFrame or Series
         a series in which each reaction is associated to a pathway
     sub_list: list
@@ -144,87 +146,95 @@ def analyze_permutation(all_files, out_name="", sub_frame=None, sub_list=[]):
     all_list = []
     if isinstance(sub_frame, pd.DataFrame):
         all_list.append(sub_frame)
-    for filename in all_files:
+    for filename in perm_sols:
         df = pd.read_csv(filename, index_col=None, header=0)
         all_list.append(df)
 
     full_results = pd.concat(all_list, axis=0, ignore_index=True)
 
-    # sol_per_rxn = full_results[1:].sum()
-    # sol_per_rxn /= len(full_results)-1
-    #
-    # # sub_list = full_results.T.agg(pd.unique)[0]
-    # # sub_list = [x for x in subsystems if x==x]
-    #
-    # sol_per_path = {}
-    # for sub in sub_list:
-    #     rxns = full_results[full_results.isin([sub])].stack()[0].index
-    #     sol_per_path[sub] = sol_per_rxn[rxns].sum()
-    # sol_per_path = pd.Series(list(sol_per_path.values()), index=list(sol_per_path.keys()))
+    solution, binary = read_solution(imat_sol)
 
-    # sol_per_rxn.to_csv("min_iMM1865/permutation_analysis/"+out_name+"_reactions.txt")
-    # sol_per_path.to_csv("min_iMM1865/permutation_analysis/"+out_name+"_pathways.txt")
-    # full_results.to_csv("p53_new_full.txt", index=0)
+    if not sub_list:
+        sub_list = full_results.T.agg(pd.unique)[0]
+        sub_list = [x for x in subsystems if x == x]  # removes nan values
+
+    rxn_freq = full_results[1:].sum()
+    rxn_freq /= len(full_results)-1
+
+    path_max_act = {}
+    for sub in sub_list:
+        rxns = full_results[full_results.isin([sub])].stack()[0].index
+        path_max_act[sub] = max(rxn_freq[rxns])
+    path_max_act = pd.Series(list(path_max_act.values()), index=list(path_max_act.keys()))
+
+    binary = pd.Series(binary, index=solution.fluxes.index)
+    hist_pathways = pd.DataFrame()
+    histograms = []
+    sol_pathways = pd.Series(dtype=float)
+
+    perms = len(full_results) - 1
+    pvalues = pd.DataFrame(index=sub_list, columns=["normal", "-log10(p)"], dtype=float)
+
+    for sub in sub_list:
+        rxns = full_results[full_results.isin([sub])].stack()[0].index
+
+        # create pathway histograms
+        data = full_results[1:][rxns].sum(axis=1)
+        hist_pathways[sub] = data.values
+        subforsave = sub.replace("/", " ")
+        plt.clf()
+        fig = data.hist(bins=np.arange(min(data), max(data) + 1)).get_figure()
+        histograms.append((fig, out_path+"_histogram "+subforsave+".png"))
+        fig.savefig(out_path+"_histogram "+subforsave+".png")
+
+        # count number of active reactions per pathway
+        sol_pathways[sub] = binary[rxns].sum()
+
+        # compute normalized active reactions per pathway & pvalues
+        pvalues["normal"][sub] = (sol_pathways[sub] - data.mean()) / data.std()
+        temp = min(data[data <= sol_pathways[sub]].count() / perms, data[data >= sol_pathways[sub]].count() / perms)
+        if temp == 0.:
+            temp = 0.001
+        pvalues["-log10(p)"][sub] = -np.log10(temp)
+
+    # create pvalue vulcanoplot
+    plt.clf()
+    pval_ax = pvalues.plot.scatter(0, 1, figsize=(20, 20))
+    for i in range(len(pvalues)):
+        pval_ax.annotate(pvalues.index[i], (pvalues["normal"][i], pvalues["-log10(p)"][i]))
+    pval_fig = pval_ax.get_figure()
+    pval_fig.savefig(out_path + "_scatterplot.png")
+
+    # save files to path
+    full_results.to_csv(out_path+"_all_solutions.txt", index=False)
+    rxn_freq.to_csv(out_path+"_reaction_frequency.csv", sep=";")
+    path_max_act.to_csv(out_path+"_pathway_maximal_frequency.csv", sep=";")
+
+    sol_pathways.to_csv(out_path+"_pathways.csv", sep=";")
+    pvalues.to_csv(out_path+"_pvalues.csv", sep=";")
+
+
+
+    # for fig, filename in histograms:
+
+
     return full_results
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
 
     # df = pd.read_csv("min_iMM1865/rxn_scores.csv", index_col=1)
     # write_dict_to_frame(df["subsystem"], out_file = "min_iMM1865_subsystem.csv"
 
-    subs = pd.read_csv("min_iMM1865/min_iMM1865_subsystem.csv")
     all_files = Path("min_iMM1865/perms_to_be_analyzed").glob("*.txt")
 
-    with open("min_iMM1865/permutation_analysis/subsystems.txt", "r") as file:
+    imat_sol = "min_iMM1865/imat_p53_new.txt"
+
+    mypath = "permutation_new/p53_"
+
+    subs = pd.read_csv("min_iMM1865/min_iMM1865_subsystem.csv")
+
+    with open("min_iMM1865/subsystems.txt", "r") as file:
         subsystems = file.read().split(";")
 
-    full_results = analyze_permutation(all_files, out_name="p53_new", sub_frame=subs, sub_list=subsystems)
-
-    hist_pathways = pd.DataFrame()
-
-    solution, binary = read_solution("min_iMM1865/imat_p53.txt")
-    newsolution, newbinary = read_solution("min_iMM1865/imat_p53_new.txt")
-
-    binary = pd.Series(binary, index=solution.fluxes.index)
-    newbinary = pd.Series(newbinary, index=newsolution.fluxes.index)
-
-    sol_pathways = pd.Series(dtype=float)
-    newsol_pathways = pd.Series(dtype=float)
-
-    perms = len(full_results) - 1
-    pvalues = pd.DataFrame(index=subsystems, columns=["normal", "-log10(p)"], dtype=float)
-    newpvalues = pd.DataFrame(index=subsystems, columns=["normal", "-log10(p)"], dtype=float)
-
-    for sub in subsystems:
-        plt.clf()
-        rxns = full_results[full_results.isin([sub])].stack()[0].index
-
-        data = full_results[1:][rxns].sum(axis=1)
-        hist_pathways[sub] = data.values
-        sub = sub.replace("/", "")
-        # data.hist(bins=np.arange(min(data), max(data) + 1)).get_figure().savefig("histograms/"+sub+".png")
-
-        sol_pathways[sub] = binary[rxns].sum()
-        newsol_pathways[sub] = newbinary[rxns].sum()
-
-        pvalues["normal"][sub] = (sol_pathways[sub] - data.mean()) / data.std()
-        newpvalues["normal"][sub] = (newsol_pathways[sub] - data.mean()) / data.std()
-
-        temp = min(data[data <= sol_pathways[sub]].count() / perms, data[data >= sol_pathways[sub]].count() / perms)
-        newtemp = min(data[data <= newsol_pathways[sub]].count() / perms, data[data >= newsol_pathways[sub]].count() / perms)
-        if temp == 0.:
-            temp = 0.001
-        if newtemp == 0.:
-            newtemp = 0.001
-        pvalues["-log10(p)"][sub] = -np.log10(temp)
-        newpvalues["-log10(p)"][sub] = -np.log10(newtemp)
-
-    plt.clf()
-    ax = pvalues.plot.scatter(0, 1, figsize=(20, 20))
-    newax = newpvalues.plot.scatter(0, 1, figsize=(20, 20))
-    for i in range(len(pvalues)):
-        ax.annotate(pvalues.index[i], (pvalues["normal"][i], pvalues["-log10(p)"][i]))
-        newax.annotate(newpvalues.index[i], (newpvalues["normal"][i], newpvalues["-log10(p)"][i]))
-    ax.get_figure().savefig("scatterplot")
-    newax.get_figure().savefig("scatterplot_new")
+    full_results = analyze_permutation(all_files, imat_sol, out_path=mypath, sub_frame=subs, sub_list=subsystems)
