@@ -254,6 +254,7 @@ def maxdist(model, reaction_weights, epsilon=1., threshold=1e-4, tlim=None, tol=
     model.solver.add(opt_const)
 
     for i in range(maxiter):
+        t0 = time.perf_counter()
         #adding the icut constraint to prevent the algorithm from finding the same solutions
 
         expr, newbound = create_icut_constraint(model, reaction_weights, threshold, prev_sol, prev_sol_bin, full)
@@ -261,17 +262,25 @@ def maxdist(model, reaction_weights, epsilon=1., threshold=1e-4, tlim=None, tol=
         model.solver.add(newconst)
         icut_constraints.append(newconst)
 
-        # defining the objective: minimize the number of overlapping ones
+        # defining the objective: minimize the number of overlapping ones and zeros
         expr = sympify("0")
         for rid, weight in six.iteritems(reaction_weights):
             rid_loc = prev_sol.fluxes.index.get_loc(rid)
             if weight > 0:
                 y_neg = model.solver.variables["rh_" + rid + "_neg"]
                 y_pos = model.solver.variables["rh_" + rid + "_pos"]
-                expr += (y_neg + y_pos) * prev_sol_bin[rid_loc]
+                # expr += (y_neg + y_pos) * prev_sol_bin[rid_loc]
+                if prev_sol_bin[rid_loc] == 1:
+                    expr += y_neg + y_pos
+                else:
+                    expr += 1 - (y_neg + y_pos)
             elif weight < 0:
                 x = model.solver.variables["rl_" + rid]
-                expr += x * prev_sol_bin[rid_loc]
+                # expr += x * prev_sol_bin[rid_loc]
+                if prev_sol_bin[rid_loc]:
+                    expr += x
+                else:
+                    expr += 1 - x
         objective = model.solver.interface.Objective(expr, direction="min")
         model.objective = objective
         try:
@@ -283,7 +292,8 @@ def maxdist(model, reaction_weights, epsilon=1., threshold=1e-4, tlim=None, tol=
         except:
             print("An error occured in iteration %i of maxdist, check if all feasible solutions have been found" % (i+1))
             break
-
+        t1 = time.perf_counter()
+        print("time for iteration "+str(i+1)+": ", t1-t0)
 
     model.solver.remove([const for const in icut_constraints if const in model.solver.constraints])
     model.solver.remove(opt_const)
