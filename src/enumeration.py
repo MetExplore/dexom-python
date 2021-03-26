@@ -277,7 +277,7 @@ def maxdist(model, reaction_weights, epsilon=1., threshold=1e-4, tlim=None, tol=
             elif weight < 0:
                 x = model.solver.variables["rl_" + rid]
                 # expr += x * prev_sol_bin[rid_loc]
-                if prev_sol_bin[rid_loc]:
+                if prev_sol_bin[rid_loc] == 1:
                     expr += x
                 else:
                     expr += 1 - x
