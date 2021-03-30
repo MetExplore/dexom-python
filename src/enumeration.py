@@ -8,6 +8,7 @@ import time
 from imat import imat
 from result_functions import get_binary_sol
 
+
 class RxnEnumSolution(object):
     def __init__(self,
                  all_solutions, unique_solutions, all_binary, unique_binary, all_reactions=None, unique_reactions=None):
@@ -321,11 +322,20 @@ def maxdist(model, reaction_weights, epsilon=1., threshold=1e-4, tlim=None, tol=
     return solution
 
 
-def diversity_enum(model, reaction_weights, start_sol, eps=1., thr=1e-4, tlim=None, tol=1e-7, obj_tol=1e-3, maxi=10):
+def diversity_enum(model, reaction_weights, prev_sol, eps=1., thr=1e-4, tlim=None, tol=1e-7, obj_tol=1e-3, maxi=10):
 
-    start_sol_bin = get_binary_sol(start_sol, thr)
-    all_solutions = [start_sol]
-    all_binary = [start_sol_bin]
+    prev_sol_bin = get_binary_sol(prev_sol, thr)
+    all_solutions = [prev_sol]
+    all_binary = [prev_sol_bin]
 
-    solution = EnumSolution(all_solutions, all_binary, start_sol.objective_value)
+    # randomly selecting
+    tempweights = {}
+    randomnumber = 1
+    for rid, weight in six.iteritems(reaction_weights):
+        rid_loc = prev_sol.fluxes.index.get_loc(rid)
+        if randomnumber > 0.9:
+            tempweights[rid] = weight
+    objective = create_maxdist_objective(model, tempweights, prev_sol, prev_sol_bin)
+
+    solution = EnumSolution(all_solutions, all_binary, all_solutions[0].objective_value)
     return solution
