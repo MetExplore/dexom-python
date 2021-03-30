@@ -1,6 +1,6 @@
 
 import argparse
-from cobra.io import load_json_model, read_sbml_model
+from cobra.io import load_json_model, read_sbml_model, load_matlab_model
 from model_functions import load_reaction_weights, clean_model
 from imat import imat
 import numpy as np
@@ -54,8 +54,10 @@ if __name__=="__main__":
         model = read_sbml_model(args.model)
     elif fileformat == '.json':
         model = load_json_model(args.model)
+    elif fileformat == ".mat":
+        model = load_matlab_model(args.model)
     else:
-        print("Only SBML and JSON formats are supported for the models")
+        print("Only SBML, JSON, and Matlab formats are supported for the models")
         model = None
 
     reaction_weights = {}

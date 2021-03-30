@@ -2,4 +2,5 @@ cobra
 numpy
 six
 sympy
+scipy
 matplotlib

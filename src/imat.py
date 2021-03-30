@@ -5,7 +5,7 @@ from sympy import Add, sympify
 from numpy import abs
 
 import argparse
-from cobra.io import load_json_model, read_sbml_model
+from cobra.io import load_json_model, read_sbml_model, load_matlab_model
 from model_functions import load_reaction_weights
 from result_functions import write_solution
 from pathlib import Path
@@ -162,8 +162,10 @@ if __name__ == "__main__":
         model = read_sbml_model(args.model)
     elif fileformat == '.json':
         model = load_json_model(args.model)
+    elif fileformat == ".mat":
+        model = load_matlab_model(args.model)
     else:
-        print("Only SBML and JSON formats are supported for the models")
+        print("Only SBML, JSON, and Matlab formats are supported for the models")
         model = None
 
     try:
