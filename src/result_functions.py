@@ -47,7 +47,7 @@ def read_solution(filename):
 
 def write_dict_from_frame(df, out_file="dict.txt"):
     """
-    When given a pandas DataFrame, writes it into a file as a dictionary (row 1: index, row 2: values, etc.)
+    When given a pandas DataFrame, writes it into a file as a dictionary (row 1: index, row 2: values)
 
     Parameters
     ----------
@@ -171,10 +171,10 @@ if __name__ == "__main__":
 
     all_files = Path("min_iMM1865/perms_to_be_analyzed").glob("*.txt")
 
-    imat_sol = "min_iMM1865/imat_e4f1.txt"
+    imat_sol = "min_iMM1865/imat_mp.txt"
     solution, binary = read_solution(imat_sol)
 
-    mypath = "permutation/e4f1"
+    mypath = "permutation/mp"
 
     subs = pd.read_csv("min_iMM1865/min_iMM1865_subsystem.csv")
 
