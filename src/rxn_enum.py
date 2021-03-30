@@ -1,8 +1,8 @@
 
 import argparse
 from cobra.io import load_json_model
-from models import load_reaction_weights, read_solution
-from iMAT import imat
+from model_functions import load_reaction_weights, read_solution
+from imat import imat
 
 
 if __name__=="__main__":

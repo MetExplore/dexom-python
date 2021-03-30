@@ -1,5 +1,4 @@
 
-import six
 from csv import DictReader, DictWriter
 import numpy as np
 import pandas as pd
@@ -8,66 +7,9 @@ from cobra import Solution
 import matplotlib.pyplot as plt
 
 
-def clean_model(model, reaction_weights=None, full=False):
-    """
-    removes variables and constraints added to the model.solver during imat
-
-    Parameters
-    ----------
-    model: cobra.Model
-        a model that has previously been passed to imat
-    reaction_weights: dict
-        the same reaction weights used for the imat
-    full: bool
-        the same bool used for the imat calculation
-    """
-    if full:
-        for rxn in model.reactions:
-            rid = rxn.id
-            if "x_"+rid in model.solver.variables:
-                model.solver.remove(model.solver.variables["x_"+rid])
-                model.solver.remove(model.solver.variables["xf_"+rid])
-                model.solver.remove(model.solver.variables["xr_"+rid])
-                model.solver.remove(model.solver.constraints["xr_"+rid+"_upper"])
-                model.solver.remove(model.solver.constraints["xr_"+rid+"_lower"])
-                model.solver.remove(model.solver.constraints["xf_"+rid+"_upper"])
-                model.solver.remove(model.solver.constraints["xf_"+rid+"_lower"])
-    else:
-        for rid, weight in six.iteritems(reaction_weights):
-            if weight > 0. and "rh_"+rid+"_pos" in model.solver.variables:
-                model.solver.remove(model.solver.variables["rh_"+rid+"_pos"])
-                model.solver.remove(model.solver.variables["rh_"+rid+"_neg"])
-                model.solver.remove(model.solver.constraints["rh_"+rid+"_pos_bound"])
-                model.solver.remove(model.solver.constraints["rh_"+rid+"_neg_bound"])
-            elif weight < 0. and "rl_"+rid in model.solver.variables:
-                model.solver.remove(model.solver.variables["rl_"+rid])
-                model.solver.remove(model.solver.constraints["rl_"+rid+"_upper"])
-                model.solver.remove(model.solver.constraints["rl_"+rid+"_lower"])
-
-
-def load_reaction_weights(filename):
-    """
-    loads reaction weights from a .csv file
-    Parameters
-    ----------
-    filename: str
-        the path + name of a .csv file containing reaction weights with the following format:
-        first row = reaction names, second row = weights
-
-    Returns
-    -------
-    reaction_weights: dict
-    """
-    reaction_weights = {}
-
-    with open(filename, newline="") as file:
-        read = DictReader(file)
-        for row in read:
-            reaction_weights = row
-    for k, v in reaction_weights.items():
-        reaction_weights[k] = float(v)
-
-    return reaction_weights
+def get_binary_sol(solution, threshold):
+    binary = [1 if np.abs(flux) >= threshold else 0 for flux in solution.fluxes]
+    return binary
 
 
 def write_solution(solution, threshold, filename):
@@ -120,7 +62,7 @@ def write_dict_from_frame(df, out_file="dict.txt"):
         writer.writerow(dictionary)
 
 
-def analyze_permutation(perm_sols, imat_sol, out_path="permutation", sub_frame=None, sub_list=None):
+def analyze_permutation(perm_sols, imat_sol, sub_frame=None, sub_list=None, savefiles=True, out_path="permutation"):
     """
 
     Parameters
@@ -183,15 +125,20 @@ def analyze_permutation(perm_sols, imat_sol, out_path="permutation", sub_frame=N
         hist_pathways[sub] = data.values
         subforsave = sub.replace("/", " ")
         plt.clf()
-        fig = data.hist(bins=np.arange(min(data), max(data) + 1)).get_figure()
+        fig = data.hist(bins=np.arange(min(data), max(data) + 2)).get_figure()
         histograms.append((fig, out_path+"_histogram "+subforsave+".png"))
-        fig.savefig(out_path+"_histogram "+subforsave+".png")
+        if savefiles:
+            fig.savefig(out_path+"_histogram "+subforsave+".png")
 
         # count number of active reactions per pathway
         sol_pathways[sub] = binary[rxns].sum()
 
         # compute normalized active reactions per pathway & pvalues
-        pvalues["normal"][sub] = (sol_pathways[sub] - data.mean()) / data.std()
+        temp = data.std()
+        if temp == 0.:
+            temp = 1.
+        pvalues["normal"][sub] = (sol_pathways[sub] - data.mean()) / temp
+
         temp = min(data[data <= sol_pathways[sub]].count() / perms, data[data >= sol_pathways[sub]].count() / perms)
         if temp == 0.:
             temp = 0.001
@@ -203,20 +150,16 @@ def analyze_permutation(perm_sols, imat_sol, out_path="permutation", sub_frame=N
     for i in range(len(pvalues)):
         pval_ax.annotate(pvalues.index[i], (pvalues["normal"][i], pvalues["-log10(p)"][i]))
     pval_fig = pval_ax.get_figure()
-    pval_fig.savefig(out_path + "_scatterplot.png")
+    if savefiles:
+        pval_fig.savefig(out_path + "_scatterplot.png")
 
-    # save files to path
-    full_results.to_csv(out_path+"_all_solutions.txt", index=False)
-    rxn_freq.to_csv(out_path+"_reaction_frequency.csv", sep=";")
-    path_max_act.to_csv(out_path+"_pathway_maximal_frequency.csv", sep=";")
+        # save files to path
+        full_results.to_csv(out_path+"_all_solutions.txt", index=False)
+        rxn_freq.to_csv(out_path+"_reaction_frequency.csv", sep=";")
+        path_max_act.to_csv(out_path+"_pathway_maximal_frequency.csv", sep=";")
 
-    sol_pathways.to_csv(out_path+"_pathways.csv", sep=";")
-    pvalues.to_csv(out_path+"_pvalues.csv", sep=";")
-
-
-
-    # for fig, filename in histograms:
-
+        sol_pathways.to_csv(out_path+"_pathways.csv", sep=";")
+        pvalues.to_csv(out_path+"_pvalues.csv", sep=";")
 
     return full_results
 
@@ -228,13 +171,30 @@ if __name__ == "__main__":
 
     all_files = Path("min_iMM1865/perms_to_be_analyzed").glob("*.txt")
 
-    imat_sol = "min_iMM1865/imat_p53_new.txt"
+    imat_sol = "min_iMM1865/imat_e4f1.txt"
+    solution, binary = read_solution(imat_sol)
 
-    mypath = "permutation_new/p53_"
+    mypath = "permutation/e4f1"
 
     subs = pd.read_csv("min_iMM1865/min_iMM1865_subsystem.csv")
 
     with open("min_iMM1865/subsystems.txt", "r") as file:
         subsystems = file.read().split(";")
 
-    full_results = analyze_permutation(all_files, imat_sol, out_path=mypath, sub_frame=subs, sub_list=subsystems)
+    full_results = analyze_permutation(all_files, imat_sol, sub_frame=subs, sub_list=subsystems,
+                                       savefiles=True, out_path=mypath)
+
+    # all_list = []
+    # for filename in all_files:
+    #     df = pd.read_csv(filename, index_col=None, header=0)
+    #     all_list.append(df)
+    # weights = pd.concat(all_list, axis=0, ignore_index=True)
+    # print(weights)
+    # print(weights.drop_duplicates())
+
+    # large_pathways = []
+    # for sub in subsystems:
+    #     temp = subs[subs.isin([sub])].stack().count()
+    #     if temp >=15:
+    #         large_pathways.append(sub)
+    # print(large_pathways)

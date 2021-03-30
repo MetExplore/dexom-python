@@ -1,8 +1,8 @@
 
 import argparse
 from cobra.io import load_json_model, read_sbml_model
-from models import load_reaction_weights, read_solution, write_solution, clean_model
-from iMAT import imat
+from model_functions import load_reaction_weights, clean_model
+from imat import imat
 import numpy as np
 from pathlib import Path
 import time

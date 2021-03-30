@@ -6,7 +6,8 @@ from numpy import abs
 
 import argparse
 from cobra.io import load_json_model, read_sbml_model
-from models import load_reaction_weights, write_solution
+from model_functions import load_reaction_weights
+from result_functions import write_solution
 from pathlib import Path
 
 
