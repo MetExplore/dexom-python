@@ -277,7 +277,7 @@ def create_maxdist_objective(model, reaction_weights, prev_sol, prev_sol_bin):
     return objective
 
 
-def maxdist(model, reaction_weights, epsilon=1., threshold=1e-4, tlim=None, tol=1e-7, obj_tol=1e-3, maxiter=10):
+def maxdist(model, reaction_weights, epsilon=1., threshold=1e-4, tlim=None, tol=1e-6, obj_tol=1e-3, maxiter=10):
 
     full = False
     prev_sol = imat(model, reaction_weights,
@@ -287,6 +287,10 @@ def maxdist(model, reaction_weights, epsilon=1., threshold=1e-4, tlim=None, tol=
     all_solutions = [prev_sol]
     prev_sol_bin = get_binary_sol(prev_sol, threshold)
     all_binary = [prev_sol_bin]
+
+    model.solver.configuration.timeout = tlim
+    model.tolerance = tol
+    model.solver.problem.parameters.mip.tolerances.mipgap.set(1e-3)
 
     # adding the optimality constraint: the new objective value must be equal to the previous objective value
 
@@ -322,20 +326,67 @@ def maxdist(model, reaction_weights, epsilon=1., threshold=1e-4, tlim=None, tol=
     return solution
 
 
-def diversity_enum(model, reaction_weights, prev_sol, eps=1., thr=1e-4, tlim=None, tol=1e-7, obj_tol=1e-3, maxi=10):
+def diversity_enum(model, reaction_weights, prev_sol, thr=1e-4, tlim=None, tol=1e-7, obj_tol=1e-3, maxi=10):
 
     prev_sol_bin = get_binary_sol(prev_sol, thr)
     all_solutions = [prev_sol]
     all_binary = [prev_sol_bin]
+    icut_constraints = []
+
+    model.solver.configuration.timeout = tlim
+    model.tolerance = tol
+    model.solver.problem.parameters.mip.tolerances.mipgap.set(1e-3)
+
+    # preserve the optimality of the solution
+    opt_const = create_maxdist_constraint(model, reaction_weights, prev_sol, obj_tol, name="dexom_optimality")
+    model.solver.add(opt_const)
 
     # randomly selecting
-    tempweights = {}
-    randomnumber = 1
-    for rid, weight in six.iteritems(reaction_weights):
-        rid_loc = prev_sol.fluxes.index.get_loc(rid)
-        if randomnumber > 0.9:
-            tempweights[rid] = weight
-    objective = create_maxdist_objective(model, tempweights, prev_sol, prev_sol_bin)
+    for idx in range(1, maxi+1):
+        t0 = time.perf_counter()
+        # adding the icut constraint to prevent the algorithm from finding the same solutions
+        const = create_icut_constraint(model, reaction_weights, thr, prev_sol, prev_sol_bin, name="icut_"+str(idx))
+        model.solver.add(const)
+        icut_constraints.append(const)
 
+        tempweights = {}
+        randomnumbers = np.random.random(len(reaction_weights)) * idx
+        i = 0
+        for rid, weight in six.iteritems(reaction_weights):
+            rid_loc = prev_sol.fluxes.index.get_loc(rid)
+            if randomnumbers[i] > 0.9:
+                tempweights[rid] = weight
+            i += 1
+        objective = create_maxdist_objective(model, tempweights, prev_sol, prev_sol_bin)
+        model.objective = objective
+
+        try:
+            with model:
+                prev_sol = model.optimize()
+            prev_sol_bin = get_binary_sol(prev_sol, thr)
+            all_solutions.append(prev_sol)
+            all_binary.append(prev_sol_bin)
+        except:
+            print("An error occured in iteration %i of dexom, check if all feasible solutions have been found" % (i + 1))
+            break
+        t1 = time.perf_counter()
+        print("time for iteration "+str(idx+1)+": ", t1-t0)
+
+    model.solver.remove([const for const in icut_constraints if const in model.solver.constraints])
+    model.solver.remove(opt_const)
     solution = EnumSolution(all_solutions, all_binary, all_solutions[0].objective_value)
+
     return solution
+
+
+if __name__== "__main__":
+    from cobra.io import load_json_model
+    from model_functions import load_reaction_weights
+    from imat import imat
+
+    model = load_json_model("example_models/small4M.json")
+    reaction_weights = load_reaction_weights("example_models/small4M_weights.csv")
+
+    imat_solution = imat(model, reaction_weights)
+
+    dexom_sol = diversity_enum(model, reaction_weights, imat_solution)
