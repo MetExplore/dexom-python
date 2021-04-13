@@ -17,7 +17,7 @@ def permutation_test(model, reaction_weights=None, nperm=10, epsilon=1, threshol
     for i in range(nperm):
         t1 = time.perf_counter()
         weights = np.array(list(reaction_weights.values()))
-        weights[weights != 0] = rng.permutation(weights[weights != 0])
+        weights = rng.permutation(weights)
         reaction_weights = dict(zip(reaction_weights.keys(), list(weights)))
         try:
             solution = imat(model, reaction_weights, epsilon, threshold, timelimit, tolerance)
