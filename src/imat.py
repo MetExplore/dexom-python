@@ -9,9 +9,11 @@ from cobra.io import load_json_model, read_sbml_model, load_matlab_model
 from model_functions import load_reaction_weights
 from result_functions import write_solution
 from pathlib import Path
+import time
 
 
-def imat(model, reaction_weights={}, epsilon=1., threshold=1e-1, timelimit=None, tolerance=1e-7, full=False):
+def imat(model, reaction_weights={}, epsilon=1., threshold=1e-1, timelimit=None, feasibility=1e-6, mipgaptol=1e-3,
+         full=False):
     """
     Integrative Metabolic Analysis Tool
 
@@ -27,11 +29,14 @@ def imat(model, reaction_weights={}, epsilon=1., threshold=1e-1, timelimit=None,
         activation threshold for all reactions
     timelimit: int
         time limit (in seconds) for the model.optimize() call
-    tolerance: float
-        tolerance for feasibility, integrality and optimality of the solution
+    feasibility: float
+        feasibility tolerance of the solver
+    mipgaptol: float
+        MIP Gap tolerance of the solver
     full: bool
         if True, apply constraints on all reactions. if False, only on reactions with non-zero weights
     """
+
 
     assert isinstance(model, Model)
 
@@ -39,6 +44,8 @@ def imat(model, reaction_weights={}, epsilon=1., threshold=1e-1, timelimit=None,
     x_variables = list()
     y_weights = list()
     x_weights = list()
+
+    t0 = time.perf_counter()
 
     try:
         if full:  # for the full_icut implementation
@@ -132,11 +139,17 @@ def imat(model, reaction_weights={}, epsilon=1., threshold=1e-1, timelimit=None,
         objective = model.solver.interface.Objective(Add(*rh_objective) + Add(*rl_objective), direction="max")
         model.objective = objective
 
+        t1 = time.perf_counter()
+
         model.solver.configuration.timeout = timelimit
-        model.tolerance = tolerance
+        model.tolerance = feasibility
+        model.solver.problem.parameters.mip.tolerances.mipgap.set(mipgaptol)
 
         with model:
             solution = model.optimize()
+            t2 = time.perf_counter()
+            print(t1-t0, "s spent before optimize call")
+            print(t2-t1, "s spent on optimize call")
             return solution
     finally:
         pass
@@ -152,7 +165,8 @@ if __name__ == "__main__":
     parser.add_argument("--epsilon", type=float, default=1., help="Activation threshold for highly expressed reactions")
     parser.add_argument("--threshold", type=float, default=1e-1, help="Activation threshold for all reactions")
     parser.add_argument("-t", "--timelimit", type=int, default=None, help="Solver time limit")
-    parser.add_argument("--tol", type=float, default=1e-7, help="Solver tolerance")
+    parser.add_argument("--tol", type=float, default=1e-6, help="Solver feasibility tolerance")
+    parser.add_argument("--mipgap", type=float, default=1e-3, help="Solver MIP gap tolerance")
     parser.add_argument("-o", "--output", default="imat_solution.txt", help="Name of the output file")
 
     args = parser.parse_args()
@@ -177,6 +191,7 @@ if __name__ == "__main__":
     if args.reaction_weights:
         reaction_weights = load_reaction_weights(args.reaction_weights)
 
-    solution = imat(model, reaction_weights, epsilon=args.epsilon, threshold=args.threshold, timelimit=args.timelimit, tolerance=args.tol)
+    solution = imat(model, reaction_weights, epsilon=args.epsilon, threshold=args.threshold, timelimit=args.timelimit,
+                    feasibility=args.tol, migaptol=args.mipgap)
 
     write_solution(solution, args.threshold, args.output)
