@@ -5,6 +5,7 @@ from csv import DictReader, DictWriter
 from cobra.io import load_json_model, read_sbml_model, load_matlab_model
 from sympy import Add, Mul, sympify
 from sympy.functions.elementary.miscellaneous import Max, Min
+import re
 
 
 def clean_model(model, reaction_weights=None, full=False):
@@ -70,7 +71,6 @@ def load_reaction_weights(filename):
 
 
 def create_weights_from_gpr(model, gene_file):
-    import re
     reaction_weights = {}
 
     genes = pd.read_csv(gene_file, sep=";")
@@ -78,58 +78,69 @@ def create_weights_from_gpr(model, gene_file):
     gene_weights.index = genes["entrez"]
     gene_weights = gene_weights["t"].to_dict()
     gene_weights = {"HGNC_"+str(k): float(v) for k, v in gene_weights.items()}
-    symbols = ["+", "*", "(", ")"]
 
     for rxn in model.reactions:
         if "GENE ASSOCIATION" in rxn.notes:
+            if rxn.id == "2HBO":
+                print("now")
             rxnnotes = rxn.notes["GENE ASSOCIATION"].replace(":", "_")
             expr_split = rxnnotes.split()
             rxnnotes = re.sub('and|or|\(|\)', '', rxnnotes)
             gen_list = rxnnotes.split()
             new_weights = {g: gene_weights.get(g, 0) for g in gen_list}
-            weight = sympify(" ".join(expr_split)).replace(Mul, Min).replace(Add, Max).subs(new_weights).evalf()
+            expression = " ".join(expr_split).replace("or", "*").replace("and", "+")
+            weight = sympify(expression).replace(Mul, Min).replace(Add, Max).subs(new_weights).evalf()
             reaction_weights[rxn.id] = weight
 
-            # rxnnotes = rxn.notes["GENE ASSOCIATION"].replace('(', '( ').replace(')', ' )').replace("or", "+").replace(
-            #     "and", "*").replace(":", "_")
+            ### the following code is an attempt to remove missing gene scores instead of inserting 0
+
+            # symbols = ["+", "*", "(", ")"]
+            # rxnnotes = rxn.notes["GENE ASSOCIATION"].replace('(', '( ').replace(')', ' )').replace("or", "*").replace(
+            #     "and", "+").replace(":", "_")
             # expression_split = rxnnotes.split()
             # new_expression = rxnnotes.split()
-            #if rxn.id == "FAOXC180x":
-
-            # for temp in expression_split:
-            #     if (temp not in symbols) and (temp not in gene_weights.keys()):
-            #         idx = new_expression.index(temp)
-            #         if len(new_expression) == 1:
-            #             new_expression.pop()
-            #         elif idx == len(new_expression)-1:
-            #             new_expression.pop(-1)
-            #             if len(new_expression) > 0:
+            # if rxn.id == "FAOXC180x":
+            #     print(rxn.id)
+            #     for temp in expression_split:
+            #         if (temp not in symbols) and (temp not in gene_weights.keys()):
+            #             idx = new_expression.index(temp)
+            #             if len(new_expression) == 1:
+            #                 new_expression.pop()
+            #             elif idx == len(new_expression)-1:
             #                 new_expression.pop(-1)
-            #         elif new_expression[idx + 1] == ")":
-            #             new_expression.pop(idx)
-            #             p = new_expression.pop(idx - 1)
-            #             if p == "(":
-            #                 new_expression.pop(idx - 1)
             #                 if new_expression:
-            #                     new_expression.pop(idx - 2)
-            #         else:
-            #             new_expression.pop(idx)
-            #             new_expression.pop(idx)
-            # weight = 0.
-            # if new_expression:
-            #     weight = sympify(" ".join(new_expression)).replace(Mul, Min).replace(Add, Max).subs(gene_weights).evalf()
-            # reaction_weights[rxn.id] = weight
+            #                     new_expression.pop(-1)
+            #             elif new_expression[idx + 1] == ")":
+            #                 new_expression.pop(idx)
+            #                 p = new_expression.pop(idx - 1)
+            #                 if p == "(":
+            #                     if len(new_expression) == 1:
+            #                         new_expression.pop()
+            #                     else:
+            #                         p = new_expression.pop(idx)
+            #                         if idx > 2 and p != ")":
+            #                             new_expression.pop(idx - 2)
+            #                         elif p != ")":
+            #                             new_expression.pop(0)
+            #             else:
+            #                 new_expression.pop(idx)
+            #                 new_expression.pop(idx)
+            #     weight = 0.
+            #     if new_expression:
+            #         new_expression = " ".join(new_expression).replace("( ) +", "").replace("( ) *", "")
+            #         weight = sympify(new_expression).replace(Mul, Min).replace(Add, Max).subs(gene_weights).evalf()
+            #     reaction_weights[rxn.id] = weight
 
     return gene_weights, reaction_weights
 
 
 if __name__ == "__main__":
-    jul_model = read_sbml_model("recon2_2/Recon2.2_reimported2_test.xml")
 
+    jul_model = read_sbml_model("recon2_2/Recon2.2_reimported2_test.xml")
     # old_model = read_sbml_model("recon2_2/Recon2.2_Swainton2016.xml")
     # mat_model = load_matlab_model("recon2_2/Recon2.2.mat")
 
-    filename = "recon2_2/sign_MUvsWT_ids_p01.csv"
+    filename = "recon2_2/sign_MUvsWT_ids_p005.csv"
 
     model = jul_model
     gen_wei, rec_wei = create_weights_from_gpr(model, filename)
@@ -139,67 +150,10 @@ if __name__ == "__main__":
 
     comp_wei = load_reaction_weights("recon2_2/weights_pval-005.txt")
 
-    print(len(rec_wei))
-    print(list(rec_wei.values()).count(0))
+    print("total reaction scores: ", len(rec_wei))
+    print("non-zero reaction scores: ", len(rec_wei)-list(rec_wei.values()).count(0))
 
-    print("comparison")
-    print(len(comp_wei))
-    print(list(comp_wei.values()).count(0))
+    print("comparison with Pablo's file")
+    print("total reaction scores: ", len(comp_wei))
+    print("non-zero reaction scores: ", len(comp_wei)-list(comp_wei.values()).count(0))
 
-    # rxnnotes = "B:1 and (C:2 or D:4) or (E:5 and A:1)"
-    # gene_weights = {"A:1": 1, "C:2": 2, "E:5": -3}
-    # new_weights = {g.replace(":", "_"): gene_weights[g] for g in gene_weights.keys()}
-    #
-    # rxnnotes = rxnnotes.replace('(', '( ').replace(')', ' )').replace("or", "+").replace("and", "*").replace(":", "_")
-    # expression_split = rxnnotes.split()
-    # new_expression = rxnnotes.split()
-    # symbols = ["+", "*", "(", ")"]
-    # for temp in expression_split:
-    #     if (temp not in symbols) and (temp not in new_weights.keys()):
-    #         idx = new_expression.index(temp)
-    #         if temp == expression_split[-1]:
-    #             new_expression.pop(idx)
-    #         elif new_expression[idx+1] == ")":
-    #             new_expression.pop(idx)
-    #             p = new_expression.pop(idx-1)
-    #             if p == "(":
-    #                 new_expression.pop(idx-1)
-    #                 if new_expression:
-    #                     new_expression.pop(idx-1)
-    #         else:
-    #             new_expression.pop(idx)
-    #             new_expression.pop(idx)
-    # weight = 0.
-    # if new_expression:
-    #     weight = sympify(" ".join(new_expression)).replace(Mul, Min).replace(Add, Max).subs(new_weights).evalf()
-    # print(weight)
-
-    ######
-    #
-    # expression_split = rxnnotes.split()
-    # new_expression = rxnnotes.split()
-    # for temp in expression_split:
-    #     if temp != "or" and temp != "and":
-    #         idx = new_expression.index(temp)
-    #         if temp.strip("()") in gene_weights.keys():
-    #             new_expression[idx] = temp.replace(temp.strip("()"), str(gene_weights[temp.strip("()")]))
-    #         elif idx == 0:
-    #             new_expression.pop(0)
-    #             new_expression.pop(0)
-    #             if "(" in temp:
-    #                 new_expression[0] = '(' + new_expression[0]
-    #         elif "(" in temp and ")" in temp:
-    #             new_expression.pop(idx)
-    #             new_expression.pop(idx)
-    #         elif "(" in temp:
-    #             new_expression.pop(idx)
-    #             new_expression.pop(idx)
-    #             new_expression[idx] = '(' + new_expression[idx]
-    #         elif ")" in temp:
-    #             new_expression.pop(idx)
-    #             new_expression.pop(idx-1)
-    #             new_expression[idx-2] = new_expression[idx-2] + ')'
-    #         else:
-    #             new_expression.pop(idx)
-    #             new_expression.pop(idx)
-    # expression = " ".join(new_expression)
