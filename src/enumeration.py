@@ -265,14 +265,14 @@ def create_maxdist_objective(model, reaction_weights, prev_sol, prev_sol_bin):
             y_pos = model.solver.variables["rh_" + rid + "_pos"]
             if prev_sol_bin[rid_loc] == 1:
                 expr += y_neg + y_pos
-            else:
-                expr += 1 - (y_neg + y_pos)
+            # else:
+            #     expr += 1 - (y_neg + y_pos)
         elif weight < 0:
             x = model.solver.variables["rl_" + rid]
             if prev_sol_bin[rid_loc] == 1:
                 expr += 1 - x
-            else:
-                expr += x
+            # else:
+            #     expr += x
     objective = model.solver.interface.Objective(expr, direction="min")
     return objective
 
@@ -302,14 +302,12 @@ def maxdist(model, reaction_weights, prev_sol, threshold=1e-4, obj_tol=1e-3, max
         # defining the objective: minimize the number of overlapping ones and zeros
         objective = create_maxdist_objective(model, reaction_weights, prev_sol, prev_sol_bin)
         model.objective = objective
-        print(objective)
         try:
             with model:
                 prev_sol = model.optimize()
             prev_sol_bin = get_binary_sol(prev_sol, threshold)
             all_solutions.append(prev_sol)
             all_binary.append(prev_sol_bin)
-            print(prev_sol)
         except:
             print("An error occured in iteration %i of maxdist, check if all feasible solutions have been found" % (i+1))
             break
@@ -322,7 +320,7 @@ def maxdist(model, reaction_weights, prev_sol, threshold=1e-4, obj_tol=1e-3, max
     return solution
 
 
-def diversity_enum(model, reaction_weights, prev_sol, thr=1e-4, obj_tol=1e-3, maxiter=10):
+def diversity_enum(model, reaction_weights, prev_sol, thr=1e-4, obj_tol=1e-3, maxiter=10, dist_anneal=0.995):
 
     prev_sol_bin = get_binary_sol(prev_sol, thr)
     all_solutions = [prev_sol]
@@ -340,27 +338,25 @@ def diversity_enum(model, reaction_weights, prev_sol, thr=1e-4, obj_tol=1e-3, ma
         model.solver.add(const)
         icut_constraints.append(const)
 
-        # randomly selecting
+        # randomly selecting reactions which were active in the previous solution
         tempweights = {}
-        randomnumbers = np.random.random(len(reaction_weights)) * idx
         i = 0
         for rid, weight in six.iteritems(reaction_weights):
             rid_loc = prev_sol.fluxes.index.get_loc(rid)
-            if randomnumbers[i] > 0.9:
+            if prev_sol_bin[rid_loc] == 1 and np.random.random() > dist_anneal**idx:
                 tempweights[rid] = weight
-            i += 1
+                i += 1
+        print("number of reactions picked: ", i)
         objective = create_maxdist_objective(model, tempweights, prev_sol, prev_sol_bin)
         model.objective = objective
-        print(objective)
         try:
             with model:
                 prev_sol = model.optimize()
             prev_sol_bin = get_binary_sol(prev_sol, thr)
             all_solutions.append(prev_sol)
             all_binary.append(prev_sol_bin)
-            print(prev_sol)
         except:
-            print("An error occured in iteration %i of dexom, check if all feasible solutions have been found" % (i))
+            print("An error occured in iteration %i of dexom, check if all feasible solutions have been found" % (idx))
             break
         t1 = time.perf_counter()
         print("time for iteration "+str(idx)+": ", t1-t0)
@@ -372,15 +368,33 @@ def diversity_enum(model, reaction_weights, prev_sol, thr=1e-4, obj_tol=1e-3, ma
 
 
 if __name__ == "__main__":
-    from cobra.io import load_json_model
+    from cobra.io import load_json_model, read_sbml_model, load_matlab_model
     from model_functions import load_reaction_weights
     from imat import imat
 
-    model = load_json_model("example_models/small4M.json")
-    reaction_weights = load_reaction_weights("example_models/small4M_weights.csv")
+    # model = load_json_model("example_models/small4M.json")
+    # reaction_weights = load_reaction_weights("example_models/small4M_weights.csv")
+    model = read_sbml_model("min_iMM1865/min_iMM1865.xml")
+    reaction_weights = load_reaction_weights("min_iMM1865/min_iMM1865_p53_weights.csv")
 
     imat_solution = imat(model, reaction_weights)
+    print("\nstarting maxdist")
+    maxdist_sol = maxdist(model, reaction_weights, imat_solution, maxiter=10)
     print("\n")
-    maxdist_sol = maxdist(model, reaction_weights, imat_solution, maxiter=3)
+    dexom_sol = diversity_enum(model, reaction_weights, imat_solution, maxiter=10, dist_anneal=0.1)
+    print("\nstarting dexom")
+    for idx in range(len(maxdist_sol.binary)-1):
+        hamming = sum(1 for x, y in zip(maxdist_sol.binary[idx], maxdist_sol.binary[idx+1]) if x != y)
+        print(idx+1, "maxdist hamming: ", hamming)
     print("\n")
-    dexom_sol = diversity_enum(model, reaction_weights, imat_solution, maxiter=3)
+    for idx in range(len(dexom_sol.binary)-1):
+        hamming = sum(1 for x, y in zip(dexom_sol.binary[idx], dexom_sol.binary[idx + 1]) if x != y)
+        print(idx+1, "dexom hamming: ", hamming)
+
+    with open("enum_maxdist_solutions.txt", "w+") as file:
+        for sol in maxdist_sol.binary:
+            file.write(",".join(map(str, sol))+"\n")
+
+    with open("enum_dexom_solutions.txt", "w+") as file:
+        for sol in dexom_sol.binary:
+            file.write(",".join(map(str, sol))+"\n")
