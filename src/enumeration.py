@@ -415,3 +415,28 @@ if __name__ == "__main__":
     with open("enum_dexom_solutions.csv", "w+") as file:
         for sol in dexom_sol.binary:
             file.write(",".join(map(str, sol))+"\n")
+
+
+    ### dexom result analysis
+
+    df = pandas.read_csv("enum_dexom_solutions.csv", names=list(range(8829)))
+    df = df.T
+    avg_pairwise = []
+    avg_near = []
+    for x in df:
+        h = 0
+        n = []
+        for y in df:
+            temp = sum(abs(df[x]-df[y]))
+            if y < x:
+                h += temp
+                n.append(temp)
+        if x > 0:
+            avg_pairwise.append(h/x)
+            avg_near.append(min(n)/x)
+
+    x = range(100)
+    plt.plot(x, avg_pairwise, 'r')
+    plt.show()
+    plt.plot(x, avg_near, 'g')
+    plt.show()
