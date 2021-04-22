@@ -45,23 +45,6 @@ def read_solution(filename):
     return solution, binary
 
 
-def write_dict_from_frame(df, out_file="dict.txt"):
-    """
-    When given a pandas DataFrame, writes it into a file as a dictionary (row 1: index, row 2: values)
-
-    Parameters
-    ----------
-    df: pandas DataFrame or Series
-    out_file: string
-    """
-    dictionary = df.to_dict()
-
-    with open(out_file, 'w+', newline='') as csvfile:
-        writer = DictWriter(csvfile, fieldnames=dictionary.keys())
-        writer.writeheader()
-        writer.writerow(dictionary)
-
-
 def analyze_permutation(perm_sols, imat_sol, sub_frame=None, sub_list=None, savefiles=True, out_path="permutation"):
     """
 
@@ -166,8 +149,7 @@ def analyze_permutation(perm_sols, imat_sol, sub_frame=None, sub_list=None, save
 
 if __name__ == "__main__":
 
-    df = pd.read_csv("recon2_2/scores-pval-005.csv", index_col=0, sep=",")
-    write_dict_from_frame(df["rxnWeights"], out_file="weights_pval-005.txt")
+    ### permutation result analysis
 
     # all_files = Path("min_iMM1865/perms_to_be_analyzed").glob("*.txt")
     #
@@ -183,7 +165,7 @@ if __name__ == "__main__":
     #
     # full_results = analyze_permutation(all_files, imat_sol, sub_frame=subs, sub_list=subsystems,
     #                                    savefiles=True, out_path=mypath)
-
+    #
     # all_list = []
     # for filename in all_files:
     #     df = pd.read_csv(filename, index_col=None, header=0)
@@ -191,10 +173,35 @@ if __name__ == "__main__":
     # weights = pd.concat(all_list, axis=0, ignore_index=True)
     # print(weights)
     # print(weights.drop_duplicates())
-
+    #
     # large_pathways = []
     # for sub in subsystems:
     #     temp = subs[subs.isin([sub])].stack().count()
     #     if temp >=15:
     #         large_pathways.append(sub)
     # print(large_pathways)
+
+
+    ### dexom result analysis
+
+    df = pd.read_csv("enum_dexom_solutions.csv", names=list(range(8829)))
+    df = df.T
+    avg_pairwise = []
+    avg_near = []
+    for x in df:
+        h = 0
+        n = []
+        for y in df:
+            temp = sum(abs(df[x]-df[y]))
+            if y < x:
+                h += temp
+                n.append(temp)
+        if x > 0:
+            avg_pairwise.append(h/x)
+            avg_near.append(min(n)/x)
+
+    x = range(100)
+    plt.plot(x, avg_pairwise, 'r')
+    plt.show()
+    plt.plot(x, avg_near, 'g')
+    plt.show()

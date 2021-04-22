@@ -249,11 +249,9 @@ def create_maxdist_constraint(model, reaction_weights, prev_sol, obj_tol, name="
             x_weights.append(abs(weight))
 
     lower_opt = prev_sol.objective_value - obj_tol
-    upper_opt = prev_sol.objective_value + obj_tol
     rh_objective = [(y[0] + y[1]) * y_weights[idx] for idx, y in enumerate(y_variables)]
     rl_objective = [x * x_weights[idx] for idx, x in enumerate(x_variables)]
-    opt_const = model.solver.interface.Constraint(Add(*rh_objective) + Add(*rl_objective),
-                                                  lb=lower_opt, name=name)
+    opt_const = model.solver.interface.Constraint(Add(*rh_objective) + Add(*rl_objective), lb=lower_opt, name=name)
     return opt_const
 
 
@@ -322,6 +320,9 @@ def maxdist(model, reaction_weights, prev_sol, threshold=1e-4, obj_tol=1e-3, max
 
 def diversity_enum(model, reaction_weights, prev_sol, thr=1e-4, obj_tol=1e-3, maxiter=10, dist_anneal=0.995):
 
+    times = []
+    selected_recs = []
+
     prev_sol_bin = get_binary_sol(prev_sol, thr)
     all_solutions = [prev_sol]
     all_binary = [prev_sol_bin]
@@ -346,7 +347,8 @@ def diversity_enum(model, reaction_weights, prev_sol, thr=1e-4, obj_tol=1e-3, ma
             if prev_sol_bin[rid_loc] == 1 and np.random.random() > dist_anneal**idx:
                 tempweights[rid] = weight
                 i += 1
-        print("number of reactions picked: ", i)
+        #print("number of reactions picked: ", i)
+        selected_recs.append(i)
         objective = create_maxdist_objective(model, tempweights, prev_sol, prev_sol_bin)
         model.objective = objective
         try:
@@ -360,17 +362,20 @@ def diversity_enum(model, reaction_weights, prev_sol, thr=1e-4, obj_tol=1e-3, ma
             break
         t1 = time.perf_counter()
         print("time for iteration "+str(idx)+": ", t1-t0)
+        times.append(t1-t0)
 
     model.solver.remove([const for const in icut_constraints if const in model.solver.constraints])
     model.solver.remove(opt_const)
     solution = EnumSolution(all_solutions, all_binary, all_solutions[0].objective_value)
-    return solution
+    return solution, times, selected_recs
 
 
 if __name__ == "__main__":
     from cobra.io import load_json_model, read_sbml_model, load_matlab_model
     from model_functions import load_reaction_weights
     from imat import imat
+    import pandas
+    import matplotlib.pyplot as plt
 
     # model = load_json_model("example_models/small4M.json")
     # reaction_weights = load_reaction_weights("example_models/small4M_weights.csv")
@@ -382,25 +387,31 @@ if __name__ == "__main__":
 
     imat_solution = imat(model, reaction_weights, feasibility=1e-6)
 
-    print("\nstarting maxdist")
-    maxdist_sol = maxdist(model, reaction_weights, imat_solution, maxiter=10, obj_tol=1e-3)
-    print("\n")
-    for idx in range(len(maxdist_sol.binary)-1):
-        hamming = sum(1 for x, y in zip(maxdist_sol.binary[idx], maxdist_sol.binary[idx+1]) if x != y)
-        print(idx+1, "maxdist hamming: ", hamming)
-
-    with open("enum_maxdist_solutions.txt", "w+") as file:
-        for sol in maxdist_sol.binary:
-            file.write(",".join(map(str, sol))+"\n")
+    # print("\nstarting maxdist")
+    # maxdist_sol = maxdist(model, reaction_weights, imat_solution, maxiter=10, obj_tol=1e-3)
+    # print("\n")
+    # for idx in range(len(maxdist_sol.binary)-1):
+    #     hamming = sum(1 for x, y in zip(maxdist_sol.binary[idx], maxdist_sol.binary[idx+1]) if x != y)
+    #     print(idx+1, "maxdist hamming: ", hamming)
+    #
+    # with open("enum_maxdist_solutions.txt", "w+") as file:
+    #     for sol in maxdist_sol.binary:
+    #         file.write(",".join(map(str, sol))+"\n")
 
     print("\nstarting dexom")
-    dexom_sol = diversity_enum(model, reaction_weights, imat_solution, maxiter=10, dist_anneal=0.9)
+    dexom_sol, times, selected_recs = diversity_enum(model, reaction_weights, imat_solution, maxiter=100, obj_tol=1e-3, dist_anneal=0.995)
     print("\n")
 
-    for idx in range(len(dexom_sol.binary)-1):
-        hamming = sum(1 for x, y in zip(dexom_sol.binary[idx], dexom_sol.binary[idx + 1]) if x != y)
-        print(idx+1, "dexom hamming: ", hamming)
+    hammings = []
 
-    with open("enum_dexom_solutions.txt", "w+") as file:
+    for idx in range(len(dexom_sol.binary)-1):
+        hamming = sum(1 for x, y in zip(dexom_sol.binary[idx], dexom_sol.binary[idx - 1]) if x != y)
+        #print(idx+1, "dexom hamming: ", hamming)
+        hammings.append(hamming)
+
+    df = pandas.DataFrame({"selected reactions": selected_recs, "time": times, "hamming": hammings})
+    df.to_csv("enum_dexom_results.csv")
+
+    with open("enum_dexom_solutions.csv", "w+") as file:
         for sol in dexom_sol.binary:
             file.write(",".join(map(str, sol))+"\n")
