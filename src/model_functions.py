@@ -45,32 +45,47 @@ def clean_model(model, reaction_weights=None, full=False):
                 model.solver.remove(model.solver.constraints["rl_"+rid+"_lower"])
 
 
-def load_reaction_weights(filename):
+def load_reaction_weights(filename, rxn_names="reactions", weight_names="weights"):
     """
     loads reaction weights from a .csv file
     Parameters
     ----------
     filename: str
-        the path + name of a .csv file containing reaction weights with the following format:
-        first row = reaction names, second row = weights
+        the path + name of a .csv file containing reaction weights
+    rxn_names: str
+        the name of the column containing the reaction names
+    weight_names: str
+        the name of the column containing the weights
 
     Returns
     -------
-    reaction_weights: dict
+    a dict of reaction weights
     """
-    reaction_weights = {}
-
-    with open(filename, newline="") as file:
-        read = DictReader(file)
-        for row in read:
-            reaction_weights = row
-    for k, v in reaction_weights.items():
-        reaction_weights[k] = float(v)
-
-    return reaction_weights
+    df = pd.read_csv(filename)
+    df.index = df[rxn_names]
+    reaction_weights = df[weight_names].to_dict()
+    return {k: float(v) for k, v in reaction_weights.items() if float(v) == float(v)}
 
 
-def create_weights_from_gpr(model, gene_file):
+def save_reaction_weights(reaction_weights, filename):
+    """
+
+    Parameters
+    ----------
+    reaction_weights: dict
+        a dictionary where keys = reaction names and values = weights
+    filename: str
+    Returns
+    -------
+    the reaction_weights dict as a pandas DataFrame
+    """
+    df = pd.DataFrame(reaction_weights.items(), columns=["reactions", "weights"])
+    df.to_csv(filename)
+    df.index = df["reactions"]
+    return df["weights"]
+
+
+def human_weights_from_gpr(model, gene_file):
     reaction_weights = {}
 
     genes = pd.read_csv(gene_file, sep=";")
@@ -81,79 +96,79 @@ def create_weights_from_gpr(model, gene_file):
 
     for rxn in model.reactions:
         if "GENE ASSOCIATION" in rxn.notes:
-            if rxn.id == "2HBO":
-                print("now")
             rxnnotes = rxn.notes["GENE ASSOCIATION"].replace(":", "_")
             expr_split = rxnnotes.split()
             rxnnotes = re.sub('and|or|\(|\)', '', rxnnotes)
-            gen_list = rxnnotes.split()
+            gen_list = set(rxnnotes.split())
             new_weights = {g: gene_weights.get(g, 0) for g in gen_list}
             expression = " ".join(expr_split).replace("or", "*").replace("and", "+")
-            weight = sympify(expression).replace(Mul, Min).replace(Add, Max).subs(new_weights).evalf()
+            weight = sympify(expression).replace(Mul, Max).replace(Add, Min).subs(new_weights, n=21)
             reaction_weights[rxn.id] = weight
+    return reaction_weights
 
-            ### the following code is an attempt to remove missing gene scores instead of inserting 0
 
-            # symbols = ["+", "*", "(", ")"]
-            # rxnnotes = rxn.notes["GENE ASSOCIATION"].replace('(', '( ').replace(')', ' )').replace("or", "*").replace(
-            #     "and", "+").replace(":", "_")
-            # expression_split = rxnnotes.split()
-            # new_expression = rxnnotes.split()
-            # if rxn.id == "FAOXC180x":
-            #     print(rxn.id)
-            #     for temp in expression_split:
-            #         if (temp not in symbols) and (temp not in gene_weights.keys()):
-            #             idx = new_expression.index(temp)
-            #             if len(new_expression) == 1:
-            #                 new_expression.pop()
-            #             elif idx == len(new_expression)-1:
-            #                 new_expression.pop(-1)
-            #                 if new_expression:
-            #                     new_expression.pop(-1)
-            #             elif new_expression[idx + 1] == ")":
-            #                 new_expression.pop(idx)
-            #                 p = new_expression.pop(idx - 1)
-            #                 if p == "(":
-            #                     if len(new_expression) == 1:
-            #                         new_expression.pop()
-            #                     else:
-            #                         p = new_expression.pop(idx)
-            #                         if idx > 2 and p != ")":
-            #                             new_expression.pop(idx - 2)
-            #                         elif p != ")":
-            #                             new_expression.pop(0)
-            #             else:
-            #                 new_expression.pop(idx)
-            #                 new_expression.pop(idx)
-            #     weight = 0.
-            #     if new_expression:
-            #         new_expression = " ".join(new_expression).replace("( ) +", "").replace("( ) *", "")
-            #         weight = sympify(new_expression).replace(Mul, Min).replace(Add, Max).subs(gene_weights).evalf()
-            #     reaction_weights[rxn.id] = weight
+def mouse_weights_from_gpr(model, gene_file):
+    reaction_weights = {}
 
-    return gene_weights, reaction_weights
+    genes = pd.read_csv(gene_file, sep=",")
+    gene_weights = pd.DataFrame(genes["Weight"])
+    gene_weights.index = genes["ID"]
+    gene_weights = gene_weights["Weight"].to_dict()
+    gene_weights = {"g_"+str(k): float(v) for k, v in gene_weights.items()}
+
+    for rxn in model.reactions:
+        if len(rxn.genes) > 0:
+            expr_split = rxn.gene_reaction_rule.split()
+            expr_split = ["g_"+s if s.isdigit() else s for s in expr_split]
+            rxngenes = re.sub('and|or|\(|\)', '', rxn.gene_reaction_rule).split()
+            gen_list = set(["g_"+s for s in rxngenes if s.isdigit()])
+            new_weights = {g: gene_weights.get(g, 0) for g in gen_list}
+            expression = " ".join(expr_split).replace("or", "*").replace("and", "+")
+            weight = sympify(expression, evaluate=False).replace(Mul, Max).replace(Add, Min).subs(new_weights, n=21)
+            reaction_weights[rxn.id] = weight
+    return reaction_weights
 
 
 if __name__ == "__main__":
 
-    jul_model = read_sbml_model("recon2_2/Recon2.2_reimported2_test.xml")
-    # old_model = read_sbml_model("recon2_2/Recon2.2_Swainton2016.xml")
-    # mat_model = load_matlab_model("recon2_2/Recon2.2.mat")
+    # jul_model = read_sbml_model("recon2_2/Recon2.2_reimported2_test.xml")
+    # # old_model = read_sbml_model("recon2_2/Recon2.2_Swainton2016.xml")
+    # # mat_model = load_matlab_model("recon2_2/Recon2.2.mat")
+    #
+    # filename = "recon2_2/sign_MUvsWT_ids_p005.csv"
+    #
+    # model = jul_model
+    # rec_wei = human_weights_from_gpr(model, filename)
+    # print(rec_wei)
+    #
+    # comp_wei = load_reaction_weights("recon2_2/weights_pval-005.txt")
+    #
+    # print("total reaction scores: ", len(rec_wei))
+    # print("non-zero reaction scores: ", len(rec_wei)-list(rec_wei.values()).count(0))
+    #
+    # print("comparison with Pablo's file")
+    # print("total reaction scores: ", len(comp_wei))
+    # print("non-zero reaction scores: ", len(comp_wei)-list(comp_wei.values()).count(0))
 
-    filename = "recon2_2/sign_MUvsWT_ids_p005.csv"
+    # minm = read_sbml_model("min_iMM1865/min_iMM1865.xml")
+    # filename = "min_iMM_synthdata/imm1865_0.25_2.5_cholesterol.csv"
+    # rec_wei = mouse_weights_from_gpr(minm, filename)
+    #
+    # pab_wei = load_reaction_weights("min_iMM_synthdata/imm1865_chol.csv", "Var1", "Var2")
+    #
+    # diff = {k: v-pab_wei[k] for k, v in rec_wei.items()}
+    # print(sum([abs(v) for v in diff.values()]))
+    # # 'r2535'
 
-    model = jul_model
-    gen_wei, rec_wei = create_weights_from_gpr(model, filename)
-    print(gen_wei)
-    print("------------------------")
-    print(rec_wei)
+    weights_1 = load_reaction_weights("min_iMM1865/rxn_scores.csv", "reaction", "p53")
+    weights_2 = load_reaction_weights("min_iMM1865/rxn_scores.csv", "reaction", "e4f1")
+    weights_3 = load_reaction_weights("min_iMM1865/rxn_scores.csv", "reaction", "ep")
+    weights_4 = load_reaction_weights("min_iMM1865/rxn_scores.csv", "reaction", "mp")
+    weights_5 = load_reaction_weights("min_iMM1865/rxn_scores.csv", "reaction", "3f")
 
-    comp_wei = load_reaction_weights("recon2_2/weights_pval-005.txt")
-
-    print("total reaction scores: ", len(rec_wei))
-    print("non-zero reaction scores: ", len(rec_wei)-list(rec_wei.values()).count(0))
-
-    print("comparison with Pablo's file")
-    print("total reaction scores: ", len(comp_wei))
-    print("non-zero reaction scores: ", len(comp_wei)-list(comp_wei.values()).count(0))
+    print(weights_1["ATPasel_1"])
+    print(weights_2["ATPasel_1"])
+    print(weights_3["ATPasel_1"])
+    print(weights_4["ATPasel_1"])
+    print(weights_5["ATPasel_1"])
 

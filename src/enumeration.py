@@ -4,6 +4,7 @@ import numpy as np
 from sympy import sympify, Add
 import six
 import time
+from sympy.core.cache import clear_cache
 
 from imat import imat
 from result_functions import get_binary_sol
@@ -27,7 +28,7 @@ class EnumSolution(object):
         self.objective_value = objective_value
 
 
-def rxn_enum(model, reaction_weights=None, epsilon=1., threshold=1e-1, tlim=None, tol=1e-7, obj_tol=1e-5):
+def rxn_enum(model, reaction_weights=None, epsilon=1., threshold=1e-1, tlim=None, feas=1e-6, mipgap=1e-3, obj_tol=1e-5):
     """
     Reaction enumeration method
 
@@ -55,7 +56,7 @@ def rxn_enum(model, reaction_weights=None, epsilon=1., threshold=1e-1, tlim=None
     assert isinstance(model, Model)
 
     initial_solution = imat(model, reaction_weights,
-                            epsilon=epsilon, threshold=threshold, timelimit=tlim, tolerance=tol)
+                            epsilon=epsilon, threshold=threshold, timelimit=tlim, feasibility=feas, mipgaptol=mipgap)
     initial_solution_binary = get_binary_sol(initial_solution, threshold)
     optimal_objective_value = initial_solution.objective_value - obj_tol
 
@@ -79,8 +80,8 @@ def rxn_enum(model, reaction_weights=None, epsilon=1., threshold=1e-1, tlim=None
                 if rxn.lower_bound < 0.:
                     try:
                         rxn.upper_bound = -threshold
-                        temp_sol = imat(model_temp, reaction_weights,
-                                        epsilon=epsilon, threshold=threshold, timelimit=tlim, tolerance=tol)
+                        temp_sol = imat(model_temp, reaction_weights, epsilon=epsilon,
+                                        threshold=threshold, timelimit=tlim, feasibility=feas, mipgaptol=mipgap)
                         temp_sol_bin = get_binary_sol(temp_sol, threshold)
 
                         if temp_sol.objective_value >= optimal_objective_value:
@@ -100,8 +101,8 @@ def rxn_enum(model, reaction_weights=None, epsilon=1., threshold=1e-1, tlim=None
                 rxn.lower_bound = threshold
             # for all fluxes: compute solution with new bounds
             try:
-                temp_sol = imat(model_temp, reaction_weights,
-                                epsilon=epsilon, threshold=threshold, timelimit=tlim, tolerance=tol)
+                temp_sol = imat(model_temp, reaction_weights, epsilon=epsilon,
+                                threshold=threshold, timelimit=tlim, feasibility=feas, mipgaptol=mipgap)
                 temp_sol_bin = [1 if np.abs(flux) >= threshold else 0 for flux in temp_sol.fluxes]
                 if temp_sol.objective_value >= optimal_objective_value:
                     all_solutions.append(temp_sol)
@@ -155,8 +156,8 @@ def create_icut_constraint(model, reaction_weights, threshold, prev_sol, prev_so
     return constraint
 
 
-def icut(model, reaction_weights=None, epsilon=1., threshold=1e-1, tlim=None, tol=1e-7, obj_tol=1e-5, maxiter=10,
-         full=False):
+def icut(model, reaction_weights=None, epsilon=1., threshold=1e-1, tlim=None, feas=1e-6, mipgap=1e-3, obj_tol=1e-5,
+         maxiter=10, full=False):
     """
     integer-cut method
 
@@ -189,7 +190,7 @@ def icut(model, reaction_weights=None, epsilon=1., threshold=1e-1, tlim=None, to
     assert isinstance(model, Model)
     
     new_solution = imat(model, reaction_weights,
-                        epsilon=epsilon, threshold=threshold, timelimit=tlim, tolerance=tol, full=full)
+                        epsilon=epsilon, threshold=threshold, timelimit=tlim, feasibility=feas, mipgaptol=mipgap, full=full)
     new_solution_binary = get_binary_sol(new_solution, threshold)
     optimal_objective_value = new_solution.objective_value - obj_tol
 
@@ -206,8 +207,8 @@ def icut(model, reaction_weights=None, epsilon=1., threshold=1e-1, tlim=None, to
         icut_constraints.append(const)
 
         try:
-            new_solution = imat(model, reaction_weights,
-                                epsilon=epsilon, threshold=threshold, timelimit=tlim, tolerance=tol, full=full)
+            new_solution = imat(model, reaction_weights, epsilon=epsilon,
+                                threshold=threshold, timelimit=tlim, feasibility=feas, mipgaptol=mipgap, full=full)
         except:
             print("An error occured in iteration %i of icut, check if all feasible solutions have been found" % (i+1))
             break
@@ -252,7 +253,7 @@ def create_maxdist_constraint(model, reaction_weights, prev_sol, obj_tol, name="
     rh_objective = [(y[0] + y[1]) * y_weights[idx] for idx, y in enumerate(y_variables)]
     rl_objective = [x * x_weights[idx] for idx, x in enumerate(x_variables)]
     opt_const = model.solver.interface.Constraint(Add(*rh_objective) + Add(*rl_objective),
-                                                  lb=lower_opt, ub=upper_opt, name=name)
+                                                  lb=lower_opt, name=name)
     return opt_const
 
 
@@ -298,10 +299,11 @@ def maxdist(model, reaction_weights, prev_sol, threshold=1e-4, obj_tol=1e-3, max
                                        name="icut_"+str(i), full=full)
         model.solver.add(const)
         icut_constraints.append(const)
-
+        print(const)
         # defining the objective: minimize the number of overlapping ones and zeros
         objective = create_maxdist_objective(model, reaction_weights, prev_sol, prev_sol_bin)
         model.objective = objective
+        print(objective)
         try:
             with model:
                 prev_sol = model.optimize()
@@ -375,26 +377,32 @@ if __name__ == "__main__":
     # model = load_json_model("example_models/small4M.json")
     # reaction_weights = load_reaction_weights("example_models/small4M_weights.csv")
     model = read_sbml_model("min_iMM1865/min_iMM1865.xml")
-    reaction_weights = load_reaction_weights("min_iMM1865/min_iMM1865_p53_weights.csv")
+    reaction_weights = load_reaction_weights("min_iMM1865/p53_deseq2_cutoff_padj_1e-6.csv", "Var1", "Var2")
 
-    imat_solution = imat(model, reaction_weights)
+    model.solver = 'cplex'
+    model.solver.configuration.verbosity = 2
+
+    imat_solution = imat(model, reaction_weights, feasibility=1e-6)
+
     print("\nstarting maxdist")
-    maxdist_sol = maxdist(model, reaction_weights, imat_solution, maxiter=10)
+    maxdist_sol = maxdist(model, reaction_weights, imat_solution, maxiter=5, obj_tol=1e-3)
     print("\n")
-    dexom_sol = diversity_enum(model, reaction_weights, imat_solution, maxiter=10, dist_anneal=0.1)
-    print("\nstarting dexom")
     for idx in range(len(maxdist_sol.binary)-1):
         hamming = sum(1 for x, y in zip(maxdist_sol.binary[idx], maxdist_sol.binary[idx+1]) if x != y)
         print(idx+1, "maxdist hamming: ", hamming)
-    print("\n")
-    for idx in range(len(dexom_sol.binary)-1):
-        hamming = sum(1 for x, y in zip(dexom_sol.binary[idx], dexom_sol.binary[idx + 1]) if x != y)
-        print(idx+1, "dexom hamming: ", hamming)
 
     with open("enum_maxdist_solutions.txt", "w+") as file:
         for sol in maxdist_sol.binary:
             file.write(",".join(map(str, sol))+"\n")
 
-    with open("enum_dexom_solutions.txt", "w+") as file:
-        for sol in dexom_sol.binary:
-            file.write(",".join(map(str, sol))+"\n")
+    # print("\nstarting dexom")
+    # dexom_sol = diversity_enum(model, reaction_weights, imat_solution, maxiter=5, dist_anneal=0.5)
+    # print("\n")
+    #
+    # for idx in range(len(dexom_sol.binary)-1):
+    #     hamming = sum(1 for x, y in zip(dexom_sol.binary[idx], dexom_sol.binary[idx + 1]) if x != y)
+    #     print(idx+1, "dexom hamming: ", hamming)
+    #
+    # with open("enum_dexom_solutions.txt", "w+") as file:
+    #     for sol in dexom_sol.binary:
+    #         file.write(",".join(map(str, sol))+"\n")

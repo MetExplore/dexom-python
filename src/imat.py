@@ -12,7 +12,7 @@ from pathlib import Path
 import time
 
 
-def imat(model, reaction_weights={}, epsilon=1., threshold=1e-1, timelimit=None, feasibility=1e-6, mipgaptol=1e-3,
+def imat(model, reaction_weights={}, epsilon=1e-2, threshold=1e-5, timelimit=None, feasibility=1e-6, mipgaptol=1e-3,
          full=False):
     """
     Integrative Metabolic Analysis Tool
@@ -161,7 +161,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument("-m", "--model", help="Metabolic model in sbml or json format")
     parser.add_argument("-r", "--reaction_weights", default={},
-                        help="Reaction weights in csv format (first row: reaction names, second row: weights)")
+                        help="Reaction weights in csv format with column names: (reactions, weights)")
     parser.add_argument("--epsilon", type=float, default=1., help="Activation threshold for highly expressed reactions")
     parser.add_argument("--threshold", type=float, default=1e-1, help="Activation threshold for all reactions")
     parser.add_argument("-t", "--timelimit", type=int, default=None, help="Solver time limit")
@@ -192,6 +192,6 @@ if __name__ == "__main__":
         reaction_weights = load_reaction_weights(args.reaction_weights)
 
     solution = imat(model, reaction_weights, epsilon=args.epsilon, threshold=args.threshold, timelimit=args.timelimit,
-                    feasibility=args.tol, migaptol=args.mipgap)
+                    feasibility=args.tol, mipgaptol=args.mipgap)
 
     write_solution(solution, args.threshold, args.output)

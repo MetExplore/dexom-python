@@ -21,10 +21,10 @@ def write_solution(solution, threshold, filename):
     threshold: float
     filename: str
     """
-    solution_binary = [1 if np.abs(flux) >= threshold else 0 for flux in solution.fluxes]
+    solution_binary = get_binary_sol(solution, threshold)
 
     with open(filename, "w+") as file:
-        file.write(",fluxes,binary\n")
+        file.write("reaction,fluxes,binary\n")
         for i, v in enumerate(solution.fluxes):
             file.write(solution.fluxes.index[i]+","+str(v)+","+str(solution_binary[i])+"\n")
         file.write("objective value: %f\n" % solution.objective_value)
@@ -98,7 +98,7 @@ def analyze_permutation(perm_sols, imat_sol, sub_frame=None, sub_list=None, save
 
     if not sub_list:
         sub_list = full_results.T.agg(pd.unique)[0]
-        sub_list = [x for x in subsystems if x == x]  # removes nan values
+        sub_list = [x for x in sub_list if x == x]  # removes nan values
 
     rxn_freq = full_results[1:].sum()
     rxn_freq /= len(full_results)-1
@@ -166,23 +166,23 @@ def analyze_permutation(perm_sols, imat_sol, sub_frame=None, sub_list=None, save
 
 if __name__ == "__main__":
 
-    # df = pd.read_csv("min_iMM1865/rxn_scores.csv", index_col=1)
-    # write_dict_to_frame(df["subsystem"], out_file = "min_iMM1865_subsystem.csv"
+    df = pd.read_csv("recon2_2/scores-pval-005.csv", index_col=0, sep=",")
+    write_dict_from_frame(df["rxnWeights"], out_file="weights_pval-005.txt")
 
-    all_files = Path("min_iMM1865/perms_to_be_analyzed").glob("*.txt")
-
-    imat_sol = "min_iMM1865/imat_mp.txt"
-    solution, binary = read_solution(imat_sol)
-
-    mypath = "permutation/mp"
-
-    subs = pd.read_csv("min_iMM1865/min_iMM1865_subsystem.csv")
-
-    with open("min_iMM1865/subsystems.txt", "r") as file:
-        subsystems = file.read().split(";")
-
-    full_results = analyze_permutation(all_files, imat_sol, sub_frame=subs, sub_list=subsystems,
-                                       savefiles=True, out_path=mypath)
+    # all_files = Path("min_iMM1865/perms_to_be_analyzed").glob("*.txt")
+    #
+    # imat_sol = "min_iMM1865/imat_mp.txt"
+    # solution, binary = read_solution(imat_sol)
+    #
+    # mypath = "permutation/mp"
+    #
+    # subs = pd.read_csv("min_iMM1865/min_iMM1865_subsystem.csv")
+    #
+    # with open("min_iMM1865/subsystems.txt", "r") as file:
+    #     subsystems = file.read().split(";")
+    #
+    # full_results = analyze_permutation(all_files, imat_sol, sub_frame=subs, sub_list=subsystems,
+    #                                    savefiles=True, out_path=mypath)
 
     # all_list = []
     # for filename in all_files:
