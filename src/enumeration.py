@@ -299,11 +299,9 @@ def maxdist(model, reaction_weights, prev_sol, threshold=1e-4, obj_tol=1e-3, max
                                        name="icut_"+str(i), full=full)
         model.solver.add(const)
         icut_constraints.append(const)
-        print(const)
         # defining the objective: minimize the number of overlapping ones and zeros
         objective = create_maxdist_objective(model, reaction_weights, prev_sol, prev_sol_bin)
         model.objective = objective
-        print(objective)
         try:
             with model:
                 prev_sol = model.optimize()
@@ -385,7 +383,7 @@ if __name__ == "__main__":
     imat_solution = imat(model, reaction_weights, feasibility=1e-6)
 
     print("\nstarting maxdist")
-    maxdist_sol = maxdist(model, reaction_weights, imat_solution, maxiter=5, obj_tol=1e-3)
+    maxdist_sol = maxdist(model, reaction_weights, imat_solution, maxiter=10, obj_tol=1e-3)
     print("\n")
     for idx in range(len(maxdist_sol.binary)-1):
         hamming = sum(1 for x, y in zip(maxdist_sol.binary[idx], maxdist_sol.binary[idx+1]) if x != y)
@@ -395,14 +393,14 @@ if __name__ == "__main__":
         for sol in maxdist_sol.binary:
             file.write(",".join(map(str, sol))+"\n")
 
-    # print("\nstarting dexom")
-    # dexom_sol = diversity_enum(model, reaction_weights, imat_solution, maxiter=5, dist_anneal=0.5)
-    # print("\n")
-    #
-    # for idx in range(len(dexom_sol.binary)-1):
-    #     hamming = sum(1 for x, y in zip(dexom_sol.binary[idx], dexom_sol.binary[idx + 1]) if x != y)
-    #     print(idx+1, "dexom hamming: ", hamming)
-    #
-    # with open("enum_dexom_solutions.txt", "w+") as file:
-    #     for sol in dexom_sol.binary:
-    #         file.write(",".join(map(str, sol))+"\n")
+    print("\nstarting dexom")
+    dexom_sol = diversity_enum(model, reaction_weights, imat_solution, maxiter=10, dist_anneal=0.9)
+    print("\n")
+
+    for idx in range(len(dexom_sol.binary)-1):
+        hamming = sum(1 for x, y in zip(dexom_sol.binary[idx], dexom_sol.binary[idx + 1]) if x != y)
+        print(idx+1, "dexom hamming: ", hamming)
+
+    with open("enum_dexom_solutions.txt", "w+") as file:
+        for sol in dexom_sol.binary:
+            file.write(",".join(map(str, sol))+"\n")
