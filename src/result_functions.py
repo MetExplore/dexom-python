@@ -163,20 +163,19 @@ def dexom_results(result_path, solution_path, out_path):
     df = df.T
     avg_pairwise = []
     avg_near = []
-    test = []
+    hammings = []
     h = 0
     for x in df:
-        test.append([])
+        hammings.append([])
         if x > 0:
-            n = []
             for y in range(x):
                 temp = sum(abs(df[x]-df[y]))
                 h += temp
-                test[x].append(temp)
-                test[y].append(temp)
+                hammings[x].append(temp)
+                hammings[y].append(temp)
             avg_pairwise.append((h/(x*(x+1)/2))/len(df))
             temp = 0
-            for v in test:
+            for v in hammings:
                 temp += min(v)/len(df)
             avg_near.append(temp/x)
     x = range(len(avg_pairwise))

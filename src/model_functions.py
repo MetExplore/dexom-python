@@ -88,7 +88,7 @@ def save_reaction_weights(reaction_weights, filename):
 def human_weights_from_gpr(model, gene_file):
     reaction_weights = {}
 
-    genes = pd.read_csv(gene_file, sep=";")
+    genes = pd.read_csv(gene_file, sep=",", decimal=",")
     gene_weights = pd.DataFrame(genes["t"])
     gene_weights.index = genes["entrez"]
     gene_weights = gene_weights["t"].to_dict()
@@ -102,7 +102,7 @@ def human_weights_from_gpr(model, gene_file):
             gen_list = set(rxnnotes.split())
             new_weights = {g: gene_weights.get(g, 0) for g in gen_list}
             expression = " ".join(expr_split).replace("or", "*").replace("and", "+")
-            weight = sympify(expression).replace(Mul, Max).replace(Add, Min).subs(new_weights, n=21)
+            weight = sympify(expression, evaluate=False).replace(Mul, Max).replace(Add, Min).subs(new_weights, n=21)
             reaction_weights[rxn.id] = weight
     return reaction_weights
 
@@ -131,44 +131,33 @@ def mouse_weights_from_gpr(model, gene_file):
 
 if __name__ == "__main__":
 
-    # jul_model = read_sbml_model("recon2_2/Recon2.2_reimported2_test.xml")
-    # # old_model = read_sbml_model("recon2_2/Recon2.2_Swainton2016.xml")
-    # # mat_model = load_matlab_model("recon2_2/Recon2.2.mat")
-    #
-    # filename = "recon2_2/sign_MUvsWT_ids_p005.csv"
-    #
-    # model = jul_model
-    # rec_wei = human_weights_from_gpr(model, filename)
-    # print(rec_wei)
-    #
-    # comp_wei = load_reaction_weights("recon2_2/weights_pval-005.txt")
-    #
-    # print("total reaction scores: ", len(rec_wei))
-    # print("non-zero reaction scores: ", len(rec_wei)-list(rec_wei.values()).count(0))
-    #
-    # print("comparison with Pablo's file")
-    # print("total reaction scores: ", len(comp_wei))
-    # print("non-zero reaction scores: ", len(comp_wei)-list(comp_wei.values()).count(0))
+    jul_model = read_sbml_model("recon2_2/Recon2.2_reimported2_test.xml")
+    # old_model = read_sbml_model("recon2_2/Recon2.2_Swainton2016.xml")
+    # mat_model = load_matlab_model("recon2_2/Recon2.2.mat")
+
+    filename = "recon2_2/sign_MUvsWT_ids.csv"
+
+    model = jul_model
+    rec_wei = human_weights_from_gpr(model, filename)
+    print(rec_wei)
+
+    pab_wei = load_reaction_weights("recon2_2/scores-pval-005.csv", "rxn", "rxnWeights")
+
+    print("total reaction scores: ", len(rec_wei))
+    print("non-zero reaction scores: ", len(rec_wei)-list(rec_wei.values()).count(0))
+
+    print("comparison with Pablo's file")
+    print("total reaction scores: ", len(pab_wei))
+    print("non-zero reaction scores: ", len(pab_wei)-list(pab_wei.values()).count(0))
 
     # minm = read_sbml_model("min_iMM1865/min_iMM1865.xml")
     # filename = "min_iMM_synthdata/imm1865_0.25_2.5_cholesterol.csv"
     # rec_wei = mouse_weights_from_gpr(minm, filename)
     #
     # pab_wei = load_reaction_weights("min_iMM_synthdata/imm1865_chol.csv", "Var1", "Var2")
-    #
-    # diff = {k: v-pab_wei[k] for k, v in rec_wei.items()}
-    # print(sum([abs(v) for v in diff.values()]))
-    # # 'r2535'
 
-    weights_1 = load_reaction_weights("min_iMM1865/rxn_scores.csv", "reaction", "p53")
-    weights_2 = load_reaction_weights("min_iMM1865/rxn_scores.csv", "reaction", "e4f1")
-    weights_3 = load_reaction_weights("min_iMM1865/rxn_scores.csv", "reaction", "ep")
-    weights_4 = load_reaction_weights("min_iMM1865/rxn_scores.csv", "reaction", "mp")
-    weights_5 = load_reaction_weights("min_iMM1865/rxn_scores.csv", "reaction", "3f")
+    diff = {k: v-pab_wei[k] for k, v in rec_wei.items()}
+    print(sum([abs(v) for v in diff.values()]))
+    # 'r2535'
 
-    print(weights_1["ATPasel_1"])
-    print(weights_2["ATPasel_1"])
-    print(weights_3["ATPasel_1"])
-    print(weights_4["ATPasel_1"])
-    print(weights_5["ATPasel_1"])
 

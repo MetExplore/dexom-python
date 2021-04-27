@@ -375,20 +375,20 @@ if __name__ == "__main__":
     from cobra.io import load_json_model, read_sbml_model, load_matlab_model
     from model_functions import load_reaction_weights
 
-    model = read_sbml_model("min_iMM1865/min_iMM1865.xml")
-    reaction_weights = load_reaction_weights("min_iMM1865/p53_deseq2_cutoff_padj_1e-6.csv", "Var1", "Var2")
-
-    model.solver = 'cplex'
-    model.solver.configuration.verbosity = 2
-
-    imat_solution = imat(model, reaction_weights, feasibility=1e-6)
-
-    print("\nstarting dexom")
-    dexom_sol, times, selected_recs = diversity_enum(model, reaction_weights, imat_solution, maxiter=300, obj_tol=1e-3,
-                                                     dist_anneal=0.999, icut=True, only_ones=True)
-    print("\n")
+    # model = read_sbml_model("min_iMM1865/min_iMM1865.xml")
+    # reaction_weights = load_reaction_weights("min_iMM1865/p53_deseq2_cutoff_padj_1e-6.csv", "Var1", "Var2")
+    #
+    # model.solver = 'cplex'
+    # model.solver.configuration.verbosity = 2
+    #
+    # imat_solution = imat(model, reaction_weights, feasibility=1e-6)
+    #
+    # print("\nstarting dexom")
+    # dexom_sol = diversity_enum(model, reaction_weights, imat_solution, maxiter=100, obj_tol=1e-3, dist_anneal=0.99,
+    #                             icut=True, only_ones=True)
+    # print("\n")
 
     ## dexom result analysis
     from result_functions import dexom_results
 
-    solutions = dexom_results("enum_dexom_noicut_results.csv", "enum_dexom_noicut_solutions.csv", "enum_dexom_noicut")
+    solutions = dexom_results("enum_dexom_newresults.csv", "enum_dexom_newsolutions.csv", "enum_dexom_newicut")
