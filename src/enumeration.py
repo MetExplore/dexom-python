@@ -4,8 +4,8 @@ import numpy as np
 from sympy import sympify, Add
 import six
 import time
+import pandas as pd
 from sympy.core.cache import clear_cache
-
 from imat import imat
 from result_functions import get_binary_sol
 
@@ -255,7 +255,7 @@ def create_maxdist_constraint(model, reaction_weights, prev_sol, obj_tol, name="
     return opt_const
 
 
-def create_maxdist_objective(model, reaction_weights, prev_sol, prev_sol_bin):
+def create_maxdist_objective(model, reaction_weights, prev_sol, prev_sol_bin, only_ones=False):
     expr = sympify("0")
     for rid, weight in six.iteritems(reaction_weights):
         rid_loc = prev_sol.fluxes.index.get_loc(rid)
@@ -264,32 +264,28 @@ def create_maxdist_objective(model, reaction_weights, prev_sol, prev_sol_bin):
             y_pos = model.solver.variables["rh_" + rid + "_pos"]
             if prev_sol_bin[rid_loc] == 1:
                 expr += y_neg + y_pos
-            # else:
-            #     expr += 1 - (y_neg + y_pos)
+            elif not only_ones:
+                expr += 1 - (y_neg + y_pos)
         elif weight < 0:
             x = model.solver.variables["rl_" + rid]
             if prev_sol_bin[rid_loc] == 1:
                 expr += 1 - x
-            # else:
-            #     expr += x
+            elif not only_ones:
+                expr += x
     objective = model.solver.interface.Objective(expr, direction="min")
     return objective
 
 
-def maxdist(model, reaction_weights, prev_sol, threshold=1e-4, obj_tol=1e-3, maxiter=10):
-
+def maxdist(model, reaction_weights, prev_sol, threshold=1e-4, obj_tol=1e-3, maxiter=10, only_ones=False):
     full = False
-
     icut_constraints = []
     all_solutions = [prev_sol]
     prev_sol_bin = get_binary_sol(prev_sol, threshold)
     all_binary = [prev_sol_bin]
 
     # adding the optimality constraint: the new objective value must be equal to the previous objective value
-
     opt_const = create_maxdist_constraint(model, reaction_weights, prev_sol, obj_tol, name="maxdist_optimality")
     model.solver.add(opt_const)
-
     for i in range(maxiter):
         t0 = time.perf_counter()
         # adding the icut constraint to prevent the algorithm from finding the same solutions
@@ -298,7 +294,7 @@ def maxdist(model, reaction_weights, prev_sol, threshold=1e-4, obj_tol=1e-3, max
         model.solver.add(const)
         icut_constraints.append(const)
         # defining the objective: minimize the number of overlapping ones and zeros
-        objective = create_maxdist_objective(model, reaction_weights, prev_sol, prev_sol_bin)
+        objective = create_maxdist_objective(model, reaction_weights, prev_sol, prev_sol_bin, only_ones)
         model.objective = objective
         try:
             with model:
@@ -318,11 +314,11 @@ def maxdist(model, reaction_weights, prev_sol, threshold=1e-4, obj_tol=1e-3, max
     return solution
 
 
-def diversity_enum(model, reaction_weights, prev_sol, thr=1e-4, obj_tol=1e-3, maxiter=10, dist_anneal=0.995):
+def diversity_enum(model, reaction_weights, prev_sol, thr=1e-4, obj_tol=1e-3, maxiter=10, dist_anneal=0.995,
+                   icut=True, only_ones=False):
 
     times = []
     selected_recs = []
-
     prev_sol_bin = get_binary_sol(prev_sol, thr)
     all_solutions = [prev_sol]
     all_binary = [prev_sol_bin]
@@ -331,25 +327,23 @@ def diversity_enum(model, reaction_weights, prev_sol, thr=1e-4, obj_tol=1e-3, ma
     # preserve the optimality of the solution
     opt_const = create_maxdist_constraint(model, reaction_weights, prev_sol, obj_tol, name="dexom_optimality")
     model.solver.add(opt_const)
-
     for idx in range(1, maxiter+1):
         t0 = time.perf_counter()
-        # adding the icut constraint to prevent the algorithm from finding the same solutions
-        const = create_icut_constraint(model, reaction_weights, thr, prev_sol, prev_sol_bin, name="icut_"+str(idx))
-        model.solver.add(const)
-        icut_constraints.append(const)
-
+        if icut:
+            # adding the icut constraint to prevent the algorithm from finding duplicate solutions
+            const = create_icut_constraint(model, reaction_weights, thr, prev_sol, prev_sol_bin, name="icut_"+str(idx))
+            model.solver.add(const)
+            icut_constraints.append(const)
         # randomly selecting reactions which were active in the previous solution
         tempweights = {}
         i = 0
         for rid, weight in six.iteritems(reaction_weights):
             rid_loc = prev_sol.fluxes.index.get_loc(rid)
-            if prev_sol_bin[rid_loc] == 1 and np.random.random() > dist_anneal**idx:
+            if (prev_sol_bin[rid_loc] == 1 or not only_ones) and np.random.random() > dist_anneal**idx:
                 tempweights[rid] = weight
                 i += 1
-        #print("number of reactions picked: ", i)
         selected_recs.append(i)
-        objective = create_maxdist_objective(model, tempweights, prev_sol, prev_sol_bin)
+        objective = create_maxdist_objective(model, tempweights, prev_sol, prev_sol_bin, only_ones)
         model.objective = objective
         try:
             with model:
@@ -367,18 +361,20 @@ def diversity_enum(model, reaction_weights, prev_sol, thr=1e-4, obj_tol=1e-3, ma
     model.solver.remove([const for const in icut_constraints if const in model.solver.constraints])
     model.solver.remove(opt_const)
     solution = EnumSolution(all_solutions, all_binary, all_solutions[0].objective_value)
-    return solution, times, selected_recs
+
+    df = pd.DataFrame({"selected reactions": selected_recs, "time": times})
+    df.to_csv("enum_dexom_results.csv")
+
+    sol = pd.DataFrame(solution.binary)
+    sol.to_csv("enum_dexom_solutions.csv")
+
+    return solution
 
 
 if __name__ == "__main__":
     from cobra.io import load_json_model, read_sbml_model, load_matlab_model
     from model_functions import load_reaction_weights
-    from imat import imat
-    import pandas
-    import matplotlib.pyplot as plt
 
-    # model = load_json_model("example_models/small4M.json")
-    # reaction_weights = load_reaction_weights("example_models/small4M_weights.csv")
     model = read_sbml_model("min_iMM1865/min_iMM1865.xml")
     reaction_weights = load_reaction_weights("min_iMM1865/p53_deseq2_cutoff_padj_1e-6.csv", "Var1", "Var2")
 
@@ -387,56 +383,12 @@ if __name__ == "__main__":
 
     imat_solution = imat(model, reaction_weights, feasibility=1e-6)
 
-    # print("\nstarting maxdist")
-    # maxdist_sol = maxdist(model, reaction_weights, imat_solution, maxiter=10, obj_tol=1e-3)
-    # print("\n")
-    # for idx in range(len(maxdist_sol.binary)-1):
-    #     hamming = sum(1 for x, y in zip(maxdist_sol.binary[idx], maxdist_sol.binary[idx+1]) if x != y)
-    #     print(idx+1, "maxdist hamming: ", hamming)
-    #
-    # with open("enum_maxdist_solutions.txt", "w+") as file:
-    #     for sol in maxdist_sol.binary:
-    #         file.write(",".join(map(str, sol))+"\n")
-
     print("\nstarting dexom")
-    dexom_sol, times, selected_recs = diversity_enum(model, reaction_weights, imat_solution, maxiter=100, obj_tol=1e-3, dist_anneal=0.995)
+    dexom_sol, times, selected_recs = diversity_enum(model, reaction_weights, imat_solution, maxiter=300, obj_tol=1e-3,
+                                                     dist_anneal=0.999, icut=True, only_ones=True)
     print("\n")
 
-    hammings = []
+    ## dexom result analysis
+    from result_functions import dexom_results
 
-    for idx in range(len(dexom_sol.binary)-1):
-        hamming = sum(1 for x, y in zip(dexom_sol.binary[idx], dexom_sol.binary[idx - 1]) if x != y)
-        #print(idx+1, "dexom hamming: ", hamming)
-        hammings.append(hamming)
-
-    df = pandas.DataFrame({"selected reactions": selected_recs, "time": times, "hamming": hammings})
-    df.to_csv("enum_dexom_results.csv")
-
-    with open("enum_dexom_solutions.csv", "w+") as file:
-        for sol in dexom_sol.binary:
-            file.write(",".join(map(str, sol))+"\n")
-
-
-    ### dexom result analysis
-
-    df = pandas.read_csv("enum_dexom_solutions.csv", names=list(range(8829)))
-    df = df.T
-    avg_pairwise = []
-    avg_near = []
-    for x in df:
-        h = 0
-        n = []
-        for y in df:
-            temp = sum(abs(df[x]-df[y]))
-            if y < x:
-                h += temp
-                n.append(temp)
-        if x > 0:
-            avg_pairwise.append(h/x)
-            avg_near.append(min(n)/x)
-
-    x = range(100)
-    plt.plot(x, avg_pairwise, 'r')
-    plt.show()
-    plt.plot(x, avg_near, 'g')
-    plt.show()
+    solutions = dexom_results("enum_dexom_noicut_results.csv", "enum_dexom_noicut_solutions.csv", "enum_dexom_noicut")

@@ -147,6 +147,55 @@ def analyze_permutation(perm_sols, imat_sol, sub_frame=None, sub_list=None, save
     return full_results
 
 
+def dexom_results(result_path, solution_path, out_path):
+
+    res = pd.read_csv(result_path, index_col=0)
+    df = pd.read_csv(solution_path, index_col=0)
+    #df = pandas.read_csv("enum_dexom_solutions_icut.csv", names=(list(range(8829))))
+
+    unique = len(df.drop_duplicates())
+    print("There are %i unique solutions and %i duplicates" % (unique, len(df)-unique))
+
+    time = res["time"].cumsum()
+    print("Total computation time: %i s" % time.iloc[-1])
+    print("Average time per iteration: %i s" % (time.iloc[-1]/len(df)))
+
+    df = df.T
+    avg_pairwise = []
+    avg_near = []
+    test = []
+    h = 0
+    for x in df:
+        test.append([])
+        if x > 0:
+            n = []
+            for y in range(x):
+                temp = sum(abs(df[x]-df[y]))
+                h += temp
+                test[x].append(temp)
+                test[y].append(temp)
+            avg_pairwise.append((h/(x*(x+1)/2))/len(df))
+            temp = 0
+            for v in test:
+                temp += min(v)/len(df)
+            avg_near.append(temp/x)
+    x = range(len(avg_pairwise))
+
+    plt.clf()
+    plt.plot(x, avg_pairwise, 'r')
+    plt.savefig(out_path + "_avg_pairwise.png")
+    plt.clf()
+    plt.plot(x, avg_near, 'g')
+    plt.savefig(out_path + "_avg_nearest_neighbor.png")
+    plt.clf()
+    fig = time.plot().get_figure()
+    fig.savefig(out_path + "_cumulated_time.png")
+    plt.clf()
+    fig = res["selected reactions"].plot().get_figure()
+    fig.savefig(out_path + "_selected_reactions.png")
+    return df.T
+
+
 if __name__ == "__main__":
 
     ### permutation result analysis
@@ -166,19 +215,7 @@ if __name__ == "__main__":
     # full_results = analyze_permutation(all_files, imat_sol, sub_frame=subs, sub_list=subsystems,
     #                                    savefiles=True, out_path=mypath)
     #
-    # all_list = []
-    # for filename in all_files:
-    #     df = pd.read_csv(filename, index_col=None, header=0)
-    #     all_list.append(df)
-    # weights = pd.concat(all_list, axis=0, ignore_index=True)
-    # print(weights)
-    # print(weights.drop_duplicates())
-    #
-    # large_pathways = []
-    # for sub in subsystems:
-    #     temp = subs[subs.isin([sub])].stack().count()
-    #     if temp >=15:
-    #         large_pathways.append(sub)
-    # print(large_pathways)
+
+    ### dexom result analysis
 
     pass
