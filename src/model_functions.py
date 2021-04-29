@@ -131,33 +131,34 @@ def mouse_weights_from_gpr(model, gene_file):
 
 if __name__ == "__main__":
 
-    jul_model = read_sbml_model("recon2_2/Recon2.2_reimported2_test.xml")
-    # old_model = read_sbml_model("recon2_2/Recon2.2_Swainton2016.xml")
-    # mat_model = load_matlab_model("recon2_2/Recon2.2.mat")
-
-    filename = "recon2_2/sign_MUvsWT_ids.csv"
-
-    model = jul_model
-    rec_wei = human_weights_from_gpr(model, filename)
-    print(rec_wei)
-
-    pab_wei = load_reaction_weights("recon2_2/scores-pval-005.csv", "rxn", "rxnWeights")
-
-    print("total reaction scores: ", len(rec_wei))
-    print("non-zero reaction scores: ", len(rec_wei)-list(rec_wei.values()).count(0))
-
-    print("comparison with Pablo's file")
-    print("total reaction scores: ", len(pab_wei))
-    print("non-zero reaction scores: ", len(pab_wei)-list(pab_wei.values()).count(0))
-
-    # minm = read_sbml_model("min_iMM1865/min_iMM1865.xml")
-    # filename = "min_iMM_synthdata/imm1865_0.25_2.5_cholesterol.csv"
-    # rec_wei = mouse_weights_from_gpr(minm, filename)
+    # jul_model = read_sbml_model("recon2_2/Recon2.2_reimported2_test.xml")
+    # # old_model = read_sbml_model("recon2_2/Recon2.2_Swainton2016.xml")
+    # # mat_model = load_matlab_model("recon2_2/Recon2.2.mat")
     #
-    # pab_wei = load_reaction_weights("min_iMM_synthdata/imm1865_chol.csv", "Var1", "Var2")
+    # filename = "recon2_2/sign_MUvsWT_ids.csv"
+    #
+    # model = jul_model
+    # rec_wei = human_weights_from_gpr(model, filename)
+    #
+    # pab_wei = load_reaction_weights("recon2_2/scores-pval-005.csv", "rxn", "rxnWeights")
+    #
+    # print("total reaction scores: ", len(rec_wei))
+    # print("non-zero reaction scores: ", len(rec_wei)-list(rec_wei.values()).count(0))
+    #
+    # print("comparison with Pablo's file")
+    # print("total reaction scores: ", len(pab_wei))
+    # print("non-zero reaction scores: ", len(pab_wei)-list(pab_wei.values()).count(0))
+
+    mouse = read_sbml_model("min_iMM1865/min_iMM1865.xml")
+    filename = "min_iMM_synthdata/imm1865_0.25_2.5_cholesterol.csv"
+    rec_wei = mouse_weights_from_gpr(mouse, filename)
+
+    pab_wei = load_reaction_weights("min_iMM_synthdata/imm1865_chol.csv", "Var1", "Var2")
 
     diff = {k: v-pab_wei[k] for k, v in rec_wei.items()}
     print(sum([abs(v) for v in diff.values()]))
-    # 'r2535'
 
+    ### for the mouse model, the result is correct by modifying the _collapse_arguments function of the MinMaxBase class
+    ### in /sympy/functions/elementary/miscellaneous.py
+    # # factor out common elements as for
 

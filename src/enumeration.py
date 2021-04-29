@@ -346,6 +346,8 @@ def diversity_enum(model, reaction_weights, prev_sol, thr=1e-4, obj_tol=1e-3, ma
         objective = create_maxdist_objective(model, tempweights, prev_sol, prev_sol_bin, only_ones)
         model.objective = objective
         try:
+            t2 = time.perf_counter()
+            print("time for creating constraints in iteration "+str(idx)+": ", t2-t0)
             with model:
                 prev_sol = model.optimize()
             prev_sol_bin = get_binary_sol(prev_sol, thr)
@@ -355,7 +357,7 @@ def diversity_enum(model, reaction_weights, prev_sol, thr=1e-4, obj_tol=1e-3, ma
             print("An error occured in iteration %i of dexom, check if all feasible solutions have been found" % (idx))
             break
         t1 = time.perf_counter()
-        print("time for iteration "+str(idx)+": ", t1-t0)
+        print("time for optimizing in iteration "+str(idx)+": ", t1-t2)
         times.append(t1-t0)
 
     model.solver.remove([const for const in icut_constraints if const in model.solver.constraints])
@@ -375,20 +377,20 @@ if __name__ == "__main__":
     from cobra.io import load_json_model, read_sbml_model, load_matlab_model
     from model_functions import load_reaction_weights
 
-    # model = read_sbml_model("min_iMM1865/min_iMM1865.xml")
-    # reaction_weights = load_reaction_weights("min_iMM1865/p53_deseq2_cutoff_padj_1e-6.csv", "Var1", "Var2")
-    #
-    # model.solver = 'cplex'
-    # model.solver.configuration.verbosity = 2
-    #
-    # imat_solution = imat(model, reaction_weights, feasibility=1e-6)
-    #
-    # print("\nstarting dexom")
-    # dexom_sol = diversity_enum(model, reaction_weights, imat_solution, maxiter=100, obj_tol=1e-3, dist_anneal=0.99,
-    #                             icut=True, only_ones=True)
-    # print("\n")
+    model = read_sbml_model("min_iMM1865/min_iMM1865.xml")
+    reaction_weights = load_reaction_weights("min_iMM1865/p53_deseq2_cutoff_padj_1e-6.csv", "Var1", "Var2")
+
+    model.solver = 'cplex'
+    model.solver.configuration.verbosity = 2
+
+    imat_solution = imat(model, reaction_weights, feasibility=1e-7, timelimit=300)
+
+    print("\nstarting dexom")
+    dexom_sol = diversity_enum(model, reaction_weights, imat_solution, maxiter=300, obj_tol=1e-3, dist_anneal=0.99,
+                                icut=True, only_ones=False)
+    print("\n")
 
     ## dexom result analysis
     from result_functions import dexom_results
 
-    solutions = dexom_results("enum_dexom_newresults.csv", "enum_dexom_newsolutions.csv", "enum_dexom_newicut")
+    solutions = dexom_results("enum_dexom_results.csv", "enum_dexom_solutions.csv", "enum_dexom_newicut")
