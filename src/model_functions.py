@@ -85,6 +85,13 @@ def save_reaction_weights(reaction_weights, filename):
     return df["weights"]
 
 
+def get_all_reactions_from_model(model, save=True):
+    rxn_list = [r.id for r in model.reactions]
+    if save:
+        pd.Series(rxn_list).to_csv(model.id+"_reactions.csv", header=False, index=False)
+    return rxn_list
+
+
 def human_weights_from_gpr(model, gene_file):
     reaction_weights = {}
 
