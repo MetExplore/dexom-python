@@ -162,8 +162,8 @@ if __name__ == "__main__":
     parser.add_argument("-m", "--model", help="Metabolic model in sbml or json format")
     parser.add_argument("-r", "--reaction_weights", default={},
                         help="Reaction weights in csv format with column names: (reactions, weights)")
-    parser.add_argument("--epsilon", type=float, default=1., help="Activation threshold for highly expressed reactions")
-    parser.add_argument("--threshold", type=float, default=1e-1, help="Activation threshold for all reactions")
+    parser.add_argument("--epsilon", type=float, default=1e-2, help="Activation threshold for highly expressed reactions")
+    parser.add_argument("--threshold", type=float, default=1e-5, help="Activation threshold for all reactions")
     parser.add_argument("-t", "--timelimit", type=int, default=None, help="Solver time limit")
     parser.add_argument("--tol", type=float, default=1e-6, help="Solver feasibility tolerance")
     parser.add_argument("--mipgap", type=float, default=1e-3, help="Solver MIP gap tolerance")

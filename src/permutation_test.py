@@ -33,7 +33,7 @@ def permutation_test(model, reaction_weights=None, nperm=10, epsilon=1, threshol
     return permutation_solutions, permutation_weights
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     description = "Performs weight permutation tests on imat"
 
     parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
@@ -41,10 +41,11 @@ if __name__=="__main__":
     parser.add_argument("-r", "--reaction_weights", default={},
                         help="Reaction weights in csv format (first row: reaction names, second row: weights)")
     parser.add_argument("-n", "--num_permutations", type=int, default=10, help="number of permutations to perform")
-    parser.add_argument("--epsilon", type=float, default=1., help="Activation threshold for highly expressed reactions")
-    parser.add_argument("--threshold", type=float, default=1e-1, help="Activation threshold for all reactions")
+    parser.add_argument("--epsilon", type=float, default=1e-2, help="Activation threshold for highly expressed reactions")
+    parser.add_argument("--threshold", type=float, default=1e-5, help="Activation threshold for all reactions")
     parser.add_argument("-t", "--timelimit", type=int, default=None, help="Solver time limit")
-    parser.add_argument("--tol", type=float, default=1e-7, help="Solver tolerance")
+    parser.add_argument("--tol", type=float, default=1e-6, help="Solver feasibility tolerance")
+    parser.add_argument("--mipgap", type=float, default=1e-3, help="Solver MIP gap tolerance")
     parser.add_argument("-o", "--output", default="imat_solution.txt", help="Name of the output file")
 
     args = parser.parse_args()
