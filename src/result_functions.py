@@ -41,7 +41,6 @@ def read_solution(filename):
         status = reader[-1].split()[-1]
     solution = Solution(objective_value, status, df["fluxes"])
     binary = df["binary"].to_list()
-
     return solution, binary
 
 
@@ -151,7 +150,6 @@ def dexom_results(result_path, solution_path, out_path):
 
     res = pd.read_csv(result_path, index_col=0)
     df = pd.read_csv(solution_path, index_col=0)
-    #df = pandas.read_csv("enum_dexom_solutions_icut.csv", names=(list(range(8829))))
 
     unique = len(df.drop_duplicates())
     print("There are %i unique solutions and %i duplicates" % (unique, len(df)-unique))
@@ -199,22 +197,19 @@ if __name__ == "__main__":
 
     ### permutation result analysis
 
-    # all_files = Path("min_iMM1865/perms_to_be_analyzed").glob("*.txt")
-    #
-    # imat_sol = "min_iMM1865/imat_mp.txt"
-    # solution, binary = read_solution(imat_sol)
-    #
-    # mypath = "permutation/mp"
-    #
-    # subs = pd.read_csv("min_iMM1865/min_iMM1865_subsystem.csv")
-    #
-    # with open("min_iMM1865/subsystems.txt", "r") as file:
-    #     subsystems = file.read().split(";")
-    #
-    # full_results = analyze_permutation(all_files, imat_sol, sub_frame=subs, sub_list=subsystems,
-    #                                    savefiles=True, out_path=mypath)
-    #
+    all_files = Path("min_iMM1865/perms_to_be_analyzed").glob("*.txt")
 
-    ### dexom result analysis
+    imat_sol = "min_iMM1865/imat_p53.txt"
+    solution, binary = read_solution(imat_sol)
+
+    mypath = "permutation/"
+
+    subs = pd.read_csv("min_iMM1865/min_iMM1865_subsystem.csv")
+
+    with open("min_iMM1865/subsystems.txt", "r") as file:
+        subsystems = file.read().split(";")
+
+    full_results = analyze_permutation(all_files, imat_sol, sub_frame=subs, sub_list=subsystems,
+                                       savefiles=True, out_path=mypath)
 
     pass
