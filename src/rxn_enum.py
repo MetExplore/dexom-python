@@ -2,6 +2,7 @@
 import argparse
 import numpy as np
 import pandas as pd
+import time
 from pathlib import Path
 from cobra.io import load_json_model, read_sbml_model, load_matlab_model
 from model_functions import load_reaction_weights
@@ -45,25 +46,31 @@ def partial_rxn_enum(model, rxn_list, init_sol, reaction_weights=None, epsilon=1
     unique_solutions_binary = [init_sol_bin]
     all_reactions = []  # for each solution, save which reaction was activated/inactived by the algorithm
     unique_reactions = []
+    results = {"reaction": [], "time": [], "result": []}
 
     for idx, rid in enumerate(rxn_list):
+        t2 = time.perf_counter()
+        results["reaction"].append(rid)
         with model as model_temp:
             if rid in model.reactions:
                 rxn = model_temp.reactions.get_by_id(rid)
+                results["result"].append("")
                 # for active fluxes, check inactivation
                 if init_sol_bin[idx] == 1:
                     rxn.bounds = (0., 0.)
+                    results["result"][-1] += "blocked_"
                 # for inactive fluxes, check activation
                 else:
                     upper_bound_temp = rxn.upper_bound
                     # for inactive reversible fluxes, check activation in backwards direction
                     if rxn.lower_bound < 0.:
+                        results["result"][-1] += "backwards_"
                         try:
                             rxn.upper_bound = -threshold
                             temp_sol = imat(model_temp, reaction_weights, epsilon=epsilon,
                                             threshold=threshold, timelimit=tlim, feasibility=feas, mipgaptol=mipgap)
                             temp_sol_bin = get_binary_sol(temp_sol, threshold)
-
+                            results["result"][-1] += "success/"
                             if temp_sol.objective_value >= optimal_objective_value:
                                 all_solutions.append(temp_sol)
                                 all_solutions_binary.append(temp_sol_bin)
@@ -75,15 +82,18 @@ def partial_rxn_enum(model, rxn_list, init_sol, reaction_weights=None, epsilon=1
                         except:
                             print("An error occurred with reaction %s_backwards. "
                                   "Check feasibility of the model when this reaction is irreversible." % rid)
+                            results["result"][-1] += "failure/"
                         finally:
                             rxn.upper_bound = upper_bound_temp
                     # for all inactive fluxes, check activation in forwards direction
                     rxn.lower_bound = threshold
+                    results["result"][-1] += "forwards_"
                 # for all fluxes: compute solution with new bounds
                 try:
                     temp_sol = imat(model_temp, reaction_weights, epsilon=epsilon,
                                     threshold=threshold, timelimit=tlim, feasibility=feas, mipgaptol=mipgap)
                     temp_sol_bin = [1 if np.abs(flux) >= threshold else 0 for flux in temp_sol.fluxes]
+                    results["result"][-1] += "success"
                     if temp_sol.objective_value >= optimal_objective_value:
                         all_solutions.append(temp_sol)
                         all_solutions_binary.append(temp_sol_bin)
@@ -94,21 +104,28 @@ def partial_rxn_enum(model, rxn_list, init_sol, reaction_weights=None, epsilon=1
                             unique_reactions.append(rid)
                 except:
                     print("An error occurred with reaction %s. "
-                          "Check feasibility of the model when this reaction is irreversible" % rid)
-
+                          "Check feasibility of the model when this reaction is blocked/irreversible" % rid)
+                    results["result"][-1] += "failure"
+            else:
+                results["result"][-1] += "not_in_model"
+        t1 = time.perf_counter()
+        results["time"].append(t1-t2)
     solution = RxnEnumSolution(all_solutions, unique_solutions, all_solutions_binary, unique_solutions_binary,
                                all_reactions, unique_reactions)
-    return solution
+
+    results = pd.DataFrame(results)
+
+    return solution, results
 
 
 if __name__ == "__main__":
     description = "Performs the reaction enumeration algorithm on a specified list of reactions"
 
     parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument("-m", "--model", help="Metabolic model in json format")
+    parser.add_argument("-m", "--model", help="Metabolic model in sbml, matlab, or json format")
     parser.add_argument("-l", "--reaction_list", default=None, help="csv list of reactions to enumerate")
-    parser.add_argument("--range", default="0-100",
-                        help="range of reactions to use from the list, in the format 'int-int'")
+    parser.add_argument("--range", default="0_",
+                        help="range of reactions to use from the list, in the format 'int_int'")
     parser.add_argument("-r", "--reaction_weights", default=None,
                         help="Reaction weights in csv format (first row: reaction names, second row: weights)")
     parser.add_argument("-i", "--initial_solution", default=None, help="initial imat solution in .txt format")
@@ -119,7 +136,7 @@ if __name__ == "__main__":
     parser.add_argument("--tol", type=float, default=1e-6, help="Solver feasibility tolerance")
     parser.add_argument("--mipgap", type=float, default=1e-3, help="Solver MIP gap tolerance")
     parser.add_argument("--obj_tol", type=float, default=1e-3, help="objective function tolerance")
-    parser.add_argument("-o", "--output", default="rxn_solution.txt", help="Name of the output file")
+    parser.add_argument("-o", "--output", default="rxn_enum", help="Name of the output file")
     args = parser.parse_args()
 
     fileformat = Path(args.model).suffix
@@ -135,6 +152,7 @@ if __name__ == "__main__":
 
     try:
         model.solver = 'cplex'
+        model.solver.configuration.presolve = True
     except:
         print("cplex is not available or not properly installed")
 
@@ -146,15 +164,24 @@ if __name__ == "__main__":
     if args.reaction_list:
         df = pd.read_csv(args.reaction_list, header=None)
         reactions = [x for x in df.unstack().values]
-        rxn_range = args.range.split("-")
-        rxn_list = reactions[int(rxn_range[0]):int(rxn_range[1])]
+        rxn_range = args.range.split("_")
+        if rxn_range[0] == '':
+            start = 0
+        else:
+            start = int(rxn_range[0])
+        if rxn_range[1] == '':
+            rxn_list = reactions[start:]
+        else:
+            rxn_list = reactions[start:int(rxn_range[1])]
 
     if args.initial_solution:
         initial_solution, initial_binary = read_solution(args.initial_solution)
     else:
-        initial_solution = imat(model, reaction_weights, args.epsilon, args.threshold, args.tol, args.mipgap)
+        initial_solution = imat(model, reaction_weights, epsilon=args.epsilon, threshold=args.threshold,
+                                timelimit=args.timelimit, feasibility=args.tol, mipgaptol=args.mipgap)
 
-    solution = partial_rxn_enum(model, rxn_list, initial_solution, reaction_weights, args.epsilon, args.threshold,
-                                args.timelimit, args.tol, args.mipgap, args.obj_tol)
+    solution, result = partial_rxn_enum(model, rxn_list, initial_solution, reaction_weights, args.epsilon,
+                                        args.threshold, args.timelimit, args.tol, args.mipgap, args.obj_tol)
 
-    # write_solution(solution, args.threshold, args.output)
+    pd.DataFrame(solution.unique_binary).to_csv(args.output+"_solutions.csv")
+    result.to_csv(args.output + "_results.csv")
