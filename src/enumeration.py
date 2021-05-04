@@ -1,7 +1,7 @@
 
 from cobra import Model
 import numpy as np
-from sympy import sympify, Add
+from sympy import sympify, Add, evaluate
 import six
 import time
 import pandas as pd
@@ -122,37 +122,39 @@ def rxn_enum(model, reaction_weights=None, epsilon=1., threshold=1e-1, tlim=None
 
 
 def create_icut_constraint(model, reaction_weights, threshold, prev_sol, prev_sol_binary, name, full=False):
-
-    expr = sympify("1")
     if full:
+        expr = sympify("1")
         newbound = sum(prev_sol_binary)
         cvector = [1 if x else -1 for x in prev_sol_binary]
         for idx, rxn in enumerate(model.reactions):
             expr += cvector[idx] * model.solver.variables["x_" + rxn.id]
     else:
-        newbound = 0
+        newbound = -1
+        var_vals = []
         for rid, weight in six.iteritems(reaction_weights):
-            if weight > 0.:
+            if weight > 0:
+                y = model.solver.variables["rh_" + rid + "_pos"]
+                x = model.solver.variables["rh_" + rid + "_neg"]
                 if prev_sol.fluxes[rid] >= threshold:
-                    expr += model.solver.variables["rh_" + rid + "_pos"] - model.solver.variables["rh_" + rid + "_neg"]
+                    var_vals.append(y-x)
                     newbound += 1
                 elif prev_sol.fluxes[rid] <= -threshold:
-                    expr += model.solver.variables["rh_" + rid + "_neg"] - model.solver.variables["rh_" + rid + "_pos"]
+                    var_vals.append(x - y)
                     newbound += 1
                 else:
-                    expr += - model.solver.variables["rh_" + rid + "_pos"] - model.solver.variables[
-                        "rh_" + rid + "_neg"]
-            elif weight < 0.:
+                    var_vals.append(- y - x)
+            elif weight < 0:
+                x = model.solver.variables["rl_" + rid]
                 if np.abs(prev_sol.fluxes[rid]) < threshold:
-                    expr += model.solver.variables["rl_" + rid]
+                    var_vals.append(x)
                     newbound += 1
                 else:
-                    expr += - model.solver.variables["rl_" + rid]
-    if expr.evalf() == 1 and not full:
+                    var_vals.append(- x)
+        expr = sum(var_vals)
+    constraint = model.solver.interface.Constraint(expr, ub=newbound, name=name)
+    if expr.evalf() == 1:
         print("No reactions were found in reaction_weights when attempting to create an icut constraint")
         constraint = None
-    else:
-        constraint = model.solver.interface.Constraint(expr, ub=newbound, name=name)
     return constraint
 
 
@@ -334,6 +336,7 @@ def diversity_enum(model, reaction_weights, prev_sol, thr=1e-4, obj_tol=1e-3, ma
             const = create_icut_constraint(model, reaction_weights, thr, prev_sol, prev_sol_bin, name="icut_"+str(idx))
             model.solver.add(const)
             icut_constraints.append(const)
+
         # randomly selecting reactions which were active in the previous solution
         tempweights = {}
         i = 0
@@ -343,11 +346,12 @@ def diversity_enum(model, reaction_weights, prev_sol, thr=1e-4, obj_tol=1e-3, ma
                 tempweights[rid] = weight
                 i += 1
         selected_recs.append(i)
+
         objective = create_maxdist_objective(model, tempweights, prev_sol, prev_sol_bin, only_ones)
         model.objective = objective
         try:
             t2 = time.perf_counter()
-            print("time for creating constraints in iteration "+str(idx)+": ", t2-t0)
+            print("time before optimizing in iteration "+str(idx)+":", t2-t0)
             with model:
                 prev_sol = model.optimize()
             prev_sol_bin = get_binary_sol(prev_sol, thr)
@@ -357,7 +361,7 @@ def diversity_enum(model, reaction_weights, prev_sol, thr=1e-4, obj_tol=1e-3, ma
             print("An error occured in iteration %i of dexom, check if all feasible solutions have been found" % (idx))
             break
         t1 = time.perf_counter()
-        print("time for optimizing in iteration "+str(idx)+": ", t1-t2)
+        print("time for optimizing in iteration "+str(idx)+":", t1-t2)
         times.append(t1-t0)
 
     model.solver.remove([const for const in icut_constraints if const in model.solver.constraints])
@@ -378,15 +382,19 @@ if __name__ == "__main__":
     from model_functions import load_reaction_weights
 
     model = read_sbml_model("min_iMM1865/min_iMM1865.xml")
-    reaction_weights = load_reaction_weights("min_iMM1865/p53_deseq2_cutoff_padj_1e-6.csv", "Var1", "Var2")
+    reaction_weights = load_reaction_weights("min_iMM1865/p53_deseq2_cutoff_padj_1e-6.csv")
 
-    model.solver = 'cplex'
+    try:
+        model.solver = 'cplex'
+    except:
+        print("cplex is not available or not properly installed")
+
     model.solver.configuration.verbosity = 2
-
+    model.solver.configuration.presolve = True
     imat_solution = imat(model, reaction_weights, feasibility=1e-7, timelimit=300)
 
     print("\nstarting dexom")
-    dexom_sol = diversity_enum(model, reaction_weights, imat_solution, maxiter=300, obj_tol=1e-3, dist_anneal=0.99,
+    dexom_sol = diversity_enum(model, reaction_weights, imat_solution, maxiter=10, obj_tol=1e-3, dist_anneal=0.9,
                                 icut=True, only_ones=False)
     print("\n")
 

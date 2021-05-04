@@ -37,7 +37,7 @@ if __name__ == "__main__":
     description = "Performs weight permutation tests on imat"
 
     parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument("-m", "--model", help="Metabolic model in sbml or json format")
+    parser.add_argument("-m", "--model", help="Metabolic model in sbml, json, or matlab format")
     parser.add_argument("-r", "--reaction_weights", default={},
                         help="Reaction weights in csv format (first row: reaction names, second row: weights)")
     parser.add_argument("-n", "--num_permutations", type=int, default=10, help="number of permutations to perform")

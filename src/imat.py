@@ -159,7 +159,7 @@ if __name__ == "__main__":
     description = "Performs the iMAT algorithm"
 
     parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument("-m", "--model", help="Metabolic model in sbml or json format")
+    parser.add_argument("-m", "--model", help="Metabolic model in sbml, json, or matlab format")
     parser.add_argument("-r", "--reaction_weights", default={},
                         help="Reaction weights in csv format with column names: (reactions, weights)")
     parser.add_argument("--epsilon", type=float, default=1e-2, help="Activation threshold for highly expressed reactions")
