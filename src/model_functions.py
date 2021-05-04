@@ -1,6 +1,7 @@
 
 import six
 import pandas as pd
+import numpy as np
 from csv import DictReader, DictWriter
 from cobra.io import load_json_model, read_sbml_model, load_matlab_model
 from sympy import Add, Mul, sympify
@@ -99,8 +100,9 @@ def human_weights_from_gpr(model, gene_file):
     genes = pd.read_csv(gene_file, sep=",", decimal=".")
     gene_weights = pd.DataFrame(genes["t"])
     gene_weights.index = genes["ID"]
-    gene_weights = gene_weights["t"].to_dict()
-    gene_weights = {str(k).replace(':', '_'): float(v) for k, v in gene_weights.items()}
+    gene_weights = {idx.replace(':', '_'): np.max(gene_weights.loc[idx]["t"]) for idx in gene_weights.index}
+    # gene_weights = gene_weights["t"].to_dict()
+    # gene_weights = {str(k).replace(':', '_'): float(v) for k, v in gene_weights.items()}
 
     for rxn in model.reactions:
         if len(rxn.genes) > 0:
@@ -121,8 +123,9 @@ def mouse_weights_from_gpr(model, gene_file):
     genes = pd.read_csv(gene_file, sep=",")
     gene_weights = pd.DataFrame(genes["Weight"])
     gene_weights.index = genes["ID"]
-    gene_weights = gene_weights["Weight"].to_dict()
-    gene_weights = {"g_"+str(k): float(v) for k, v in gene_weights.items()}
+    gene_weights = {"g_"+str(idx): np.max(gene_weights.loc[idx]["Weight"]) for idx in gene_weights.index}
+    # gene_weights = gene_weights["Weight"].to_dict()
+    # gene_weights = {"g_"+str(k): float(v) for k, v in gene_weights.items()}
 
     for rxn in model.reactions:
         if len(rxn.genes) > 0:
@@ -145,11 +148,12 @@ if __name__ == "__main__":
     louison_model = load_matlab_model("recon2_2/recon2v2_corrected.mat")
 
     filename = "recon2_2/sign_MUvsWT_hgnc_clean.csv"
+    #filename = "recon2_2/microarray_hgnc.csv"
 
     model = louison_model
     rec_wei = human_weights_from_gpr(model, filename)
 
-    pab_wei = load_reaction_weights("recon2_2/recon2.2_tvals.csv", "Reaction", "t")
+    pab_wei = load_reaction_weights("recon2_2/rxn_scores_MUvsWT_recon22.csv", "Var1", "Var2")
 
     print("total reaction scores: ", len(rec_wei))
     print("non-zero reaction scores: ", len(rec_wei)-list(rec_wei.values()).count(0))
@@ -166,9 +170,9 @@ if __name__ == "__main__":
     #
     diff = {k: v-pab_wei[k] for k, v in rec_wei.items()}
     print(sum([abs(v) for v in diff.values()]))
-    diffrecs = {k: v for k, v in diff.items() if abs(v) > 0.001}
+    diffrecs = {k: (rec_wei[k], pab_wei[k]) for k, v in diff.items() if abs(v) > 0.001}
     print(len(diffrecs))
-    ### for the mouse model, the result is correct by modifying the _collapse_arguments function of the MinMaxBase class
-    ### in /sympy/functions/elementary/miscellaneous.py
-    # # factor out common elements as for
 
+    ### the result is rendered correct by modifying the _collapse_arguments function of the MinMaxBase class
+    ### in /sympy/functions/elementary/miscellaneous.py
+    ### see https://github.com/sympy/sympy/issues/21399 for details
