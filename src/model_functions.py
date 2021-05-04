@@ -34,6 +34,7 @@ def clean_model(model, reaction_weights=None, full=False):
                 model.solver.remove(model.solver.constraints["xf_"+rid+"_lower"])
     else:
         for rid, weight in six.iteritems(reaction_weights):
+            print(rid)
             if weight > 0. and "rh_"+rid+"_pos" in model.solver.variables:
                 model.solver.remove(model.solver.variables["rh_"+rid+"_pos"])
                 model.solver.remove(model.solver.variables["rh_"+rid+"_neg"])
@@ -95,20 +96,20 @@ def get_all_reactions_from_model(model, save=True):
 def human_weights_from_gpr(model, gene_file):
     reaction_weights = {}
 
-    genes = pd.read_csv(gene_file, sep=",", decimal=",")
+    genes = pd.read_csv(gene_file, sep=",", decimal=".")
     gene_weights = pd.DataFrame(genes["t"])
-    gene_weights.index = genes["entrez"]
+    gene_weights.index = genes["ID"]
     gene_weights = gene_weights["t"].to_dict()
-    gene_weights = {"HGNC_"+str(k): float(v) for k, v in gene_weights.items()}
+    gene_weights = {str(k).replace(':', '_'): float(v) for k, v in gene_weights.items()}
 
     for rxn in model.reactions:
-        if "GENE ASSOCIATION" in rxn.notes:
-            rxnnotes = rxn.notes["GENE ASSOCIATION"].replace(":", "_")
-            expr_split = rxnnotes.split()
-            rxnnotes = re.sub('and|or|\(|\)', '', rxnnotes)
-            gen_list = set(rxnnotes.split())
+        if len(rxn.genes) > 0:
+            expr_split = rxn.gene_reaction_rule.split()
+            expr_split = [s.replace(':', '_') if ':' in s else s for s in expr_split]
+            rxngenes = re.sub('and|or|\(|\)', '', rxn.gene_reaction_rule).split()
+            gen_list = set([s.replace(':', '_') for s in rxngenes if ':' in s])
             new_weights = {g: gene_weights.get(g, 0) for g in gen_list}
-            expression = " ".join(expr_split).replace("or", "*").replace("and", "+")
+            expression = ' '.join(expr_split).replace('or', '*').replace('and', '+')
             weight = sympify(expression, evaluate=False).replace(Mul, Max).replace(Add, Min).subs(new_weights, n=21)
             reaction_weights[rxn.id] = weight
     return reaction_weights
@@ -139,32 +140,34 @@ def mouse_weights_from_gpr(model, gene_file):
 if __name__ == "__main__":
 
     # jul_model = read_sbml_model("recon2_2/Recon2.2_reimported2_test.xml")
-    # # old_model = read_sbml_model("recon2_2/Recon2.2_Swainton2016.xml")
-    # # mat_model = load_matlab_model("recon2_2/Recon2.2.mat")
-    #
-    # filename = "recon2_2/sign_MUvsWT_ids.csv"
-    #
-    # model = jul_model
-    # rec_wei = human_weights_from_gpr(model, filename)
-    #
-    # pab_wei = load_reaction_weights("recon2_2/scores-pval-005.csv", "rxn", "rxnWeights")
-    #
-    # print("total reaction scores: ", len(rec_wei))
-    # print("non-zero reaction scores: ", len(rec_wei)-list(rec_wei.values()).count(0))
-    #
-    # print("comparison with Pablo's file")
-    # print("total reaction scores: ", len(pab_wei))
-    # print("non-zero reaction scores: ", len(pab_wei)-list(pab_wei.values()).count(0))
+    # old_model = read_sbml_model("recon2_2/Recon2.2_Swainton2016.xml")
+    # mat_model = load_matlab_model("recon2_2/Recon2.2.mat")
+    louison_model = load_matlab_model("recon2_2/recon2v2_corrected.mat")
 
-    mouse = read_sbml_model("min_iMM1865/min_iMM1865.xml")
-    filename = "min_iMM_synthdata/imm1865_0.25_2.5_cholesterol.csv"
-    rec_wei = mouse_weights_from_gpr(mouse, filename)
+    filename = "recon2_2/sign_MUvsWT_hgnc_clean.csv"
 
-    pab_wei = load_reaction_weights("min_iMM_synthdata/imm1865_chol.csv", "Var1", "Var2")
+    model = louison_model
+    rec_wei = human_weights_from_gpr(model, filename)
 
+    pab_wei = load_reaction_weights("recon2_2/recon2.2_tvals.csv", "Reaction", "t")
+
+    print("total reaction scores: ", len(rec_wei))
+    print("non-zero reaction scores: ", len(rec_wei)-list(rec_wei.values()).count(0))
+
+    print("comparison with Pablo's file")
+    print("total reaction scores: ", len(pab_wei))
+    print("non-zero reaction scores: ", len(pab_wei)-list(pab_wei.values()).count(0))
+
+    # mouse = read_sbml_model("min_iMM1865/min_iMM1865.xml")
+    # filename = "min_iMM_synthdata/imm1865_0.25_2.5_cholesterol.csv"
+    # rec_wei = mouse_weights_from_gpr(mouse, filename)
+    #
+    # pab_wei = load_reaction_weights("min_iMM_synthdata/imm1865_chol.csv", "Var1", "Var2")
+    #
     diff = {k: v-pab_wei[k] for k, v in rec_wei.items()}
     print(sum([abs(v) for v in diff.values()]))
-
+    diffrecs = {k: v for k, v in diff.items() if abs(v) > 0.001}
+    print(len(diffrecs))
     ### for the mouse model, the result is correct by modifying the _collapse_arguments function of the MinMaxBase class
     ### in /sympy/functions/elementary/miscellaneous.py
     # # factor out common elements as for
