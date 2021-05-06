@@ -142,15 +142,12 @@ def mouse_weights_from_gpr(model, gene_file):
 
 if __name__ == "__main__":
 
-    # jul_model = read_sbml_model("recon2_2/Recon2.2_reimported2_test.xml")
-    # old_model = read_sbml_model("recon2_2/Recon2.2_Swainton2016.xml")
-    # mat_model = load_matlab_model("recon2_2/Recon2.2.mat")
-    louison_model = load_matlab_model("recon2_2/recon2v2_corrected.mat")
+    corr_model = load_matlab_model("recon2_2/recon2v2_corrected.mat")
 
-    filename = "recon2_2/sign_MUvsWT_hgnc_clean.csv"
-    #filename = "recon2_2/microarray_hgnc.csv"
+    # filename = "recon2_2/sign_MUvsWT_hgnc_clean.csv"
+    filename = "recon2_2/microarray_hgnc.csv"
 
-    model = louison_model
+    model = corr_model
     rec_wei = human_weights_from_gpr(model, filename)
 
     pab_wei = load_reaction_weights("recon2_2/rxn_scores_MUvsWT_recon22.csv", "Var1", "Var2")
