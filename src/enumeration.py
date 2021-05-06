@@ -279,6 +279,27 @@ def create_maxdist_objective(model, reaction_weights, prev_sol, prev_sol_bin, on
 
 
 def maxdist(model, reaction_weights, prev_sol, threshold=1e-4, obj_tol=1e-3, maxiter=10, only_ones=False):
+    """
+
+    Parameters
+    ----------
+    model: cobrapy Model
+    reaction_weights: dict
+        keys = reactions and values = weights
+    prev_sol: Solution instance
+        a previous imat solution
+    threshold: float
+        detection threshold of activated reactions
+    obj_tol: float
+        variance allowed in the objective_values of the solutions
+    maxiter: foat
+        maximum number of solutions to check for
+    only_ones: bool
+        determines if the hamming distance is only calculated with ones, or with ones & zeros
+    Returns
+    -------
+
+    """
     full = False
     icut_constraints = []
     all_solutions = [prev_sol]
@@ -318,7 +339,41 @@ def maxdist(model, reaction_weights, prev_sol, threshold=1e-4, obj_tol=1e-3, max
 
 def diversity_enum(model, reaction_weights, prev_sol, thr=1e-4, obj_tol=1e-3, maxiter=10, dist_anneal=0.995,
                    icut=True, only_ones=False):
+    """
 
+    Parameters
+    ----------
+    model
+    reaction_weights
+    prev_sol
+    thr
+    obj_tol
+    maxiter
+    dist_anneal
+    icut
+    only_ones
+
+    model: cobrapy Model
+    reaction_weights: dict
+        keys = reactions and values = weights
+    prev_sol: Solution instance
+        a previous imat solution
+    threshold: float
+        detection threshold of activated reactions
+    obj_tol: float
+        variance allowed in the objective_values of the solutions
+    maxiter: foat
+        maximum number of solutions to check for
+    dist_anneal: float
+        parameter which influences the probability of selecting reactions
+    icut: bool
+        determines whether icut constraints are applied or not
+    only_ones: bool
+        determines if the hamming distance is only calculated with ones, or with ones & zeros
+    Returns
+    -------
+
+    """
     times = []
     selected_recs = []
     prev_sol_bin = get_binary_sol(prev_sol, thr)
@@ -381,8 +436,11 @@ if __name__ == "__main__":
     from cobra.io import load_json_model, read_sbml_model, load_matlab_model
     from model_functions import load_reaction_weights
 
-    model = read_sbml_model("min_iMM1865/min_iMM1865.xml")
-    reaction_weights = load_reaction_weights("min_iMM1865/p53_deseq2_cutoff_padj_1e-6.csv")
+    # model = read_sbml_model("min_iMM1865/min_iMM1865.xml")
+    # reaction_weights = load_reaction_weights("min_iMM1865/p53_deseq2_cutoff_padj_1e-6.csv")
+
+    model = load_matlab_model("recon2_2/recon2v2_corrected.mat")
+    reaction_weights = load_reaction_weights("recon2_2/microarray_reactions_test.csv", "reactions", "scores")
 
     try:
         model.solver = 'cplex'
@@ -390,7 +448,6 @@ if __name__ == "__main__":
         print("cplex is not available or not properly installed")
 
     model.solver.configuration.verbosity = 2
-    model.solver.configuration.presolve = True
     imat_solution = imat(model, reaction_weights, feasibility=1e-7, timelimit=300)
 
     print("\nstarting dexom")

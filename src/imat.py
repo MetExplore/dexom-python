@@ -37,8 +37,10 @@ def imat(model, reaction_weights={}, epsilon=1e-2, threshold=1e-5, timelimit=Non
         if True, apply constraints on all reactions. if False, only on reactions with non-zero weights
     """
 
-
-    assert isinstance(model, Model)
+    try:
+        model.solver = 'cplex'
+    except:
+        print("cplex is not available or not properly installed")
 
     y_variables = list()
     x_variables = list()
@@ -138,13 +140,11 @@ def imat(model, reaction_weights={}, epsilon=1e-2, threshold=1e-5, timelimit=Non
         rl_objective = [x * x_weights[idx] for idx, x in enumerate(x_variables)]
         objective = model.solver.interface.Objective(Add(*rh_objective) + Add(*rl_objective), direction="max")
         model.objective = objective
-
-        t1 = time.perf_counter()
-
         model.solver.configuration.timeout = timelimit
         model.tolerance = feasibility
         model.solver.problem.parameters.mip.tolerances.mipgap.set(mipgaptol)
-
+        model.solver.configuration.presolve = True
+        t1 = time.perf_counter()
         with model:
             solution = model.optimize()
             t2 = time.perf_counter()
@@ -167,7 +167,7 @@ if __name__ == "__main__":
     parser.add_argument("-t", "--timelimit", type=int, default=None, help="Solver time limit")
     parser.add_argument("--tol", type=float, default=1e-6, help="Solver feasibility tolerance")
     parser.add_argument("--mipgap", type=float, default=1e-3, help="Solver MIP gap tolerance")
-    parser.add_argument("-o", "--output", default="imat_solution.txt", help="Name of the output file")
+    parser.add_argument("-o", "--output", default="imat_solution.csv", help="Name of the output file")
 
     args = parser.parse_args()
 
@@ -181,11 +181,6 @@ if __name__ == "__main__":
     else:
         print("Only SBML, JSON, and Matlab formats are supported for the models")
         model = None
-
-    try:
-        model.solver = 'cplex'
-    except:
-        print("cplex is not available or not properly installed")
 
     reaction_weights = {}
     if args.reaction_weights:
