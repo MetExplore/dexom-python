@@ -46,11 +46,12 @@ def partial_rxn_enum(model, rxn_list, init_sol, reaction_weights=None, epsilon=1
     unique_solutions_binary = [init_sol_bin]
     all_reactions = []  # for each solution, save which reaction was activated/inactived by the algorithm
     unique_reactions = []
-    results = {"reaction": [], "time": [], "result": []}
+    results = {"reaction": [], "time": [], "result": [], "unique_solutions": []}
 
     for idx, rid in enumerate(rxn_list):
         t2 = time.perf_counter()
         results["reaction"].append(rid)
+        results["unique_solutions"].append(0)
         with model as model_temp:
             if rid in model.reactions:
                 rxn = model_temp.reactions.get_by_id(rid)
@@ -79,6 +80,7 @@ def partial_rxn_enum(model, rxn_list, init_sol, reaction_weights=None, epsilon=1
                                     unique_solutions.append(temp_sol)
                                     unique_solutions_binary.append(temp_sol_bin)
                                     unique_reactions.append(rid+"_backwards")
+                                    results["unique_solutions"][-1] += 1
                         except:
                             print("An error occurred with reaction %s_backwards. "
                                   "Check feasibility of the model when this reaction is irreversible." % rid)
@@ -102,12 +104,13 @@ def partial_rxn_enum(model, rxn_list, init_sol, reaction_weights=None, epsilon=1
                             unique_solutions.append(temp_sol)
                             unique_solutions_binary.append(temp_sol_bin)
                             unique_reactions.append(rid)
+                            results["unique_solutions"][-1] += 1
                 except:
                     print("An error occurred with reaction %s. "
                           "Check feasibility of the model when this reaction is blocked/irreversible" % rid)
                     results["result"][-1] += "failure"
             else:
-                results["result"][-1] += "not_in_model"
+                results["result"].append("not_in_model")
         t1 = time.perf_counter()
         results["time"].append(t1-t2)
     solution = RxnEnumSolution(all_solutions, unique_solutions, all_solutions_binary, unique_solutions_binary,
@@ -152,7 +155,6 @@ if __name__ == "__main__":
 
     try:
         model.solver = 'cplex'
-        model.solver.configuration.presolve = True
     except:
         print("cplex is not available or not properly installed")
 
@@ -170,6 +172,8 @@ if __name__ == "__main__":
         else:
             start = int(rxn_range[0])
         if rxn_range[1] == '':
+            rxn_list = reactions[start:]
+        elif int(rxn_range[1]) > len(rxn_list):
             rxn_list = reactions[start:]
         else:
             rxn_list = reactions[start:int(rxn_range[1])]
