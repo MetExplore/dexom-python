@@ -70,6 +70,8 @@ def analyze_permutation(perm_sols, imat_sol, sub_frame=None, sub_list=None, save
     all_list = []
     if isinstance(sub_frame, pd.DataFrame):
         all_list.append(sub_frame)
+    if type(perm_sols) == str:
+        perm_sols = [perm_sols]
     for filename in perm_sols:
         df = pd.read_csv(filename, index_col=None, header=0)
         all_list.append(df)
@@ -193,23 +195,65 @@ def dexom_results(result_path, solution_path, out_path):
     return df.T
 
 
+def pathway_histograms(solutions, sub_frame, sub_list, out_path):
+
+    full_list = []
+    hist_pathways = pd.DataFrame()
+    histograms = []
+
+    if isinstance(sub_frame, pd.DataFrame):
+        full_list.append(sub_frame)
+    if type(solutions) == str:
+        solutions = [solutions]
+    for filename in solutions:
+        df = pd.read_csv(filename, index_col=0, header=0)
+        mapp = {df.columns[i]: sub_frame.columns[i] for i in range(len(df.columns))}
+        df.rename(mapp, axis=1, inplace=True)
+        full_list.append(df)
+    full_solutions = pd.concat(full_list, axis=0, ignore_index=True)
+
+    for sub in sub_list:
+        rxns = full_solutions[full_solutions.isin([sub])].stack()[0].index
+
+        # create pathway histograms
+        data = full_solutions[1:][rxns].sum(axis=1)
+        hist_pathways[sub] = data.values
+        subforsave = sub.replace("/", " ")
+        plt.clf()
+        fig = data.hist(bins=np.arange(min(data), max(data) + 2)).get_figure()
+        histograms.append((fig, out_path+"_histogram "+subforsave+".png"))
+        fig.savefig(out_path+"_histogram "+subforsave+".png")
+
+    return full_solutions
+
+
 if __name__ == "__main__":
 
     ### permutation result analysis
 
-    all_files = Path("min_iMM1865/perms_to_be_analyzed").glob("*.txt")
+    # all_files = Path("min_iMM1865/perms_to_be_analyzed").glob("*.txt")
+    #
+    # imat_sol = "min_iMM1865/imat_p53.txt"
+    # solution, binary = read_solution(imat_sol)
+    #
+    # mypath = "permutation/"
+    #
+    # subs = pd.read_csv("min_iMM1865/min_iMM1865_subsystem.csv")
+    #
+    # with open("min_iMM1865/subsystems.txt", "r") as file:
+    #     subsystems = file.read().split(";")
+    #
+    # full_results = analyze_permutation(all_files, imat_sol, sub_frame=subs, sub_list=subsystems,
+    #                                    savefiles=True, out_path=mypath)
+    #
+    #
 
-    imat_sol = "min_iMM1865/imat_p53.txt"
-    solution, binary = read_solution(imat_sol)
-
-    mypath = "permutation/"
+    sols = "500 dexom/enum_dexom_solutions.csv"
 
     subs = pd.read_csv("min_iMM1865/min_iMM1865_subsystem.csv")
 
     with open("min_iMM1865/subsystems.txt", "r") as file:
         subsystems = file.read().split(";")
 
-    full_results = analyze_permutation(all_files, imat_sol, sub_frame=subs, sub_list=subsystems,
-                                       savefiles=True, out_path=mypath)
-
-    pass
+    sol = pathway_histograms(sols, subs, subsystems, "dexom_scatter/")
+    print(sol)
