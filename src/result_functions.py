@@ -12,9 +12,9 @@ def get_binary_sol(solution, threshold):
     return binary
 
 
-def write_solution(solution, threshold, filename):
+def write_solution(solution, threshold, filename="imat_sol.csv"):
     """
-    Writes an imat solution as a txt file. The solution is written in a column format
+    Writes an optimize solution as a txt file. The solution is written in a column format
     Parameters
     ----------
     solution: cobra.Solution
@@ -222,13 +222,12 @@ def pathway_histograms(solutions, sub_frame, sub_list, out_path):
         plt.clf()
         fig = data.hist(bins=np.arange(min(data), max(data) + 2)).get_figure()
         histograms.append((fig, out_path+"_histogram "+subforsave+".png"))
-        fig.savefig(out_path+"_histogram "+subforsave+".png")
+        #fig.savefig(out_path+"_histogram "+subforsave+".png")
 
     return full_solutions
 
 
 if __name__ == "__main__":
-
     ### permutation result analysis
 
     # all_files = Path("min_iMM1865/perms_to_be_analyzed").glob("*.txt")
@@ -245,7 +244,6 @@ if __name__ == "__main__":
     #
     # full_results = analyze_permutation(all_files, imat_sol, sub_frame=subs, sub_list=subsystems,
     #                                    savefiles=True, out_path=mypath)
-    #
     #
 
     sols = "500 dexom/enum_dexom_solutions.csv"

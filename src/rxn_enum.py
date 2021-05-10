@@ -2,7 +2,6 @@
 import argparse
 import numpy as np
 import pandas as pd
-import time
 from pathlib import Path
 from cobra.io import load_json_model, read_sbml_model, load_matlab_model
 from model_functions import load_reaction_weights
@@ -46,56 +45,43 @@ def partial_rxn_enum(model, rxn_list, init_sol, reaction_weights=None, epsilon=1
     unique_solutions_binary = [init_sol_bin]
     all_reactions = []  # for each solution, save which reaction was activated/inactived by the algorithm
     unique_reactions = []
-    results = {"reaction": [], "time": [], "result": [], "unique_solutions": []}
 
     for idx, rid in enumerate(rxn_list):
-        t2 = time.perf_counter()
-        results["reaction"].append(rid)
-        results["unique_solutions"].append(0)
         with model as model_temp:
             if rid in model.reactions:
                 rxn = model_temp.reactions.get_by_id(rid)
-                results["result"].append("")
                 # for active fluxes, check inactivation
                 if init_sol_bin[idx] == 1:
                     rxn.bounds = (0., 0.)
-                    results["result"][-1] += "blocked_"
                 # for inactive fluxes, check activation
                 else:
                     upper_bound_temp = rxn.upper_bound
                     # for inactive reversible fluxes, check activation in backwards direction
                     if rxn.lower_bound < 0.:
-                        results["result"][-1] += "backwards_"
                         try:
                             rxn.upper_bound = -threshold
                             temp_sol = imat(model_temp, reaction_weights, epsilon=epsilon,
                                             threshold=threshold, timelimit=tlim, feasibility=feas, mipgaptol=mipgap)
                             temp_sol_bin = get_binary_sol(temp_sol, threshold)
-                            results["result"][-1] += "success/"
                             if temp_sol.objective_value >= optimal_objective_value:
                                 all_solutions.append(temp_sol)
                                 all_solutions_binary.append(temp_sol_bin)
-                                all_reactions.append(rid+"_backwards")
                                 if temp_sol_bin not in unique_solutions_binary:
                                     unique_solutions.append(temp_sol)
                                     unique_solutions_binary.append(temp_sol_bin)
                                     unique_reactions.append(rid+"_backwards")
-                                    results["unique_solutions"][-1] += 1
                         except:
                             print("An error occurred with reaction %s_backwards. "
                                   "Check feasibility of the model when this reaction is irreversible." % rid)
-                            results["result"][-1] += "failure/"
                         finally:
                             rxn.upper_bound = upper_bound_temp
                     # for all inactive fluxes, check activation in forwards direction
                     rxn.lower_bound = threshold
-                    results["result"][-1] += "forwards_"
                 # for all fluxes: compute solution with new bounds
                 try:
                     temp_sol = imat(model_temp, reaction_weights, epsilon=epsilon,
                                     threshold=threshold, timelimit=tlim, feasibility=feas, mipgaptol=mipgap)
                     temp_sol_bin = [1 if np.abs(flux) >= threshold else 0 for flux in temp_sol.fluxes]
-                    results["result"][-1] += "success"
                     if temp_sol.objective_value >= optimal_objective_value:
                         all_solutions.append(temp_sol)
                         all_solutions_binary.append(temp_sol_bin)
@@ -104,21 +90,14 @@ def partial_rxn_enum(model, rxn_list, init_sol, reaction_weights=None, epsilon=1
                             unique_solutions.append(temp_sol)
                             unique_solutions_binary.append(temp_sol_bin)
                             unique_reactions.append(rid)
-                            results["unique_solutions"][-1] += 1
                 except:
                     print("An error occurred with reaction %s. "
                           "Check feasibility of the model when this reaction is blocked/irreversible" % rid)
-                    results["result"][-1] += "failure"
-            else:
-                results["result"].append("not_in_model")
-        t1 = time.perf_counter()
-        results["time"].append(t1-t2)
+
     solution = RxnEnumSolution(all_solutions, unique_solutions, all_solutions_binary, unique_solutions_binary,
                                all_reactions, unique_reactions)
 
-    results = pd.DataFrame(results)
-
-    return solution, results
+    return solution
 
 
 if __name__ == "__main__":
@@ -184,7 +163,7 @@ if __name__ == "__main__":
         initial_solution = imat(model, reaction_weights, epsilon=args.epsilon, threshold=args.threshold,
                                 timelimit=args.timelimit, feasibility=args.tol, mipgaptol=args.mipgap)
 
-    solution, result = partial_rxn_enum(model, rxn_list, initial_solution, reaction_weights, args.epsilon,
+    solution = partial_rxn_enum(model, rxn_list, initial_solution, reaction_weights, args.epsilon,
                                         args.threshold, args.timelimit, args.tol, args.mipgap, args.obj_tol)
 
     pd.DataFrame(solution.unique_binary).to_csv(args.output+"_solutions.csv")

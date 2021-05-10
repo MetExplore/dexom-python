@@ -280,8 +280,8 @@ def create_maxdist_objective(model, reaction_weights, prev_sol, prev_sol_bin, on
 
 def maxdist(model, reaction_weights, prev_sol, threshold=1e-4, obj_tol=1e-3, maxiter=10, only_ones=False):
     """
-
     Parameters
+    maximal distance enumeration
     ----------
     model: cobrapy Model
     reaction_weights: dict
@@ -340,7 +340,7 @@ def maxdist(model, reaction_weights, prev_sol, threshold=1e-4, obj_tol=1e-3, max
 def diversity_enum(model, reaction_weights, prev_sol, thr=1e-4, obj_tol=1e-3, maxiter=10, dist_anneal=0.995,
                    icut=True, only_ones=False):
     """
-
+    diversity-based enumeration
     Parameters
     ----------
     model
@@ -412,12 +412,12 @@ def diversity_enum(model, reaction_weights, prev_sol, thr=1e-4, obj_tol=1e-3, ma
             prev_sol_bin = get_binary_sol(prev_sol, thr)
             all_solutions.append(prev_sol)
             all_binary.append(prev_sol_bin)
+            t1 = time.perf_counter()
+            print("time for optimizing in iteration " + str(idx) + ":", t1 - t2)
+            times.append(t1 - t0)
         except:
             print("An error occured in iteration %i of dexom, check if all feasible solutions have been found" % (idx))
             break
-        t1 = time.perf_counter()
-        print("time for optimizing in iteration "+str(idx)+":", t1-t2)
-        times.append(t1-t0)
 
     model.solver.remove([const for const in icut_constraints if const in model.solver.constraints])
     model.solver.remove(opt_const)
@@ -448,10 +448,10 @@ if __name__ == "__main__":
         print("cplex is not available or not properly installed")
 
     model.solver.configuration.verbosity = 2
-    imat_solution = imat(model, reaction_weights, feasibility=1e-7, timelimit=300)
+    imat_solution = imat(model, reaction_weights, feasibility=1e-7, timelimit=1200)
 
     print("\nstarting dexom")
-    dexom_sol = diversity_enum(model, reaction_weights, imat_solution, maxiter=10, obj_tol=1e-3, dist_anneal=0.9,
+    dexom_sol = diversity_enum(model, reaction_weights, imat_solution, maxiter=100, obj_tol=1e-3, dist_anneal=0.99,
                                 icut=True, only_ones=False)
     print("\n")
 
