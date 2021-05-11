@@ -5,13 +5,13 @@ import pandas as pd
 from pathlib import Path
 from cobra.io import load_json_model, read_sbml_model, load_matlab_model
 from model_functions import load_reaction_weights
-from result_functions import read_solution, get_binary_sol
+from result_functions import read_solution, get_binary_sol, write_solution
 from imat import imat
 from enumeration import RxnEnumSolution
 
 
 def partial_rxn_enum(model, rxn_list, init_sol, reaction_weights=None, epsilon=1., threshold=1e-1, tlim=None,
-                     feas=1e-6, mipgap=1e-3, obj_tol=1e-5):
+                     feas=1e-6, mipgap=1e-3, obj_tol=1e-5, out_name="rxn_enum"):
     """
     Reaction enumeration method
 
@@ -30,7 +30,8 @@ def partial_rxn_enum(model, rxn_list, init_sol, reaction_weights=None, epsilon=1
         tolerance for imat
     obj_tol: float
         variance allowed in the objective_values of the solutions
-
+    out_name: str
+        name of output files without format
     Returns
     -------
     solution: EnumSolution object
@@ -70,6 +71,7 @@ def partial_rxn_enum(model, rxn_list, init_sol, reaction_weights=None, epsilon=1
                                     unique_solutions.append(temp_sol)
                                     unique_solutions_binary.append(temp_sol_bin)
                                     unique_reactions.append(rid+"_backwards")
+                                    write_solution(temp_sol, threshold, out_name+"_sol_"+rid+"_b.csv")
                         except:
                             print("An error occurred with reaction %s_backwards. "
                                   "Check feasibility of the model when this reaction is irreversible." % rid)
@@ -90,6 +92,7 @@ def partial_rxn_enum(model, rxn_list, init_sol, reaction_weights=None, epsilon=1
                             unique_solutions.append(temp_sol)
                             unique_solutions_binary.append(temp_sol_bin)
                             unique_reactions.append(rid)
+                            write_solution(temp_sol, threshold, out_name+"_sol_"+rid+".csv")
                 except:
                     print("An error occurred with reaction %s. "
                           "Check feasibility of the model when this reaction is blocked/irreversible" % rid)
@@ -118,7 +121,7 @@ if __name__ == "__main__":
     parser.add_argument("--tol", type=float, default=1e-6, help="Solver feasibility tolerance")
     parser.add_argument("--mipgap", type=float, default=1e-3, help="Solver MIP gap tolerance")
     parser.add_argument("--obj_tol", type=float, default=1e-3, help="objective function tolerance")
-    parser.add_argument("-o", "--output", default="rxn_enum", help="Name of the output file")
+    parser.add_argument("-o", "--output", default="rxn_enum", help="Base name of output files, without format")
     args = parser.parse_args()
 
     fileformat = Path(args.model).suffix
@@ -163,8 +166,7 @@ if __name__ == "__main__":
         initial_solution = imat(model, reaction_weights, epsilon=args.epsilon, threshold=args.threshold,
                                 timelimit=args.timelimit, feasibility=args.tol, mipgaptol=args.mipgap)
 
-    solution = partial_rxn_enum(model, rxn_list, initial_solution, reaction_weights, args.epsilon,
-                                        args.threshold, args.timelimit, args.tol, args.mipgap, args.obj_tol)
+    solution = partial_rxn_enum(model, rxn_list, initial_solution, reaction_weights, args.epsilon, args.threshold,
+                                args.timelimit, args.tol, args.mipgap, args.obj_tol, args.output)
 
     pd.DataFrame(solution.unique_binary).to_csv(args.output+"_solutions.csv")
-    result.to_csv(args.output + "_results.csv")
