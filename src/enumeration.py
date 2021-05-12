@@ -1,5 +1,4 @@
 
-from cobra import Model
 import numpy as np
 from sympy import sympify, Add, evaluate
 import six
@@ -53,8 +52,6 @@ def rxn_enum(model, reaction_weights=None, epsilon=1., threshold=1e-1, tlim=None
     solution: EnumSolution object
 
     """
-    assert isinstance(model, Model)
-
     initial_solution = imat(model, reaction_weights,
                             epsilon=epsilon, threshold=threshold, timelimit=tlim, feasibility=feas, mipgaptol=mipgap)
     initial_solution_binary = get_binary_sol(initial_solution, threshold)
@@ -188,9 +185,6 @@ def icut(model, reaction_weights=None, epsilon=1., threshold=1e-1, tlim=None, fe
     solution: EnumSolution object
         In the case of integer-cut, all_solutions and unique_solutions are identical
     """
-
-    assert isinstance(model, Model)
-    
     new_solution = imat(model, reaction_weights,
                         epsilon=epsilon, threshold=threshold, timelimit=tlim, feasibility=feas, mipgaptol=mipgap, full=full)
     new_solution_binary = get_binary_sol(new_solution, threshold)

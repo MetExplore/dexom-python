@@ -15,7 +15,7 @@ if __name__ == '__main__':
     #model = load_json_model("recon2_2/Recon2.2_mat.json")
 
     model = read_sbml_model("min_iMM1865/min_iMM1865.xml")
-    reaction_weights = load_reaction_weights("min_iMM1865/p53_deseq2_cutoff_padj_1e-6.csv", "Var1", "Var2")
+    reaction_weights = load_reaction_weights("min_iMM1865/p53_deseq2_cutoff_padj_1e-6.csv",)
 
     eps = 1e-2  # threshold of activity for highly expressed reactions
     thr = 1e-5  # threshold of activity for all reactions
@@ -26,6 +26,7 @@ if __name__ == '__main__':
     maxiter = 10
     model.solver = "cplex"
     model.solver.configuration.verbosity = 3
+    model.solver.configuration.presolve = True
 
     t0 = time.perf_counter()
     print('import time: ', t0 - t3)
@@ -36,4 +37,5 @@ if __name__ == '__main__':
     print('total imat time: ', t1-t0)
 
     imat_solution_binary = get_binary_sol(imat_solution, thr)
-    clean_model(model, reaction_weights)
+    #clean_model(model, reaction_weights)
+    print("end of script")
