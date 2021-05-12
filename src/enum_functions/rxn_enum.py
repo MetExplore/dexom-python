@@ -4,13 +4,23 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 from cobra.io import load_json_model, read_sbml_model, load_matlab_model
-from model_functions import load_reaction_weights
-from result_functions import read_solution, get_binary_sol, write_solution
-from imat import imat
-from enumeration import RxnEnumSolution
+from src.imat import imat
+from src.model_functions import load_reaction_weights
+from src.result_functions import read_solution, get_binary_sol, write_solution
 
 
-def partial_rxn_enum(model, rxn_list, init_sol, reaction_weights=None, epsilon=1., threshold=1e-1, tlim=None,
+class RxnEnumSolution(object):
+    def __init__(self,
+                 all_solutions, unique_solutions, all_binary, unique_binary, all_reactions=None, unique_reactions=None):
+        self.all_solutions = all_solutions
+        self.unique_solutions = unique_solutions
+        self.all_binary = all_binary
+        self.unique_binary = unique_binary
+        self.all_reactions = all_reactions
+        self.unique_reactions = unique_reactions
+
+
+def rxn_enum(model, rxn_list, init_sol, reaction_weights=None, epsilon=1., threshold=1e-1, tlim=None,
                      feas=1e-6, mipgap=1e-3, obj_tol=1e-5, out_name="rxn_enum"):
     """
     Reaction enumeration method
@@ -34,8 +44,7 @@ def partial_rxn_enum(model, rxn_list, init_sol, reaction_weights=None, epsilon=1
         name of output files without format
     Returns
     -------
-    solution: EnumSolution object
-
+    solution: RxnEnumSolution object
     """
     init_sol_bin = get_binary_sol(init_sol, threshold)
     optimal_objective_value = init_sol.objective_value - obj_tol
@@ -47,6 +56,8 @@ def partial_rxn_enum(model, rxn_list, init_sol, reaction_weights=None, epsilon=1
     all_reactions = []  # for each solution, save which reaction was activated/inactived by the algorithm
     unique_reactions = []
 
+    if not rxn_list:
+        rxn_list = list(model.reactions)
     for idx, rid in enumerate(rxn_list):
         with model as model_temp:
             if rid in model.reactions:
@@ -103,12 +114,39 @@ def partial_rxn_enum(model, rxn_list, init_sol, reaction_weights=None, epsilon=1
     return solution
 
 
+def rxn_enum_single_loop(model, reaction_weights, rec_id, new_rec_state, out_name, eps=1e-2, thr=1e-5, tlim=None,
+                         feas=1e-6, mipgap=1e-3):
+    with model as model_temp:
+        if rec_id not in model.reactions:
+            print("reaction not found in model")
+            return 0
+        rxn = model_temp.reactions.get_by_id(rec_id)
+        if int(new_rec_state) == 0:
+            rxn.bounds = (0., 0.)
+        elif int(new_rec_state) == 1:
+            rxn.lower_bound = thr
+        elif int(new_rec_state) == 2:
+            rxn.upper_bound = -thr
+        else:
+            print("new_rec_state has an incorrect value: %s" % str(new_rec_state))
+            return 0
+        try:
+            sol = imat(model_temp, reaction_weights, epsilon=eps, threshold=thr, timelimit=tlim,
+                            feasibility=feas, mipgaptol=mipgap)
+        except:
+            print("This constraint renders the problem unfeasible")
+            return 0
+    write_solution(sol, thr, out_name)
+    return 1
+
+
 if __name__ == "__main__":
     description = "Performs the reaction enumeration algorithm on a specified list of reactions"
 
     parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument("-m", "--model", help="Metabolic model in sbml, matlab, or json format")
-    parser.add_argument("-l", "--reaction_list", default=None, help="csv list of reactions to enumerate")
+    parser.add_argument("-l", "--reaction_list", default=None, help="csv list of reactions to enumerate - if empty, "
+                                                                    "will use all reactions in the model")
     parser.add_argument("--range", default="0_",
                         help="range of reactions to use from the list, in the format 'int_int'")
     parser.add_argument("-r", "--reaction_weights", default=None,
@@ -166,7 +204,7 @@ if __name__ == "__main__":
         initial_solution = imat(model, reaction_weights, epsilon=args.epsilon, threshold=args.threshold,
                                 timelimit=args.timelimit, feasibility=args.tol, mipgaptol=args.mipgap)
 
-    solution = partial_rxn_enum(model, rxn_list, initial_solution, reaction_weights, args.epsilon, args.threshold,
+    solution = rxn_enum(model, rxn_list, initial_solution, reaction_weights, args.epsilon, args.threshold,
                                 args.timelimit, args.tol, args.mipgap, args.obj_tol, args.output)
 
     pd.DataFrame(solution.unique_binary).to_csv(args.output+"_solutions.csv")

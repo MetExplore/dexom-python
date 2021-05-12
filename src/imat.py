@@ -3,11 +3,11 @@ import six
 from sympy import Add, sympify
 from numpy import abs
 import argparse
-from cobra.io import load_json_model, read_sbml_model, load_matlab_model
-from model_functions import load_reaction_weights
-from result_functions import write_solution
 from pathlib import Path
 import time
+from cobra.io import load_json_model, read_sbml_model, load_matlab_model
+from src.model_functions import load_reaction_weights
+from src.result_functions import write_solution
 
 
 def create_full_variables(model, reaction_weights, epsilon, threshold):
@@ -132,12 +132,12 @@ def imat(model, reaction_weights={}, epsilon=1e-2, threshold=1e-5, timelimit=Non
             model = create_partial_variables(model, reaction_weights, epsilon)
             for rid, weight in six.iteritems(reaction_weights):
                 if weight > 0:
-                    y_pos = model.solver.variables["rh_"+rid+"_pos"]
-                    y_neg = model.solver.variables["rh_"+rid+"_neg"]
+                    y_neg = model.solver.variables["rh_" + rid + "_neg"]
+                    y_pos = model.solver.variables["rh_" + rid + "_pos"]
                     y_variables.append([y_neg, y_pos])
                     y_weights.append(weight)
                 elif weight < 0:
-                    x = model.solver.variables["rl_"+rid]
+                    x = model.solver.variables["rl_" + rid]
                     x_variables.append(x)
                     x_weights.append(abs(weight))
 

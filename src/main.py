@@ -1,14 +1,10 @@
 if __name__ == '__main__':
-    import numpy as np
     import time
-    from cobra.io import load_json_model, read_sbml_model, load_matlab_model
+    from cobra.io import read_sbml_model
 
-    from model_functions import clean_model, load_reaction_weights
-    from result_functions import read_solution
+    from model_functions import load_reaction_weights
     from imat import imat
-    from enumeration import get_binary_sol, rxn_enum, icut, maxdist
-    from permutation_test import permutation_test
-    from example_models import dagNet
+    from src.enum_functions.enumeration import get_binary_sol
 
     t3 = time.perf_counter()
 
