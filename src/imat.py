@@ -1,15 +1,83 @@
 
-from cobra import Model
 import six
 from sympy import Add, sympify
 from numpy import abs
-
 import argparse
 from cobra.io import load_json_model, read_sbml_model, load_matlab_model
 from model_functions import load_reaction_weights
 from result_functions import write_solution
 from pathlib import Path
 import time
+
+
+def create_full_variables(model, reaction_weights, epsilon, threshold):
+
+    # the x_rid variables represent a binary condition of flux activation
+    for rxn in model.reactions:
+        if "x_" + rxn.id not in model.solver.variables:
+            rid = rxn.id
+            xtot = model.solver.interface.Variable("x_%s" % rid, type="binary")
+            xf = model.solver.interface.Variable("xf_%s" % rid, type="binary")
+            xr = model.solver.interface.Variable("xr_%s" % rid, type="binary")
+            model.solver.add(xtot)
+            model.solver.add(xf)
+            model.solver.add(xr)
+            xtot_def = model.solver.interface.Constraint(xtot - xf - xr, lb=0., ub=0., name="x_%s_def" % rid)
+            xf_upper = model.solver.interface.Constraint(
+                rxn.forward_variable - rxn.upper_bound * xf, ub=0., name="xr_%s_upper" % rid)
+            xr_upper = model.solver.interface.Constraint(
+                rxn.reverse_variable + rxn.lower_bound * xr, ub=0., name="xf_%s_upper" % rid)
+            temp = threshold
+            if rid in reaction_weights:
+                if reaction_weights[rid] > 0.:
+                    temp = epsilon
+            xf_lower = model.solver.interface.Constraint(
+                rxn.forward_variable - temp * xf, lb=0., name="xf_%s_lower" % rid)
+            xr_lower = model.solver.interface.Constraint(
+                rxn.reverse_variable - temp * xr, lb=0., name="xr_%s_lower" % rid)
+            model.solver.add(xtot_def)
+            model.solver.add(xf_upper)
+            model.solver.add(xr_upper)
+            model.solver.add(xf_lower)
+            model.solver.add(xr_lower)
+
+    return model
+
+
+def create_partial_variables(model, reaction_weights, epsilon):
+
+    for rid, weight in six.iteritems(reaction_weights):
+        if weight > 0:  # the rh_rid variables represent the highly expressed reactions
+            if "rh_" + rid + "_pos" not in model.solver.variables:
+                reaction = model.reactions.get_by_id(rid)
+                y_pos = model.solver.interface.Variable("rh_%s_pos" % rid, type="binary")
+                y_neg = model.solver.interface.Variable("rh_%s_neg" % rid, type="binary")
+                pos_constraint = model.solver.interface.Constraint(
+                    reaction.flux_expression + y_pos * (reaction.lower_bound - epsilon),
+                    lb=reaction.lower_bound, name="rh_%s_pos_bound" % rid)
+                neg_constraint = model.solver.interface.Constraint(
+                    reaction.flux_expression + y_neg * (reaction.upper_bound + epsilon),
+                    ub=reaction.upper_bound, name="rh_%s_neg_bound" % rid)
+                model.solver.add(y_pos)
+                model.solver.add(y_neg)
+                model.solver.add(pos_constraint)
+                model.solver.add(neg_constraint)
+
+        elif weight < 0:  # the rl_rid variables represent the lowly expressed reactions
+            if "rl_" + rid not in model.solver.variables:
+                reaction = model.reactions.get_by_id(rid)
+                x = model.solver.interface.Variable("rl_%s" % rid, type="binary")
+                pos_constraint = model.solver.interface.Constraint(
+                    (1 - x) * reaction.upper_bound - reaction.flux_expression,
+                    lb=0, name="rl_%s_upper" % rid)
+                neg_constraint = model.solver.interface.Constraint(
+                    (1 - x) * reaction.lower_bound - reaction.flux_expression,
+                    ub=0, name="rl_%s_lower" % rid)
+                model.solver.add(x)
+                model.solver.add(pos_constraint)
+                model.solver.add(neg_constraint)
+
+    return model
 
 
 def imat(model, reaction_weights={}, epsilon=1e-2, threshold=1e-5, timelimit=None, feasibility=1e-6, mipgaptol=1e-3,
@@ -36,7 +104,6 @@ def imat(model, reaction_weights={}, epsilon=1e-2, threshold=1e-5, timelimit=Non
     full: bool
         if True, apply constraints on all reactions. if False, only on reactions with non-zero weights
     """
-
     try:
         model.solver = 'cplex'
     except:
@@ -46,93 +113,31 @@ def imat(model, reaction_weights={}, epsilon=1e-2, threshold=1e-5, timelimit=Non
     x_variables = list()
     y_weights = list()
     x_weights = list()
-
     t0 = time.perf_counter()
-
     try:
         if full:  # for the full_icut implementation
-            # the x_rid variables represent a binary condition of flux activation
-            for rxn in model.reactions:
-                if "x_"+rxn.id not in model.solver.variables:
-                    rid = rxn.id
-                    xtot = model.solver.interface.Variable("x_%s" % rid, type="binary")
-                    xf = model.solver.interface.Variable("xf_%s" % rid, type="binary")
-                    xr = model.solver.interface.Variable("xr_%s" % rid, type="binary")
-                    model.solver.add(xtot)
-                    model.solver.add(xf)
-                    model.solver.add(xr)
-                    xtot_def = model.solver.interface.Constraint(xtot - xf - xr, lb=0., ub=0., name="x_%s_def" % rid)
-                    xf_upper = model.solver.interface.Constraint(
-                        rxn.forward_variable - rxn.upper_bound * xf, ub=0., name="xr_%s_upper" % rid)
-                    xr_upper = model.solver.interface.Constraint(
-                        rxn.reverse_variable + rxn.lower_bound * xr, ub=0., name="xf_%s_upper" % rid)
-                    temp = threshold
-                    if rid in reaction_weights:
-                        if reaction_weights[rid] > 0.:
-                            temp = epsilon
-                    xf_lower = model.solver.interface.Constraint(
-                        rxn.forward_variable - temp * xf, lb=0., name="xf_%s_lower" % rid)
-                    xr_lower = model.solver.interface.Constraint(
-                        rxn.reverse_variable - temp * xr, lb=0., name="xr_%s_lower" % rid)
-                    model.solver.add(xtot_def)
-                    model.solver.add(xf_upper)
-                    model.solver.add(xr_upper)
-                    model.solver.add(xf_lower)
-                    model.solver.add(xr_lower)
+            model = create_full_variables(model, reaction_weights, epsilon, threshold)
             for rid, weight in six.iteritems(reaction_weights):
                 if weight > 0:
                     y_pos = model.solver.variables["xf_" + rid]
                     y_neg = model.solver.variables["xr_" + rid]
                     y_variables.append([y_neg, y_pos])
                     y_weights.append(weight)
-
                 elif weight < 0:
                     x = sympify("1") - model.solver.variables["x_" + rid]
                     x_variables.append(x)
                     x_weights.append(abs(weight))
 
         else:  # for the driven imat implementation
+            model = create_partial_variables(model, reaction_weights, epsilon)
             for rid, weight in six.iteritems(reaction_weights):
-                if weight > 0:  # the rh_rid variables represent the highly expressed reactions
-                    if "rh_" + rid + "_pos" not in model.solver.variables:
-                        reaction = model.reactions.get_by_id(rid)
-                        y_pos = model.solver.interface.Variable("rh_%s_pos" % rid, type="binary")
-                        y_neg = model.solver.interface.Variable("rh_%s_neg" % rid, type="binary")
-                        pos_constraint = model.solver.interface.Constraint(
-                            reaction.flux_expression + y_pos * (reaction.lower_bound - epsilon),
-                            lb=reaction.lower_bound, name="rh_%s_pos_bound" % rid)
-                        neg_constraint = model.solver.interface.Constraint(
-                            reaction.flux_expression + y_neg * (reaction.upper_bound + epsilon),
-                            ub=reaction.upper_bound, name="rh_%s_neg_bound" % rid)
-                        model.solver.add(y_pos)
-                        model.solver.add(y_neg)
-                        model.solver.add(pos_constraint)
-                        model.solver.add(neg_constraint)
-
-                    else:
-                        y_neg = model.solver.variables["rh_"+rid+"_neg"]
-                        y_pos = model.solver.variables["rh_"+rid+"_pos"]
-
+                if weight > 0:
+                    y_pos = model.solver.variables["rh_"+rid+"_pos"]
+                    y_neg = model.solver.variables["rh_"+rid+"_neg"]
                     y_variables.append([y_neg, y_pos])
                     y_weights.append(weight)
-
-                elif weight < 0:  # the rl_rid variables represent the lowly expressed reactions
-                    if "rl_" + rid not in model.solver.variables:
-                        reaction = model.reactions.get_by_id(rid)
-                        x = model.solver.interface.Variable("rl_%s" % rid, type="binary")
-                        pos_constraint = model.solver.interface.Constraint(
-                            (1 - x) * reaction.upper_bound - reaction.flux_expression,
-                            lb=0, name="rl_%s_upper" % rid)
-                        neg_constraint = model.solver.interface.Constraint(
-                            (1 - x) * reaction.lower_bound - reaction.flux_expression,
-                            ub=0, name="rl_%s_lower" % rid)
-                        model.solver.add(x)
-                        model.solver.add(pos_constraint)
-                        model.solver.add(neg_constraint)
-
-                    else:
-                        x = model.solver.variables["rl_"+rid]
-
+                elif weight < 0:
+                    x = model.solver.variables["rl_"+rid]
                     x_variables.append(x)
                     x_weights.append(abs(weight))
 
