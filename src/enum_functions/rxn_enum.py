@@ -207,4 +207,7 @@ if __name__ == "__main__":
     solution = rxn_enum(model, rxn_list, initial_solution, reaction_weights, args.epsilon, args.threshold,
                                 args.timelimit, args.tol, args.mipgap, args.obj_tol, args.output)
 
-    pd.DataFrame(solution.unique_binary).to_csv(args.output+"_solutions.csv")
+    uniques = pd.DataFrame(solution.unique_binary)
+    uniques.to_csv(args.output+"_solutions.csv")
+    for i in uniques.T:
+        uniques.T[i].to_csv(args.output+"_solution_"+str(i)+".csv", index=False, header=False)
