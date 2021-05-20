@@ -17,11 +17,15 @@ def write_batch_script(filenums):
             file.write('#!/bin/bash\n#SBATCH -p workq\n#SBATCH --mail-type=ALL\n#SBATCH --mem=64G\n#SBATCH -c 24\n'
                        '#SBATCH -t 00:10:00\n#SBATCH -J rxn_enum_%i\n#SBATCH -o rxnout%i.out\n#SBATCH -e rxnerr%i.out\n'
                        % (i, i, i))
-            file.write('cd $SLURM_SUBMIT_DIR\nmodule purge\nmodule load system/Python-3.7.4\nsource env/bin/activate\n'
+            file.write('cd /home/mstingl/work\nmodule purge\nmodule load system/Python-3.7.4\nsource env/bin/activate\n'
                        'export PYTHONPATH=${PYTHONPATH}:"/home/mstingl/work/CPLEX_Studio1210/cplex/python/3.7/'
-                       'x86-64_linux"\npython src/rxn_enum.py -o parallel/rxn_enum_%i --range %i0_%i0 -m '
-                       'min_iMM1865/min_iMM1865.xml -r min_iMM1865/p53_deseq2_cutoff_padj_1e-6.csv -l '
-                       'min_iMM1865/min_iMM1865_reactions.txt -t 600' % (i, i, i+1))
+                       'x86-64_linux"\npython src/enum_functions/rxn_enum.py -o parallel_approach1/rxn_enum_%i --range '
+                       '%i0_%i0 -m min_iMM1865/min_iMM1865.xml -r min_iMM1865/p53_deseq2_cutoff_padj_1e-6.csv -l '
+                       'min_iMM1865/min_iMM1865_reactions_shuffled.txt -t 600\n' % (i, i, i+1))
+            a = 0.99999**i
+            file.write('python src/enum_functions/diversity_enum.py -o parallel_approach1/div_enum_%i -m '
+                       'min_iMM1865/min_iMM1865.xml -r min_iMM1865/p53_deseq2_cutoff_padj_1e-6.csv -i '
+                       'parallel_approach1/rxn_enum_%i_solutions.csv -a %i' % (i, i, a))
     return 0
 
 
@@ -70,4 +74,3 @@ def dexom_results(result_path, solution_path, out_path):
     fig = res["selected reactions"].plot().get_figure()
     fig.savefig(out_path + "_selected_reactions.png")
     return df.T
-

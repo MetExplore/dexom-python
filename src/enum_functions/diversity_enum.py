@@ -125,14 +125,20 @@ if __name__ == "__main__":
     full = False
     only_ones = False
 
+    for rxn in model.reactions:
+        if rxn.id not in reaction_weights:
+            reaction_weights[rxn.id] = 1e-8
+        elif reaction_weights[rxn.id] == 0:
+            reaction_weights[rxn.id] = 1e-8
+
     model.solver.configuration.verbosity = 2
-    imat_solution = imat(model, reaction_weights, feasibility=1e-7, timelimit=1200, full=full)
+    imat_solution = imat(model, reaction_weights, feasibility=1e-7, timelimit=2000, full=full)
 
     print("\nstarting dexom")
-    dexom_sol = diversity_enum(model, reaction_weights, imat_solution, maxiter=10, obj_tol=1e-3, dist_anneal=0.9,
+    dexom_sol = diversity_enum(model, reaction_weights, imat_solution, maxiter=10, obj_tol=1e-3, dist_anneal=0.995,
                                icut=icut, only_ones=only_ones, full=full)
     print("\n")
 
     ## dexom result analysis
 
-    #solutions = dexom_results("enum_dexom_results.csv", "enum_dexom_solutions.csv", "enum_dexom_newicut")
+    solutions = dexom_results("enum_dexom_results.csv", "enum_dexom_solutions.csv", "enum_dexom_newicut")
