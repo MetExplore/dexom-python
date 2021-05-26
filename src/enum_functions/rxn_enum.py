@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 from cobra.io import load_json_model, read_sbml_model, load_matlab_model
-from src.imat import imat
+from src.imat import imat, create_partial_variables, create_full_variables
 from src.model_functions import load_reaction_weights
 from src.result_functions import read_solution, get_binary_sol, write_solution
 
@@ -110,7 +110,7 @@ def rxn_enum(model, rxn_list, init_sol, reaction_weights=None, epsilon=1., thres
 
     solution = RxnEnumSolution(all_solutions, unique_solutions, all_solutions_binary, unique_solutions_binary,
                                all_reactions, unique_reactions)
-
+    write_solution(solution.unique_solutions[-1], threshold, out_name + "_solution.csv")
     return solution
 
 
@@ -147,7 +147,7 @@ if __name__ == "__main__":
     parser.add_argument("-m", "--model", help="Metabolic model in sbml, matlab, or json format")
     parser.add_argument("-l", "--reaction_list", default=None, help="csv list of reactions to enumerate - if empty, "
                                                                     "will use all reactions in the model")
-    parser.add_argument("--range", default="0_",
+    parser.add_argument("--range", default="_",
                         help="range of reactions to use from the list, in the format 'int_int'")
     parser.add_argument("-r", "--reaction_weights", default=None,
                         help="Reaction weights in csv format (first row: reaction names, second row: weights)")
@@ -193,13 +193,14 @@ if __name__ == "__main__":
             start = int(rxn_range[0])
         if rxn_range[1] == '':
             rxn_list = reactions[start:]
-        elif int(rxn_range[1]) > len(rxn_list):
+        elif int(rxn_range[1]) > len(reactions):
             rxn_list = reactions[start:]
         else:
             rxn_list = reactions[start:int(rxn_range[1])]
 
     if args.initial_solution:
         initial_solution, initial_binary = read_solution(args.initial_solution)
+        model = create_partial_variables(model, reaction_weights, args.epsilon)
     else:
         initial_solution = imat(model, reaction_weights, epsilon=args.epsilon, threshold=args.threshold,
                                 timelimit=args.timelimit, feasibility=args.tol, mipgaptol=args.mipgap)
@@ -209,5 +210,6 @@ if __name__ == "__main__":
 
     uniques = pd.DataFrame(solution.unique_binary)
     uniques.to_csv(args.output+"_solutions.csv")
-    for i in uniques.T:
-        uniques.T[i].to_csv(args.output+"_solution_"+str(i)+".csv", index=False, header=False)
+
+    for i in range(len(solution.unique_solutions)):
+        write_solution(solution.unique_solutions[i], args.threshold, args.output+"_solution_"+str(i)+".csv")
