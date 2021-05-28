@@ -41,6 +41,10 @@ def write_batch_script1(filenums):
             f.write('python src/enum_functions/diversity_enum.py -o parallel_approach1/div_enum_%i -m '
                     'min_iMM1865/min_iMM1865.xml -r min_iMM1865/p53_deseq2_cutoff_padj_1e-6.csv -p '
                     'parallel_approach1/rxn_enum_%i_solution_0.csv -a %.5f' % (i, i, a))
+    with open("parallel_approach1/runfiles.sh", "w+") as f:
+        f.write('#!/bin/bash\n#SBATCH --mail-type=ALL\n#SBATCH -J runfiles\n#SBATCH -o runout.out\n#SBATCH '
+                '-e runerr.out\ncd $SLURM_SUBMIT_DIR\nfor i in {0..99}\ndo\n    dos2unix file_"$i".sh\n    sbatch'
+                'file_"$i".sh')
     return True
 
 
@@ -68,7 +72,12 @@ def write_batch_script2(filenums):
         f.write('python src/enum_functions/diversity_enum.py -o parallel_approach2/div_enum -m '
                 'min_iMM1865/min_iMM1865.xml -r min_iMM1865/p53_deseq2_cutoff_padj_1e-6.csv -p parallel_approach2 '
                 '-i 1 -a 0.995 --save')
-
+    with open("parallel_approach2/rundexoms.sh", "w+") as f:
+        f.write('#!/bin/bash\n#SBATCH --mail-type=ALL\n#SBATCH -J rundexoms\n#SBATCH -o runout.out\n#SBATCH '
+                '-e runerr.out\ncd $SLURM_SUBMIT_DIR\nfor i in {0..99}\ndo\n    dos2unix rxnstart_"$i".sh\n    sbatch'
+                'rxnstart_"$i".sh\ndone\ndos2unix dexomstart.sh\nfor i in {0..99}\ndo\n    sbatch dexomstart.sh '
+                '-J dexom2_"$i" -o dexout_"$i".out -e dexerr_"$i".out\ndone')
+    return True
 
 def dexom_results(result_path, solution_path, out_path):
 
