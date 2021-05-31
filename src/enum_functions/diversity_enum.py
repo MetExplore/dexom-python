@@ -111,11 +111,16 @@ def diversity_enum(model, reaction_weights, prev_sol, thr=1e-5, eps=1e-2, obj_to
     model.solver.remove(opt_const)
     solution = EnumSolution(all_solutions, all_binary, all_solutions[0].objective_value)
 
-    df = pd.DataFrame({"selected reactions": selected_recs, "time": times})
-    df.to_csv(out_path+"_results.csv")
 
+    df = pd.DataFrame({"selected reactions": selected_recs, "time": times})
     sol = pd.DataFrame(solution.binary)
-    sol.to_csv(out_path+"_solutions.csv")
+
+    if save:
+        df.to_csv(out_path+time.strftime("%Y%m%d-%H%M%S")+"_results.csv")
+        sol.to_csv(out_path+time.strftime("%Y%m%d-%H%M%S")+"_solutions.csv")
+    else:
+        df.to_csv(out_path+"_results.csv")
+        sol.to_csv(out_path+"_solutions.csv")
 
     return solution
 
@@ -169,7 +174,7 @@ if __name__ == "__main__":
         prev_sol, prev_bin = read_solution(args.prev_sol)
         model = create_partial_variables(model, reaction_weights, epsilon=args.epsilon)
     elif args.prev_sol:
-        prev_sol, i = get_recent_solution_and_iteration(args.prev_sol)
+        prev_sol, i = get_recent_solution_and_iteration(args.prev_sol, args.startsol_num)
         a = a ** i
         model = create_partial_variables(model, reaction_weights, epsilon=args.epsilon)
     else:
@@ -187,9 +192,9 @@ if __name__ == "__main__":
     if args.full:
         for rxn in model.reactions:
             if rxn.id not in reaction_weights:
-                reaction_weights[rxn.id] = args.obj_tol*1e-5
+                reaction_weights[rxn.id] = -args.obj_tol*1e-5
             elif reaction_weights[rxn.id] == 0:
-                reaction_weights[rxn.id] = args.obj_tol*1e-5
+                reaction_weights[rxn.id] = -args.obj_tol*1e-5
 
     dexom_sol = diversity_enum(model=model, reaction_weights=reaction_weights, prev_sol=prev_sol, thr=args.threshold,
                                maxiter=args.maxiter, obj_tol=args.obj_tol, dist_anneal=a, icut=icut,
