@@ -9,9 +9,9 @@ from cobra.io import load_json_model, load_matlab_model, read_sbml_model
 from src.imat import imat, create_partial_variables, create_full_variables
 from src.result_functions import read_solution, get_binary_sol, write_solution
 from src.model_functions import load_reaction_weights
-from enumeration import EnumSolution, get_recent_solution_and_iteration
-from icut import create_icut_constraint
-from maxdist import create_maxdist_constraint, create_maxdist_objective
+from src.enum_functions.enumeration import EnumSolution, get_recent_solution_and_iteration
+from src.enum_functions.icut import create_icut_constraint
+from src.enum_functions.maxdist import create_maxdist_constraint, create_maxdist_objective
 
 
 def diversity_enum(model, reaction_weights, prev_sol, thr=1e-5, eps=1e-2, obj_tol=1e-3, maxiter=10, dist_anneal=0.995,

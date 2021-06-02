@@ -5,7 +5,7 @@ import numpy as np
 from sympy import sympify
 from src.imat import imat
 from src.result_functions import get_binary_sol
-from enumeration import EnumSolution
+from src.enum_functions.enumeration import EnumSolution
 
 
 def create_icut_constraint(model, reaction_weights, threshold, prev_sol, prev_sol_binary, name, full=False):

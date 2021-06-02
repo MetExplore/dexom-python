@@ -4,7 +4,6 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from src.imat import imat
 from src.model_functions import load_reaction_weights
 from src.result_functions import read_solution
 
@@ -29,22 +28,22 @@ def write_batch_script1(filenums):
     for i in range(filenums):
         with open("parallel_approach1/file_"+str(i)+".sh", "w+") as f:
             f.write('#!/bin/bash\n#SBATCH -p workq\n#SBATCH --mail-type=ALL\n#SBATCH --mem=64G\n#SBATCH -c 24\n'
-                    '#SBATCH -t 02:00:00\n#SBATCH -J dexom1_%i\n#SBATCH -o dex1out%i.out\n#SBATCH -e dex1err%i.out\n'
+                    '#SBATCH -t 01:00:00\n#SBATCH -J dexom1_%i\n#SBATCH -o dex1out%i.out\n#SBATCH -e dex1err%i.out\n'
                     % (i, i, i))
             f.write('cd /home/mstingl/work/dexom_py\nmodule purge\nmodule load system/Python-3.7.4\nsource env/bin/'
                     'activate\nexport PYTHONPATH=${PYTHONPATH}:"/home/mstingl/work/CPLEX_Studio1210/cplex/python/3.7'
                     '/x86-64_linux"\n')
-            f.write('python src/enum_functions/rxn_enum.py -o parallel_approach1/rxn_enum_%i --range %i_%i '
-                    '-m min_iMM1865/min_iMM1865.xml -r min_iMM1865/p53_deseq2_cutoff_padj_1e-6.csv '
-                    '-l min_iMM1865/min_iMM1865_reactions_shuffled.txt -t 600\n' % (i, i*5, i*5+10))
+            # f.write('python src/enum_functions/rxn_enum.py -o parallel_approach1/rxn_enum_%i --range %i_%i '
+            #         '-m min_iMM1865/min_iMM1865.xml -r min_iMM1865/p53_deseq2_cutoff_padj_1e-6.csv '
+            #         '-l min_iMM1865/min_iMM1865_reactions_shuffled.txt -t 6000\n' % (i, i*5, i*5+10))
             a = (1-1/(filenums*2))**i
             f.write('python src/enum_functions/diversity_enum.py -o parallel_approach1/div_enum_%i -m '
                     'min_iMM1865/min_iMM1865.xml -r min_iMM1865/p53_deseq2_cutoff_padj_1e-6.csv -p '
-                    'parallel_approach1/rxn_enum_%i_solution_0.csv -a %.5f' % (i, i, a))
+                    'parallel_approach1/rxn_enum_%i_solution_1.csv -a %.5f' % (i, i, a))
     with open("parallel_approach1/runfiles.sh", "w+") as f:
         f.write('#!/bin/bash\n#SBATCH --mail-type=ALL\n#SBATCH -J runfiles\n#SBATCH -o runout.out\n#SBATCH '
-                '-e runerr.out\ncd $SLURM_SUBMIT_DIR\nfor i in {0..99}\ndo\n    dos2unix file_"$i".sh\n    sbatch'
-                'file_"$i".sh')
+                '-e runerr.out\ncd $SLURM_SUBMIT_DIR\nfor i in {0..%i}\ndo\n    dos2unix file_"$i".sh\n    sbatch'
+                ' file_"$i".sh\ndone' % (filenums-1))
     return True
 
 
@@ -74,9 +73,9 @@ def write_batch_script2(filenums):
                 '-i 1 -a 0.99 -s 100 --save --full')
     with open("parallel_approach2/rundexoms.sh", "w+") as f:
         f.write('#!/bin/bash\n#SBATCH --mail-type=ALL\n#SBATCH -J rundexoms\n#SBATCH -o runout.out\n#SBATCH '
-                '-e runerr.out\ncd $SLURM_SUBMIT_DIR\nfor i in {0..99}\ndo\n    dos2unix rxnstart_"$i".sh\n    sbatch '
-                'rxnstart_"$i".sh\ndone\ndos2unix dexomstart.sh\nfor i in {0..99}\ndo\n    sbatch -J dexomiter_"$i" '
-                '-o dexout_"$i".out -e dexerr_"$i".out dexomstart.sh \ndone')
+                '-e runerr.out\ncd $SLURM_SUBMIT_DIR\nfor i in {0..%i}\ndo\n    dos2unix rxnstart_"$i".sh\n    sbatch '
+                'rxnstart_"$i".sh\ndone\ndos2unix dexomstart.sh\nfor i in {0..%i}\ndo\n    sbatch -J dexomiter_"$i" '
+                '-o dexout_"$i".out -e dexerr_"$i".out dexomstart.sh \ndone' % (filenums-1, filenums-1))
     return True
 
 
@@ -127,30 +126,30 @@ def dexom_results(result_path, solution_path, out_path):
     return df.T
 
 
-def dexom_cluster_results(in_folder, out_folder, approach):
+def dexom_cluster_results(in_folder, out_folder, approach, filenums=100):
 
     # concatenating all .out files from the cluster
     if approach == 1:
-        fileout = '/rxnout'
-        fileerr = '/rxnerr'
+        fileout = '/dex1out'
+        fileerr = '/dex1err'
         with open(out_folder+'/all_outs.txt', 'w+') as outfile:
-            for i in range(100):
+            for i in range(filenums):
                 fname = in_folder+fileout+str(i)+'.out'
                 with open(fname) as infile:
                     outfile.write(infile.read())
         with open(out_folder+'/all_errs.txt', 'w+') as outfile:
-            for i in range(100):
+            for i in range(filenums):
                 fname = in_folder+fileerr+str(i)+'.out'
                 with open(fname) as infile:
                     outfile.write(infile.read())
     elif approach == 2:
-        outfiles = Path("parallel_approach2_notfull").glob("*out*.out")
-        errfiles = Path("parallel_approach2_notfull").glob("*err*.out")
-        with open('all_outs.txt', 'w+') as outfile:
+        outfiles = Path(in_folder).glob("*out*.out")
+        errfiles = Path(in_folder).glob("*err*.out")
+        with open(out_folder + '/all_outs.txt', 'w+') as outfile:
             for f in outfiles:
                 with open(str(f)) as infile:
                     outfile.write(infile.read())
-        with open('all_errs.txt', 'w+') as outfile:
+        with open(out_folder + '/all_errs.txt', 'w+') as outfile:
             for f in errfiles:
                 with open(str(f)) as infile:
                     outfile.write(infile.read())
@@ -159,7 +158,7 @@ def dexom_cluster_results(in_folder, out_folder, approach):
     print("looking at rxn_enum")
 
     all_rxn = []
-    for i in range(100):
+    for i in range(filenums):
         try:
             if approach == 1:
                 filename = in_folder + '/rxn_enum_%i_solutions.csv' % i
@@ -185,11 +184,12 @@ def dexom_cluster_results(in_folder, out_folder, approach):
                     counter += 1
                 except:
                     pass
-        print("Total computation time:", fulltime)
-        print("Average time per iteration:", fulltime*2/counter)
+        if counter != 0:
+            print("Total computation time:", int(fulltime), "s")
+            print("Average time per iteration:", int(fulltime*2/counter), "s")
     if approach == 2:
         all_res = []
-        for i in range(100):
+        for i in range(filenums):
             try:
                 filename = Path(in_folder).glob("div_enum_%i_*_results.csv" % i)
                 filename = str(list(filename)[0])
@@ -206,7 +206,7 @@ def dexom_cluster_results(in_folder, out_folder, approach):
     all_res = []
     all_sol = []
     if approach == 1:
-        for i in range(100):
+        for i in range(filenums):
             try:
                 solname = in_folder + '/div_enum_%i_solutions.csv' % i
                 resname = in_folder + '/div_enum_%i_results.csv' % i
@@ -241,14 +241,19 @@ def dexom_cluster_results(in_folder, out_folder, approach):
 
 
 if __name__ == "__main__":
+    from cobra.io import read_sbml_model
+    # write_batch_script1(100)
 
-    # write_batch_script2(100)
+    # sol = dexom_cluster_results("parallel_approach1", "parallel_approach1_analysis", approach=1, filenums=100)
 
-    sol = dexom_cluster_results("parallel_approach2", "parallel_approach2_analysis", approach=2)
+    sol4 = pd.read_csv("4_all_sol.csv", index_col=0)
+    sol5 = pd.read_csv("5_all_sol.csv", index_col=0)
+    doubsol = pd.concat([sol4, sol5], ignore_index=True)
+    sol = doubsol.drop_duplicates()
 
-    # # calculating objective values
-    # recs = load_reaction_weights("min_iMM1865/p53_deseq2_cutoff_padj_1e-6.csv")
-    # imsol = read_solution("parallel_approach1/rxn_enum_0_solution_0.csv")
-    # weights = np.array([recs[key] if key in recs else 0 for key in imsol[0].fluxes.index])
-    # obj = [np.dot(np.array(s[1]), weights) for s in sol.iterrows()]
-    # print("objective value range: ", min(obj), ",", max(obj))
+    # calculating objective values
+    recs = load_reaction_weights("min_iMM1865/p53_deseq2_cutoff_padj_1e-6.csv")
+    model = read_sbml_model("min_iMM1865/min_iMM1865.xml")
+    weights = np.array([recs.get(rxn.id, 0) for rxn in model.reactions])
+    obj = [np.dot(np.array(s[1]), weights) for s in sol.iterrows()]
+    print("objective value range: ", min(obj), ",", max(obj))

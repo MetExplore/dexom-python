@@ -5,8 +5,8 @@ import numpy as np
 from sympy import sympify, Add
 from src.imat import imat
 from src.result_functions import get_binary_sol
-from enumeration import EnumSolution
-from icut import create_icut_constraint
+from src.enum_functions.enumeration import EnumSolution
+from src.enum_functions.icut import create_icut_constraint
 
 
 def create_maxdist_constraint(model, reaction_weights, prev_sol, obj_tol, name="maxdist_optimality", full=False):

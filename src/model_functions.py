@@ -97,7 +97,7 @@ def get_all_reactions_from_model(model, save=True):
 def human_weights_from_gpr(model, gene_file):
     reaction_weights = {}
 
-    genes = pd.read_csv(gene_file, sep=",", decimal=".")
+    genes = pd.read_csv(gene_file, sep=";", decimal=".")
     gene_weights = pd.DataFrame(genes["t"])
     gene_weights.index = genes["ID"]
     gene_weights = {idx.replace(':', '_'): np.max(gene_weights.loc[idx]["t"]) for idx in gene_weights.index}
@@ -114,6 +114,8 @@ def human_weights_from_gpr(model, gene_file):
             expression = ' '.join(expr_split).replace('or', '*').replace('and', '+')
             weight = sympify(expression, evaluate=False).replace(Mul, Max).replace(Add, Min).subs(new_weights, n=21)
             reaction_weights[rxn.id] = weight
+        else:
+            reaction_weights[rxn.id] = 0
     return reaction_weights
 
 
@@ -142,33 +144,34 @@ def mouse_weights_from_gpr(model, gene_file):
 
 if __name__ == "__main__":
 
-    corr_model = load_matlab_model("recon2_2/recon2v2_corrected.mat")
+    model = load_json_model("recon2_2/recon2v2_corrected.json")
 
     # filename = "recon2_2/sign_MUvsWT_hgnc_clean.csv"
-    filename = "recon2_2/microarray_hgnc.csv"
+    filename = "recon2_2/microarray_hgnc_pval_0-01.csv"
 
-    model = corr_model
     rec_wei = human_weights_from_gpr(model, filename)
 
-    pab_wei = load_reaction_weights("recon2_2/rxn_scores_MUvsWT_recon22.csv", "Var1", "Var2")
+    save_reaction_weights(rec_wei, "recon2_2/microarray_hgnc_pval_0-01_weights_full.csv")
 
-    print("total reaction scores: ", len(rec_wei))
-    print("non-zero reaction scores: ", len(rec_wei)-list(rec_wei.values()).count(0))
-
-    print("comparison with Pablo's file")
-    print("total reaction scores: ", len(pab_wei))
-    print("non-zero reaction scores: ", len(pab_wei)-list(pab_wei.values()).count(0))
-
-    # mouse = read_sbml_model("min_iMM1865/min_iMM1865.xml")
-    # filename = "min_iMM_synthdata/imm1865_0.25_2.5_cholesterol.csv"
-    # rec_wei = mouse_weights_from_gpr(mouse, filename)
+    # pab_wei = load_reaction_weights("recon2_2/rxn_scores_MUvsWT_recon22.csv", "Var1", "Var2")
     #
-    # pab_wei = load_reaction_weights("min_iMM_synthdata/imm1865_chol.csv", "Var1", "Var2")
+    # print("total reaction scores: ", len(rec_wei))
+    # print("non-zero reaction scores: ", len(rec_wei)-list(rec_wei.values()).count(0))
     #
-    diff = {k: v-pab_wei[k] for k, v in rec_wei.items()}
-    print(sum([abs(v) for v in diff.values()]))
-    diffrecs = {k: (rec_wei[k], pab_wei[k]) for k, v in diff.items() if abs(v) > 0.001}
-    print(len(diffrecs))
+    # print("comparison with Pablo's file")
+    # print("total reaction scores: ", len(pab_wei))
+    # print("non-zero reaction scores: ", len(pab_wei)-list(pab_wei.values()).count(0))
+    #
+    # # mouse = read_sbml_model("min_iMM1865/min_iMM1865.xml")
+    # # filename = "min_iMM_synthdata/imm1865_0.25_2.5_cholesterol.csv"
+    # # rec_wei = mouse_weights_from_gpr(mouse, filename)
+    # #
+    # # pab_wei = load_reaction_weights("min_iMM_synthdata/imm1865_chol.csv", "Var1", "Var2")
+    # #
+    # diff = {k: v-pab_wei[k] for k, v in rec_wei.items()}
+    # print(sum([abs(v) for v in diff.values()]))
+    # diffrecs = {k: (rec_wei[k], pab_wei[k]) for k, v in diff.items() if abs(v) > 0.001}
+    # print(len(diffrecs))
 
     ### the result is rendered correct by modifying the _collapse_arguments function of the MinMaxBase class
     ### in /sympy/functions/elementary/miscellaneous.py
