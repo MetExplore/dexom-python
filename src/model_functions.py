@@ -87,11 +87,30 @@ def save_reaction_weights(reaction_weights, filename):
     return df["weights"]
 
 
-def get_all_reactions_from_model(model, save=True):
+def get_all_reactions_from_model(model, save=True, shuffle=False):
     rxn_list = [r.id for r in model.reactions]
     if save:
-        pd.Series(rxn_list).to_csv(model.id+"_reactions.csv", header=False, index=False)
+        pd.Series(rxn_list).to_csv(model.id + "_reactions.csv", header=False, index=False)
+    if shuffle:
+        np.random.shuffle(rxn_list)
+        pd.Series(rxn_list).to_csv(model.id + "_reactions_shuffled.csv", header=False, index=False)
     return rxn_list
+
+
+def get_subsytems_from_model(model, save=True):
+    rxn_sub = {}
+    sub_list = []
+    for rxn in model.reactions:
+        rxn_sub[rxn.id] = rxn.subsystem
+        if rxn.subsystem not in sub_list:
+            sub_list.append(rxn.subsystem)
+    if sub_list[-1] == "":
+        sub_list.pop()
+    rxn_sub = pd.DataFrame(rxn_sub, index=[0])
+    rxn_sub.to_csv(model.id+"_reactions_subsystems.csv", index=False)
+    with open(model.id+"_subsystems_list.txt", "w+") as file:
+        file.write(";".join(sub_list))
+    return rxn_sub, sub_list
 
 
 def human_weights_from_gpr(model, gene_file):
@@ -145,34 +164,7 @@ def mouse_weights_from_gpr(model, gene_file):
 if __name__ == "__main__":
 
     model = load_json_model("recon2_2/recon2v2_corrected.json")
-
-    # filename = "recon2_2/sign_MUvsWT_hgnc_clean.csv"
-    filename = "recon2_2/microarray_hgnc_pval_0-01.csv"
-
-    rec_wei = human_weights_from_gpr(model, filename)
-
-    save_reaction_weights(rec_wei, "recon2_2/microarray_hgnc_pval_0-01_weights_full.csv")
-
-    # pab_wei = load_reaction_weights("recon2_2/rxn_scores_MUvsWT_recon22.csv", "Var1", "Var2")
-    #
-    # print("total reaction scores: ", len(rec_wei))
-    # print("non-zero reaction scores: ", len(rec_wei)-list(rec_wei.values()).count(0))
-    #
-    # print("comparison with Pablo's file")
-    # print("total reaction scores: ", len(pab_wei))
-    # print("non-zero reaction scores: ", len(pab_wei)-list(pab_wei.values()).count(0))
-    #
-    # # mouse = read_sbml_model("min_iMM1865/min_iMM1865.xml")
-    # # filename = "min_iMM_synthdata/imm1865_0.25_2.5_cholesterol.csv"
-    # # rec_wei = mouse_weights_from_gpr(mouse, filename)
-    # #
-    # # pab_wei = load_reaction_weights("min_iMM_synthdata/imm1865_chol.csv", "Var1", "Var2")
-    # #
-    # diff = {k: v-pab_wei[k] for k, v in rec_wei.items()}
-    # print(sum([abs(v) for v in diff.values()]))
-    # diffrecs = {k: (rec_wei[k], pab_wei[k]) for k, v in diff.items() if abs(v) > 0.001}
-    # print(len(diffrecs))
-
+    get_all_reactions_from_model(model, shuffle=True)
     ### the result is rendered correct by modifying the _collapse_arguments function of the MinMaxBase class
     ### in /sympy/functions/elementary/miscellaneous.py
-    ### see https://github.com/sympy/sympy/issues/21399 for details
+    ### see https://github.com/sympy/sympy/issues/21399 and https://github.com/sympy/sympy/pull/21547 for details

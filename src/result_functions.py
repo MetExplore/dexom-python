@@ -12,6 +12,12 @@ def get_binary_sol(solution, threshold):
     return binary
 
 
+def get_obj_value_from_binary(binary, model, reaction_weights):
+    weights = np.array([reaction_weights.get(rxn.id, 0) for rxn in model.reactions])
+    obj_val = np.dot(np.array(binary), weights)
+    return obj_val
+
+
 def write_solution(solution, threshold, filename="imat_sol.csv"):
     """
     Writes an optimize solution as a txt file. The solution is written in a column format
@@ -31,17 +37,41 @@ def write_solution(solution, threshold, filename="imat_sol.csv"):
         file.write("solver status: %s" % solution.status)
 
 
-def read_solution(filename):
-    df = pd.read_csv(filename, index_col=0, skipfooter=2, engine="python")
-    with open(filename, "r") as file:
-        reader = file.read().split("\n")
-        if reader[-1] == '':
-            reader.pop(-1)
-        objective_value = float(reader[-2].split()[-1])
-        status = reader[-1].split()[-1]
-    solution = Solution(objective_value, status, df["fluxes"])
-    binary = df["binary"].to_list()
-    return solution, binary
+def read_solution(filename, model=None, reaction_weights=None):
+    binary = True
+    with open(filename, "r") as f:
+        reader = f.read().split("\n")
+        if reader[0] == "reaction,fluxes,binary":
+            binary = False
+            if reader[-1] == '':
+                reader.pop(-1)
+            objective_value = float(reader[-2].split()[-1])
+            status = reader[-1].split()[-1]
+    if binary:
+        fluxes = pd.read_csv(filename, index_col=0).rename(index={0: "fluxes"}).T
+        fluxes.index = [rxn.id for rxn in model.reactions]
+        sol_bin = list(fluxes["fluxes"])
+        objective_value = get_obj_value_from_binary(sol_bin, model, reaction_weights)
+        status = "binary"
+    else:
+        df = pd.read_csv(filename, index_col=0, skipfooter=2, engine="python")
+        fluxes = df["fluxes"]
+        sol_bin = df["binary"].to_list()
+    solution = Solution(objective_value, status, fluxes)
+    return solution, sol_bin
+
+
+def combine_solutions(sol_path):
+    solutions = Path(sol_path).glob("*solutions.csv")
+    sollist = []
+    for sol in solutions:
+        sollist.append(pd.read_csv(sol, index_col=0))
+    fullsol = pd.concat(sollist, ignore_index=True)
+    uniquesol = fullsol.drop_duplicates()
+    print("There are %i unique solutions and %i duplicates." % (len(uniquesol), len(fullsol) - len(uniquesol)))
+    uniquesol.to_csv(sol_path+"/combined_solutions.csv")
+    return uniquesol
+
 
 
 def analyze_permutation(perm_sols, imat_sol, sub_frame=None, sub_list=None, savefiles=True, out_path="permutation"):
@@ -70,10 +100,13 @@ def analyze_permutation(perm_sols, imat_sol, sub_frame=None, sub_list=None, save
     all_list = []
     if isinstance(sub_frame, pd.DataFrame):
         all_list.append(sub_frame)
+    elif type(sub_frame) == str:
+        all_list.append(pd.read_csv(sub_frame, index_col=None))
     if type(perm_sols) == str:
         perm_sols = [perm_sols]
     for filename in perm_sols:
-        df = pd.read_csv(filename, index_col=None, header=0)
+        df = pd.read_csv(filename, index_col=0, header=0)
+        df.columns = sub_frame.columns
         all_list.append(df)
 
     full_results = pd.concat(all_list, axis=0, ignore_index=True)
@@ -86,6 +119,7 @@ def analyze_permutation(perm_sols, imat_sol, sub_frame=None, sub_list=None, save
 
     rxn_freq = full_results[1:].sum()
     rxn_freq /= len(full_results)-1
+
 
     path_max_act = {}
     for sub in sub_list:
@@ -103,7 +137,6 @@ def analyze_permutation(perm_sols, imat_sol, sub_frame=None, sub_list=None, save
 
     for sub in sub_list:
         rxns = full_results[full_results.isin([sub])].stack()[0].index
-
         # create pathway histograms
         data = full_results[1:][rxns].sum(axis=1)
         hist_pathways[sub] = data.values
@@ -190,21 +223,22 @@ if __name__ == "__main__":
     #
     # mypath = "permutation/"
     #
-    # subs = pd.read_csv("min_iMM1865/min_iMM1865_subsystem.csv")
+    # subs = pd.read_csv("min_iMM1865/min_iMM1865_reactions_subsystems.csv")
     #
-    # with open("min_iMM1865/subsystems.txt", "r") as file:
+    # with open("min_iMM1865/min_iMM1865_subsystems_list.txt", "r") as file:
     #     subsystems = file.read().split(";")
     #
     # full_results = analyze_permutation(all_files, imat_sol, sub_frame=subs, sub_list=subsystems,
     #                                    savefiles=True, out_path=mypath)
     #
+    #
+    sols = "dexom_recon2/recon_dexom_solutions.csv"
+    imat_sol = "recon2_2/recon_imatsol_pval_0-01.csv"
 
-    sols = "500 dexom/enum_dexom_solutions.csv"
+    subframe = pd.read_csv("recon2_2/recon2v2_reactions_subsystems.csv")
 
-    subs = pd.read_csv("min_iMM1865/min_iMM1865_subsystem.csv")
+    with open("recon2_2/recon2v2_subsystems_list.txt", "r") as file:
+        sublist = file.read().split(";")
 
-    with open("min_iMM1865/subsystems.txt", "r") as file:
-        subsystems = file.read().split(";")
+    analyze_permutation(sols, imat_sol, subframe, sublist, out_path="dexom_500_analysis/")
 
-    sol = pathway_histograms(sols, subs, subsystems, "dexom_scatter/")
-    print(sol)
