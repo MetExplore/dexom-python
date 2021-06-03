@@ -82,7 +82,6 @@ def rxn_enum(model, rxn_list, init_sol, reaction_weights=None, epsilon=1., thres
                                     unique_solutions.append(temp_sol)
                                     unique_solutions_binary.append(temp_sol_bin)
                                     unique_reactions.append(rid+"_backwards")
-                                    write_solution(temp_sol, threshold, out_name+"_sol_"+rid+"_b.csv")
                         except:
                             print("An error occurred with reaction %s_backwards. "
                                   "Check feasibility of the model when this reaction is irreversible." % rid)
@@ -103,14 +102,12 @@ def rxn_enum(model, rxn_list, init_sol, reaction_weights=None, epsilon=1., thres
                             unique_solutions.append(temp_sol)
                             unique_solutions_binary.append(temp_sol_bin)
                             unique_reactions.append(rid)
-                            write_solution(temp_sol, threshold, out_name+"_sol_"+rid+".csv")
                 except:
                     print("An error occurred with reaction %s. "
                           "Check feasibility of the model when this reaction is blocked/irreversible" % rid)
 
     solution = RxnEnumSolution(all_solutions, unique_solutions, all_solutions_binary, unique_solutions_binary,
                                all_reactions, unique_reactions)
-    write_solution(solution.unique_solutions[-1], threshold, out_name + "_solution.csv")
     return solution
 
 
@@ -151,7 +148,7 @@ if __name__ == "__main__":
                         help="range of reactions to use from the list, in the format 'int_int'")
     parser.add_argument("-r", "--reaction_weights", default=None,
                         help="Reaction weights in csv format (first row: reaction names, second row: weights)")
-    parser.add_argument("-i", "--initial_solution", default=None, help="initial imat solution in .txt format")
+    parser.add_argument("-p", "--prev_sol", default=None, help="initial imat solution in .txt format")
     parser.add_argument("--epsilon", type=float, default=1e-2,
                         help="Activation threshold for highly expressed reactions")
     parser.add_argument("--threshold", type=float, default=1e-5, help="Activation threshold for all reactions")
@@ -160,6 +157,7 @@ if __name__ == "__main__":
     parser.add_argument("--mipgap", type=float, default=1e-3, help="Solver MIP gap tolerance")
     parser.add_argument("--obj_tol", type=float, default=1e-3, help="objective function tolerance")
     parser.add_argument("-o", "--output", default="rxn_enum", help="Base name of output files, without format")
+    parser.add_argument("--save", action="store_true", help="Use this flag to save each solution individually")
     args = parser.parse_args()
 
     fileformat = Path(args.model).suffix
@@ -198,8 +196,8 @@ if __name__ == "__main__":
         else:
             rxn_list = reactions[start:int(rxn_range[1])]
 
-    if args.initial_solution:
-        initial_solution, initial_binary = read_solution(args.initial_solution)
+    if args.prev_sol:
+        initial_solution, initial_binary = read_solution(args.prev_sol, model, reaction_weights)
         model = create_partial_variables(model, reaction_weights, args.epsilon)
     else:
         initial_solution = imat(model, reaction_weights, epsilon=args.epsilon, threshold=args.threshold,
@@ -211,5 +209,6 @@ if __name__ == "__main__":
     uniques = pd.DataFrame(solution.unique_binary)
     uniques.to_csv(args.output+"_solutions.csv")
 
-    for i in range(len(solution.unique_solutions)):
-        write_solution(solution.unique_solutions[i], args.threshold, args.output+"_solution_"+str(i)+".csv")
+    if args.save:
+        for i in range(len(solution.unique_solutions)):
+            write_solution(solution.unique_solutions[i], args.threshold, args.output+"_solution_"+str(i)+".csv")

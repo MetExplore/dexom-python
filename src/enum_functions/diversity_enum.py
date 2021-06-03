@@ -171,7 +171,7 @@ if __name__ == "__main__":
 
     a = args.dist_anneal
     if "." in args.prev_sol:
-        prev_sol, prev_bin = read_solution(args.prev_sol)
+        prev_sol, prev_bin = read_solution(args.prev_sol, model, reaction_weights)
         model = create_partial_variables(model, reaction_weights, epsilon=args.epsilon)
     elif args.prev_sol:
         prev_sol, i = get_recent_solution_and_iteration(args.prev_sol, args.startsol_num)

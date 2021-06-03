@@ -24,6 +24,26 @@ def get_recent_solution_and_iteration(dirpath, startsol_num):
     return solution, iteration
 
 
+def write_rxn_enum_script(model, out_folder="recon_rxn_enum", iters=100):
+    rxn_num = (len(model.reactions) // iters) + 1
+    for i in range(rxn_num):
+        with open(out_folder+"/file_" + str(i) + ".sh", "w+") as f:
+            f.write('#!/bin/bash\n#SBATCH -p workq\n#SBATCH --mail-type=ALL\n#SBATCH --mem=64G\n#SBATCH -c 24\n'
+                    '#SBATCH -t 01:00:00\n#SBATCH -J rxn_%i\n#SBATCH -o rxnout_%i.out\n#SBATCH -e rxnerr_%i.out\n'
+                    % (i, i, i))
+            f.write('cd /home/mstingl/work/dexom_py\nmodule purge\nmodule load system/Python-3.7.4\nsource env/bin/'
+                    'activate\nexport PYTHONPATH=${PYTHONPATH}:"/home/mstingl/work/CPLEX_Studio1210/cplex/python/3.7'
+                    '/x86-64_linux"\n')
+            f.write('python src/enum_functions/rxn_enum.py -o %s/rxn_enum_%i --range %i_%i -t 6000 '
+                    '-m recon2_2/recon2v2_corrected.json -r recon2_2/microarray_hgnc_pval_0-01_weights.csv '
+                    '-l recon2_2/recon2v2_reactions_shuffled.csv -p recon2_2/recon_imatsol_pval_0-01.csv\n'
+                    % (out_folder, i, i*iters, i*iters+iters))
+    with open(out_folder+"/runffiles.sh", "w+") as f:
+        f.write('#!/bin/bash\n#SBATCH --mail-type=ALL\n#SBATCH -J runfiles\n#SBATCH -o runout.out\n#SBATCH '
+                '-e runerr.out\ncd $SLURM_SUBMIT_DIR\nfor i in {0..%i}\ndo\n    dos2unix file_"$i".sh\n    sbatch'
+                ' file_"$i".sh\ndone' % (rxn_num-1))
+
+
 def write_batch_script1(filenums):
     for i in range(filenums):
         with open("parallel_approach1/file_"+str(i)+".sh", "w+") as f:
@@ -241,19 +261,17 @@ def dexom_cluster_results(in_folder, out_folder, approach, filenums=100):
 
 
 if __name__ == "__main__":
-    from cobra.io import read_sbml_model
+    from cobra.io import read_sbml_model, load_json_model
     # write_batch_script1(100)
 
     # sol = dexom_cluster_results("parallel_approach1", "parallel_approach1_analysis", approach=1, filenums=100)
+    # # calculating objective values
+    # recs = load_reaction_weights("min_iMM1865/p53_deseq2_cutoff_padj_1e-6.csv")
+    # model = read_sbml_model("min_iMM1865/min_iMM1865.xml")
+    # weights = np.array([recs.get(rxn.id, 0) for rxn in model.reactions])
+    # obj = [np.dot(np.array(s[1]), weights) for s in sol.iterrows()]
+    # print("objective value range: ", min(obj), ",", max(obj))
 
-    sol4 = pd.read_csv("4_all_sol.csv", index_col=0)
-    sol5 = pd.read_csv("5_all_sol.csv", index_col=0)
-    doubsol = pd.concat([sol4, sol5], ignore_index=True)
-    sol = doubsol.drop_duplicates()
+    model = load_json_model("recon2_2/recon2v2_corrected.json")
+    write_rxn_enum_script(model)
 
-    # calculating objective values
-    recs = load_reaction_weights("min_iMM1865/p53_deseq2_cutoff_padj_1e-6.csv")
-    model = read_sbml_model("min_iMM1865/min_iMM1865.xml")
-    weights = np.array([recs.get(rxn.id, 0) for rxn in model.reactions])
-    obj = [np.dot(np.array(s[1]), weights) for s in sol.iterrows()]
-    print("objective value range: ", min(obj), ",", max(obj))

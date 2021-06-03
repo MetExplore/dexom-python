@@ -3,6 +3,7 @@ if __name__ == '__main__':
     from cobra.io import read_sbml_model, load_matlab_model, load_json_model, save_json_model
 
     from src.model_functions import load_reaction_weights
+    from src.result_functions import write_solution, read_solution
     from src.imat import imat
     from src.enum_functions.diversity_enum import diversity_enum
     from src.enum_functions.enumeration import dexom_results
@@ -32,15 +33,16 @@ if __name__ == '__main__':
     #
     t0 = time.perf_counter()
     print('import time: ', t0 - t3)
-    #
-    imat_solution = imat(model, reaction_weights, epsilon=eps, threshold=thr, timelimit=tlim, feasibility=tol,
-                         mipgaptol=mipgap, full=False)
-    t1 = time.perf_counter()
-    print('total imat time: ', t1-t0)
+    # #
+    # imat_solution = imat(model, reaction_weights, epsilon=eps, threshold=thr, timelimit=tlim, feasibility=tol,
+    #                      mipgaptol=mipgap, full=False)
+    # t1 = time.perf_counter()
+    # print('total imat time: ', t1-t0)
+    imat_solution, binary = read_solution("recon2_2/recon_imatsol_pval_0-01.csv")
 
-    div_sol = diversity_enum(model, reaction_weights, prev_sol=imat_solution, maxiter=100, out_path="recon_dexom")
+    div_sol = diversity_enum(model, reaction_weights, prev_sol=imat_solution, maxiter=500, out_path="recon_dexom")
 
     solutions = dexom_results("recon_dexom_results.csv", "recon_dexom_solutions.csv", "recon_dexom")
     #
     # #clean_model(model, reaction_weights)
-    # print("end of script")
+
