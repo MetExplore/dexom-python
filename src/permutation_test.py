@@ -1,14 +1,16 @@
 
 import argparse
-from cobra.io import load_json_model, read_sbml_model, load_matlab_model
-from model_functions import load_reaction_weights, clean_model
-from imat import imat
 import numpy as np
 from pathlib import Path
 import time
+from cobra.io import load_json_model, read_sbml_model, load_matlab_model
+from src.model_functions import load_reaction_weights, clean_model
+from src.result_functions import get_binary_sol
+from src.imat import imat
 
 
-def permutation_test(model, reaction_weights=None, nperm=10, epsilon=1, threshold=1e-2, timelimit=None, tolerance=1e-7):
+def permutation_test(model, reaction_weights=None, nperm=10, epsilon=1, threshold=1e-2, timelimit=None, tolerance=1e-6,
+                     mipgaptol=1e-3):
     rng = np.random.default_rng()
     if not reaction_weights:
         reaction_weights = {}
@@ -20,8 +22,8 @@ def permutation_test(model, reaction_weights=None, nperm=10, epsilon=1, threshol
         weights = rng.permutation(weights)
         reaction_weights = dict(zip(reaction_weights.keys(), list(weights)))
         try:
-            solution = imat(model, reaction_weights, epsilon, threshold, timelimit, tolerance)
-            solution_binary = [1 if np.abs(flux) >= threshold else 0 for flux in solution.fluxes]
+            solution = imat(model, reaction_weights, epsilon, threshold, timelimit, tolerance, mipgaptol)
+            solution_binary = get_binary_sol(solution, threshold=threshold)
             permutation_solutions.append(solution_binary)
             permutation_weights.append(list(weights))
         except:
@@ -66,7 +68,7 @@ if __name__ == "__main__":
         reaction_weights = load_reaction_weights(args.reaction_weights)
 
     perm_sol, perm_weights = permutation_test(model, reaction_weights, args.num_permutations,
-                                              args.epsilon, args.threshold, args.timelimit, args.tol)
+                                              args.epsilon, args.threshold, args.timelimit, args.tol, args.mipgap)
 
     name = args.output.split(".")
     outname = name.pop(0)
