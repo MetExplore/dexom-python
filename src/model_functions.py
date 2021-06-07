@@ -2,8 +2,6 @@
 import six
 import pandas as pd
 import numpy as np
-from csv import DictReader, DictWriter
-from cobra.io import load_json_model, read_sbml_model, load_matlab_model
 from sympy import Add, Mul, sympify
 from sympy.functions.elementary.miscellaneous import Max, Min
 import re
@@ -162,9 +160,11 @@ def mouse_weights_from_gpr(model, gene_file):
 
 
 if __name__ == "__main__":
-
+    from cobra.io import load_json_model, read_sbml_model, load_matlab_model
     model = load_json_model("recon2_2/recon2v2_corrected.json")
-    get_all_reactions_from_model(model, shuffle=True)
+    genefile = "recon2_2/microarray_hgnc_pval_0-05.csv"
+    rec_wei = human_weights_from_gpr(model, genefile)
+    save_reaction_weights(rec_wei, "recon2_2/microarray_hgnc_pval_0-05_weights.csv")
     ### the result is rendered correct by modifying the _collapse_arguments function of the MinMaxBase class
     ### in /sympy/functions/elementary/miscellaneous.py
     ### see https://github.com/sympy/sympy/issues/21399 and https://github.com/sympy/sympy/pull/21547 for details

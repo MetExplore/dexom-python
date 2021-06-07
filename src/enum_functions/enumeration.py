@@ -38,7 +38,7 @@ def write_rxn_enum_script(model, out_folder="recon_rxn_enum", iters=100):
                     '-m recon2_2/recon2v2_corrected.json -r recon2_2/microarray_hgnc_pval_0-01_weights.csv '
                     '-l recon2_2/recon2v2_reactions_shuffled.csv -p recon2_2/recon_imatsol_pval_0-01.csv\n'
                     % (out_folder, i, i*iters, i*iters+iters))
-    with open(out_folder+"/runffiles.sh", "w+") as f:
+    with open(out_folder+"/runfiles.sh", "w+") as f:
         f.write('#!/bin/bash\n#SBATCH --mail-type=ALL\n#SBATCH -J runfiles\n#SBATCH -o runout.out\n#SBATCH '
                 '-e runerr.out\ncd $SLURM_SUBMIT_DIR\nfor i in {0..%i}\ndo\n    dos2unix file_"$i".sh\n    sbatch'
                 ' file_"$i".sh\ndone' % (rxn_num-1))
@@ -53,13 +53,13 @@ def write_batch_script1(filenums):
             f.write('cd /home/mstingl/work/dexom_py\nmodule purge\nmodule load system/Python-3.7.4\nsource env/bin/'
                     'activate\nexport PYTHONPATH=${PYTHONPATH}:"/home/mstingl/work/CPLEX_Studio1210/cplex/python/3.7'
                     '/x86-64_linux"\n')
-            # f.write('python src/enum_functions/rxn_enum.py -o parallel_approach1/rxn_enum_%i --range %i_%i '
-            #         '-m min_iMM1865/min_iMM1865.xml -r min_iMM1865/p53_deseq2_cutoff_padj_1e-6.csv '
-            #         '-l min_iMM1865/min_iMM1865_reactions_shuffled.txt -t 6000\n' % (i, i*5, i*5+10))
-            a = (1-1/(filenums*2))**i
+            f.write('python src/enum_functions/rxn_enum.py -o parallel_approach1/rxn_enum_%i --range %i_%i '
+                    '-m recon2_2/recon2v2_corrected.json -r recon2_2/microarray_hgnc_pval_0-01_weights.csv '
+                    '-l recon2_2/recon2v2_reactions_shuffled.csv -t 6000 --save\n' % (i, i*5, i*5+5))
+            a = (1-1/(filenums*20))**i
             f.write('python src/enum_functions/diversity_enum.py -o parallel_approach1/div_enum_%i -m '
-                    'min_iMM1865/min_iMM1865.xml -r min_iMM1865/p53_deseq2_cutoff_padj_1e-6.csv -p '
-                    'parallel_approach1/rxn_enum_%i_solution_1.csv -a %.5f' % (i, i, a))
+                    'recon2_2/recon2v2_corrected.json -r recon2_2/microarray_hgnc_pval_0-01_weights.csv -p '
+                    'parallel_approach1/rxn_enum_%i_solution_0.csv -a %.5f -i 100' % (i, i, a))
     with open("parallel_approach1/runfiles.sh", "w+") as f:
         f.write('#!/bin/bash\n#SBATCH --mail-type=ALL\n#SBATCH -J runfiles\n#SBATCH -o runout.out\n#SBATCH '
                 '-e runerr.out\ncd $SLURM_SUBMIT_DIR\nfor i in {0..%i}\ndo\n    dos2unix file_"$i".sh\n    sbatch'
@@ -262,9 +262,9 @@ def dexom_cluster_results(in_folder, out_folder, approach, filenums=100):
 
 if __name__ == "__main__":
     from cobra.io import read_sbml_model, load_json_model
-    # write_batch_script1(100)
+    write_batch_script1(100)
 
-    # sol = dexom_cluster_results("parallel_approach1", "parallel_approach1_analysis", approach=1, filenums=100)
+    # sol = dexom_cluster_results("parallel_approach1_10", "parallel_approach1_10_analysis", approach=1, filenums=100)
     # # calculating objective values
     # recs = load_reaction_weights("min_iMM1865/p53_deseq2_cutoff_padj_1e-6.csv")
     # model = read_sbml_model("min_iMM1865/min_iMM1865.xml")
@@ -272,6 +272,6 @@ if __name__ == "__main__":
     # obj = [np.dot(np.array(s[1]), weights) for s in sol.iterrows()]
     # print("objective value range: ", min(obj), ",", max(obj))
 
-    model = load_json_model("recon2_2/recon2v2_corrected.json")
-    write_rxn_enum_script(model)
+    # model = load_json_model("recon2_2/recon2v2_corrected.json")
+    # write_rxn_enum_script(model)
 
