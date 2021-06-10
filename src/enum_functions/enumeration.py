@@ -44,22 +44,22 @@ def write_rxn_enum_script(model, out_folder="recon_rxn_enum", iters=100):
                 ' file_"$i".sh\ndone' % (rxn_num-1))
 
 
-def write_batch_script1(filenums):
+def write_batch_script1(filenums, iters=10):
     for i in range(filenums):
         with open("parallel_approach1/file_"+str(i)+".sh", "w+") as f:
             f.write('#!/bin/bash\n#SBATCH -p workq\n#SBATCH --mail-type=ALL\n#SBATCH --mem=64G\n#SBATCH -c 24\n'
-                    '#SBATCH -t 01:00:00\n#SBATCH -J dexom1_%i\n#SBATCH -o dex1out%i.out\n#SBATCH -e dex1err%i.out\n'
+                    '#SBATCH -t 02:00:00\n#SBATCH -J dexom1_%i\n#SBATCH -o dex1out%i.out\n#SBATCH -e dex1err%i.out\n'
                     % (i, i, i))
             f.write('cd /home/mstingl/work/dexom_py\nmodule purge\nmodule load system/Python-3.7.4\nsource env/bin/'
                     'activate\nexport PYTHONPATH=${PYTHONPATH}:"/home/mstingl/work/CPLEX_Studio1210/cplex/python/3.7'
                     '/x86-64_linux"\n')
             f.write('python src/enum_functions/rxn_enum.py -o parallel_approach1/rxn_enum_%i --range %i_%i '
-                    '-m recon2_2/recon2v2_corrected.json -r recon2_2/microarray_hgnc_pval_0-01_weights.csv '
+                    '-m recon2_2/recon2v2_corrected.json -r recon2_2/microarray_hgnc_pval_0-05_weights.csv '
                     '-l recon2_2/recon2v2_reactions_shuffled.csv -t 6000 --save\n' % (i, i*5, i*5+5))
-            a = (1-1/(filenums*20))**i
+            a = (1-1/(filenums*2*(iters/10)))**i
             f.write('python src/enum_functions/diversity_enum.py -o parallel_approach1/div_enum_%i -m '
-                    'recon2_2/recon2v2_corrected.json -r recon2_2/microarray_hgnc_pval_0-01_weights.csv -p '
-                    'parallel_approach1/rxn_enum_%i_solution_0.csv -a %.5f -i 100' % (i, i, a))
+                    'recon2_2/recon2v2_corrected.json -r recon2_2/microarray_hgnc_pval_0-05_weights.csv -p '
+                    'parallel_approach1/rxn_enum_%i_solution_0.csv -a %.5f -i %i' % (i, i, a, iters))
     with open("parallel_approach1/runfiles.sh", "w+") as f:
         f.write('#!/bin/bash\n#SBATCH --mail-type=ALL\n#SBATCH -J runfiles\n#SBATCH -o runout.out\n#SBATCH '
                 '-e runerr.out\ncd $SLURM_SUBMIT_DIR\nfor i in {0..%i}\ndo\n    dos2unix file_"$i".sh\n    sbatch'
@@ -102,32 +102,32 @@ def write_batch_script2(filenums):
 def dexom_results(result_path, solution_path, out_path):
 
     res = pd.read_csv(result_path, index_col=0)
-    df = pd.read_csv(solution_path, index_col=0)
+    sol = pd.read_csv(solution_path, index_col=0)
 
-    unique = len(df.drop_duplicates())
-    print("There are %i unique solutions and %i duplicates" % (unique, len(df)-unique))
+    unique = len(sol.drop_duplicates())
+    print("There are %i unique solutions and %i duplicates" % (unique, len(sol)-unique))
 
     time = res["time"].cumsum()
     print("Total computation time: %i s" % time.iloc[-1])
-    print("Average time per iteration: %i s" % (time.iloc[-1]/len(df)))
+    print("Average time per iteration: %i s" % (time.iloc[-1]/len(sol)))
 
-    df = df.T
+    sol = sol.T
     avg_pairwise = []
     avg_near = []
     hammings = []
     h = 0
-    for x in df:
+    for x in sol:
         hammings.append([])
         if x > 0:
             for y in range(x):
-                temp = sum(abs(df[x]-df[y]))
+                temp = sum(abs(sol[x]-sol[y]))
                 h += temp
                 hammings[x].append(temp)
                 hammings[y].append(temp)
-            avg_pairwise.append((h/(x*(x+1)/2))/len(df))
+            avg_pairwise.append((h/(x*(x+1)/2))/len(sol))
             temp = 0
             for v in hammings:
-                temp += min(v)/len(df)
+                temp += min(v)/len(sol)
             avg_near.append(temp/x)
     x = range(len(avg_pairwise))
 
@@ -143,7 +143,7 @@ def dexom_results(result_path, solution_path, out_path):
     plt.clf()
     fig = res["selected reactions"].plot().get_figure()
     fig.savefig(out_path + "_selected_reactions.png")
-    return df.T
+    return sol.T
 
 
 def dexom_cluster_results(in_folder, out_folder, approach, filenums=100):
@@ -245,7 +245,7 @@ def dexom_cluster_results(in_folder, out_folder, approach, filenums=100):
     res = pd.concat(all_res, ignore_index=True)
     sol.to_csv(out_folder+"/all_sol.csv")
     res.to_csv(out_folder+"/all_res.csv")
-    dexom_results(out_folder+"/all_res.csv", out_folder+"/all_sol.csv", out_folder+"/all_dexom")
+    # dexom_results(out_folder+"/all_res.csv", out_folder+"/all_sol.csv", out_folder+"/all_dexom")
 
     plt.clf()
     fig = res.sort_values("selected reactions").reset_index(drop=True)["selected reactions"].plot().get_figure()
@@ -262,9 +262,13 @@ def dexom_cluster_results(in_folder, out_folder, approach, filenums=100):
 
 if __name__ == "__main__":
     from cobra.io import read_sbml_model, load_json_model
-    write_batch_script1(100)
+    # write_batch_script1(100, iters=100)
 
-    # sol = dexom_cluster_results("parallel_approach1_10", "parallel_approach1_10_analysis", approach=1, filenums=100)
+    sol = dexom_cluster_results("parallel_approach1_pval01_10_real", "parallel_approach1_pval01_10_real_analysis", approach=1, filenums=100)
+
+    folder = "parallel_approach1_pval01_10_real_analysis"
+    ol = dexom_results(folder+"/all_res.csv", folder+"/all_sol.csv", folder+"/all_dexom")
+
     # # calculating objective values
     # recs = load_reaction_weights("min_iMM1865/p53_deseq2_cutoff_padj_1e-6.csv")
     # model = read_sbml_model("min_iMM1865/min_iMM1865.xml")

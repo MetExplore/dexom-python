@@ -232,13 +232,13 @@ if __name__ == "__main__":
     #                                    savefiles=True, out_path=mypath)
     #
     #
-    sols = "dexom_recon2/recon_dexom_solutions.csv"
-    imat_sol = "recon2_2/recon_imatsol_pval_0-01.csv"
+    sols = "parallel_approach1_pval05_10_analysis/all_sol.csv"
+    imat_sol = "recon2_2/recon_imatsol_pval_0-05.csv"
 
     subframe = pd.read_csv("recon2_2/recon2v2_reactions_subsystems.csv")
 
     with open("recon2_2/recon2v2_subsystems_list.txt", "r") as file:
         sublist = file.read().split(";")
 
-    analyze_permutation(sols, imat_sol, subframe, sublist, out_path="dexom_500_analysis/")
+    analyze_permutation(sols, imat_sol, subframe, sublist, out_path="pvalcomparison/pval05_")
 
