@@ -9,6 +9,10 @@ from src.enum_functions.enumeration import EnumSolution
 
 
 def create_icut_constraint(model, reaction_weights, threshold, prev_sol, prev_sol_binary, name, full=False):
+    """
+    Creates an icut constraint on the previously found solution.
+    This solution is excluded from the solution space.
+    """
     if full:
         expr = sympify("1")
         newbound = sum(prev_sol_binary)
@@ -45,7 +49,7 @@ def create_icut_constraint(model, reaction_weights, threshold, prev_sol, prev_so
     return constraint
 
 
-def icut(model, reaction_weights=None, epsilon=1., threshold=1e-1, tlim=None, feas=1e-6, mipgap=1e-3, obj_tol=1e-5,
+def icut(model, reaction_weights=None, epsilon=1e-2, threshold=1e-5, tlim=None, feas=1e-6, mipgap=1e-3, obj_tol=1e-5,
          maxiter=10, full=False):
     """
     integer-cut method
@@ -115,3 +119,12 @@ def icut(model, reaction_weights=None, epsilon=1., threshold=1e-1, tlim=None, fe
     else:
         print("partial icut iterations: ", i+1)
     return solution
+
+
+if __name__ == "__main__":
+    from cobra.io import load_json_model
+    from src.model_functions import load_reaction_weights
+    model = load_json_model("recon2_2/recon2v2_corrected.json")
+    reaction_weights = load_reaction_weights("recon2_2/microarray_hgnc_pval_0-01_weights.csv")
+
+    sol = icut(model, reaction_weights)

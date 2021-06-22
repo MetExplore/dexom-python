@@ -115,7 +115,7 @@ def imat(model, reaction_weights={}, epsilon=1e-2, threshold=1e-5, timelimit=Non
     x_weights = list()
     t0 = time.perf_counter()
     try:
-        if full:  # for the full_icut implementation
+        if full:  # for the full_imat implementation
             model = create_full_variables(model, reaction_weights, epsilon, threshold)
             for rid, weight in six.iteritems(reaction_weights):
                 if weight > 0:
@@ -128,7 +128,7 @@ def imat(model, reaction_weights={}, epsilon=1e-2, threshold=1e-5, timelimit=Non
                     x_variables.append(x)
                     x_weights.append(abs(weight))
 
-        else:  # for the driven imat implementation
+        else:  # for the driven-based imat implementation
             model = create_partial_variables(model, reaction_weights, epsilon)
             for rid, weight in six.iteritems(reaction_weights):
                 if weight > 0:
@@ -167,7 +167,8 @@ if __name__ == "__main__":
     parser.add_argument("-m", "--model", help="Metabolic model in sbml, json, or matlab format")
     parser.add_argument("-r", "--reaction_weights", default={},
                         help="Reaction weights in csv format with column names: (reactions, weights)")
-    parser.add_argument("--epsilon", type=float, default=1e-2, help="Activation threshold for highly expressed reactions")
+    parser.add_argument("-e", "--epsilon", type=float, default=1e-2,
+                        help="Activation threshold for highly expressed reactions")
     parser.add_argument("--threshold", type=float, default=1e-5, help="Activation threshold for all reactions")
     parser.add_argument("-t", "--timelimit", type=int, default=None, help="Solver time limit")
     parser.add_argument("--tol", type=float, default=1e-6, help="Solver feasibility tolerance")

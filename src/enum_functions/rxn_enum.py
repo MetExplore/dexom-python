@@ -47,7 +47,7 @@ def rxn_enum(model, rxn_list, init_sol, reaction_weights=None, epsilon=1., thres
     solution: RxnEnumSolution object
     """
     init_sol_bin = get_binary_sol(init_sol, threshold)
-    optimal_objective_value = init_sol.objective_value - obj_tol
+    optimal_objective_value = init_sol.objective_value - init_sol.objective_value * obj_tol
 
     all_solutions = [initial_solution]
     all_solutions_binary = [init_sol_bin]
@@ -155,7 +155,8 @@ if __name__ == "__main__":
     parser.add_argument("-t", "--timelimit", type=int, default=None, help="Solver time limit")
     parser.add_argument("--tol", type=float, default=1e-6, help="Solver feasibility tolerance")
     parser.add_argument("--mipgap", type=float, default=1e-3, help="Solver MIP gap tolerance")
-    parser.add_argument("--obj_tol", type=float, default=1e-3, help="objective function tolerance")
+    parser.add_argument("--obj_tol", type=float, default=1e-3,
+                        help="objective value tolerance, as a fraction of the original value")
     parser.add_argument("-o", "--output", default="rxn_enum", help="Base name of output files, without format")
     parser.add_argument("--save", action="store_true", help="Use this flag to save each solution individually")
     args = parser.parse_args()

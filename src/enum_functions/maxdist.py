@@ -10,7 +10,10 @@ from src.enum_functions.icut import create_icut_constraint
 
 
 def create_maxdist_constraint(model, reaction_weights, prev_sol, obj_tol, name="maxdist_optimality", full=False):
-
+    """
+    Creates the optimality constraint for the maxdist algorithm.
+    This constraint conserves the optimal objective value of the previous solution
+    """
     y_variables = []
     y_weights = []
     x_variables = []
@@ -38,7 +41,7 @@ def create_maxdist_constraint(model, reaction_weights, prev_sol, obj_tol, name="
                 x_variables.append(model.solver.variables["rl_" + rid])
                 x_weights.append(abs(weight))
 
-    lower_opt = prev_sol.objective_value - obj_tol
+    lower_opt = prev_sol.objective_value - prev_sol.objective_value * obj_tol
     rh_objective = [(y[0] + y[1]) * y_weights[idx] for idx, y in enumerate(y_variables)]
     rl_objective = [x * x_weights[idx] for idx, x in enumerate(x_variables)]
     opt_const = model.solver.interface.Constraint(Add(*rh_objective) + Add(*rl_objective), lb=lower_opt, name=name)
@@ -46,6 +49,11 @@ def create_maxdist_constraint(model, reaction_weights, prev_sol, obj_tol, name="
 
 
 def create_maxdist_objective(model, reaction_weights, prev_sol, prev_sol_bin, only_ones=False, full=False):
+    """
+    Create the new objective for the maxdist algorithm.
+    This objective is the minimization of similarity between the binary solution vectors
+    If only_ones is set to False, the similarity will only be calculated with overlapping ones
+    """
     expr = sympify("0")
     if full:
         for rxn in model.reactions:
