@@ -128,8 +128,20 @@ def human_weights_from_gpr(model, gene_file):
             rxngenes = re.sub('and|or|\(|\)', '', rxn.gene_reaction_rule).split()
             gen_list = set([s.replace(':', '_') for s in rxngenes if ':' in s])
             new_weights = {g: gene_weights.get(g, 0) for g in gen_list}
+            negweights = []
+            for g, v in new_weights.items():
+                if v < 0 and -v not in new_weights.values():
+                    new_weights[g] = -v
+                    negweights.append(-v)
+                elif v < 0:
+                    new_weights[g] = -1e9*v
+                    negweights.append(-v)
             expression = ' '.join(expr_split).replace('or', '*').replace('and', '+')
             weight = sympify(expression, evaluate=False).replace(Mul, Max).replace(Add, Min).subs(new_weights, n=21)
+            if weight in negweights and weight > 100:
+                weight = -1e-9*v
+            elif weight in negweights:
+                weight = -weight
             reaction_weights[rxn.id] = weight
         else:
             reaction_weights[rxn.id] = 0
@@ -153,18 +165,40 @@ def mouse_weights_from_gpr(model, gene_file):
             rxngenes = re.sub('and|or|\(|\)', '', rxn.gene_reaction_rule).split()
             gen_list = set(["g_"+s for s in rxngenes if s.isdigit()])
             new_weights = {g: gene_weights.get(g, 0) for g in gen_list}
+            negweights = []
+            for g, v in new_weights.items():
+                if v < 0 and -v not in new_weights.values():
+                    new_weights[g] = -v
+                    negweights.append(-v)
+                elif v < 0:
+                    new_weights[g] = -1e9*v
+                    negweights.append(-v)
             expression = " ".join(expr_split).replace("or", "*").replace("and", "+")
             weight = sympify(expression, evaluate=False).replace(Mul, Max).replace(Add, Min).subs(new_weights, n=21)
+            if weight in negweights and weight > 100:
+                weight = -1e-9*v
+            elif weight in negweights:
+                weight = -weight
             reaction_weights[rxn.id] = weight
     return reaction_weights
 
 
 if __name__ == "__main__":
     from cobra.io import load_json_model, read_sbml_model, load_matlab_model
-    model = load_json_model("recon2_2/recon2v2_corrected.json")
-    genefile = "recon2_2/microarray_hgnc_pval_0-05.csv"
-    rec_wei = human_weights_from_gpr(model, genefile)
-    save_reaction_weights(rec_wei, "recon2_2/microarray_hgnc_pval_0-05_weights.csv")
+
+    # model = load_json_model("recon2_2/recon2v2_corrected.json")
+    # genefile = "recon2_2/microarray_hgnc_pval_0-01.csv"
+    # rec_wei = human_weights_from_gpr(model, genefile)
+    # save_reaction_weights(rec_wei, "recon2_2/pval_0-01_reactionweights.csv")
+
+    rec = load_reaction_weights("recon2_2/pval_0-01_reactionweights.csv")
+    for g in rec.keys():
+        if rec[g] > 0:
+            rec[g] = 1
+        elif rec[g] < 0:
+            rec[g] = -1
+    save_reaction_weights(rec, "recon2_2/pval_0-01_reactionrhrl")
+
     ### the result is rendered correct by modifying the _collapse_arguments function of the MinMaxBase class
     ### in /sympy/functions/elementary/miscellaneous.py
     ### see https://github.com/sympy/sympy/issues/21399 and https://github.com/sympy/sympy/pull/21547 for details
