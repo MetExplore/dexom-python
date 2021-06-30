@@ -29,14 +29,14 @@ def write_rxn_enum_script(model, out_folder="recon_rxn_enum", iters=100):
     for i in range(rxn_num):
         with open(out_folder+"/file_" + str(i) + ".sh", "w+") as f:
             f.write('#!/bin/bash\n#SBATCH -p workq\n#SBATCH --mail-type=ALL\n#SBATCH --mem=64G\n#SBATCH -c 24\n'
-                    '#SBATCH -t 01:00:00\n#SBATCH -J rxn_%i\n#SBATCH -o rxnout_%i.out\n#SBATCH -e rxnerr_%i.out\n'
+                    '#SBATCH -t 05:00:00\n#SBATCH -J rxn_%i\n#SBATCH -o rxnout_%i.out\n#SBATCH -e rxnerr_%i.out\n'
                     % (i, i, i))
             f.write('cd /home/mstingl/work/dexom_py\nmodule purge\nmodule load system/Python-3.7.4\nsource env/bin/'
                     'activate\nexport PYTHONPATH=${PYTHONPATH}:"/home/mstingl/work/CPLEX_Studio1210/cplex/python/3.7'
                     '/x86-64_linux"\n')
             f.write('python src/enum_functions/rxn_enum.py -o %s/rxn_enum_%i --range %i_%i -t 6000 '
-                    '-m recon2_2/recon2v2_corrected.json -r recon2_2/microarray_hgnc_pval_0-01_weights.csv '
-                    '-l recon2_2/recon2v2_reactions_shuffled.csv -p recon2_2/recon_imatsol_pval_0-01.csv\n'
+                    '-m recon2_2/recon2v2_corrected.json -r recon2_2/pval_0-01_reactionweights.csv '
+                    '-l recon2_2/recon2v2_reactions_shuffled.csv -p recon2_2/pval_0-01_imatsol.csv\n'
                     % (out_folder, i, i*iters, i*iters+iters))
     with open(out_folder+"/runfiles.sh", "w+") as f:
         f.write('#!/bin/bash\n#SBATCH --mail-type=ALL\n#SBATCH -J runfiles\n#SBATCH -o runout.out\n#SBATCH '
@@ -46,21 +46,22 @@ def write_rxn_enum_script(model, out_folder="recon_rxn_enum", iters=100):
 
 def write_batch_script1(filenums, iters=10):
     for i in range(filenums):
-        with open("parallel_approach1/file_"+str(i)+".sh", "w+") as f:
-            f.write('#!/bin/bash\n#SBATCH -p workq\n#SBATCH --mail-type=ALL\n#SBATCH --mem=64G\n#SBATCH -c 24\n'
-                    '#SBATCH -t 02:00:00\n#SBATCH -J dexom1_%i\n#SBATCH -o dex1out%i.out\n#SBATCH -e dex1err%i.out\n'
+        with open("par_1/file_"+str(i)+".sh", "w+") as f:
+            f.write('#!/bin/bash\n#SBATCH -p workq\n#SBATCH --mail-type=ALL\n#SBATCH --mem=8G\n#SBATCH -c 24\n'
+                    '#SBATCH -t 05:00:00\n#SBATCH -J dexom1_%i\n#SBATCH -o dex1out%i.out\n#SBATCH -e dex1err%i.out\n'
                     % (i, i, i))
             f.write('cd /home/mstingl/work/dexom_py\nmodule purge\nmodule load system/Python-3.7.4\nsource env/bin/'
                     'activate\nexport PYTHONPATH=${PYTHONPATH}:"/home/mstingl/work/CPLEX_Studio1210/cplex/python/3.7'
                     '/x86-64_linux"\n')
-            f.write('python src/enum_functions/rxn_enum.py -o parallel_approach1/rxn_enum_%i --range %i_%i '
-                    '-m recon2_2/recon2v2_corrected.json -r recon2_2/microarray_hgnc_pval_0-05_weights.csv '
-                    '-l recon2_2/recon2v2_reactions_shuffled.csv -t 6000 --save\n' % (i, i*5, i*5+5))
+            f.write('python src/enum_functions/rxn_enum.py -o par_1/rxn_enum_%i --range %i_%i '
+                    '-m recon2_2/recon2v2_corrected.json -r recon2_2/pval_0-01_reactionweights.csv '
+                    '-l recon2_2/recon2v2_reactions_shuffled.csv -p recon2_2/pval_0-01_imatsol.csv -t 6000 '
+                    '--save\n' % (i, i*5, i*5+5))
             a = (1-1/(filenums*2*(iters/10)))**i
-            f.write('python src/enum_functions/diversity_enum.py -o parallel_approach1/div_enum_%i -m '
-                    'recon2_2/recon2v2_corrected.json -r recon2_2/microarray_hgnc_pval_0-05_weights.csv -p '
-                    'parallel_approach1/rxn_enum_%i_solution_0.csv -a %.5f -i %i' % (i, i, a, iters))
-    with open("parallel_approach1/runfiles.sh", "w+") as f:
+            f.write('python src/enum_functions/diversity_enum.py -o par_1/div_enum_%i -m '
+                    'recon2_2/recon2v2_corrected.json -r recon2_2/pval_0-01_reactionweights.csv -p '
+                    'par_1/rxn_enum_%i_solution_0.csv -a %.5f -i %i --obj_tol 0.01' % (i, i, a, iters))
+    with open("par_1/runfiles.sh", "w+") as f:
         f.write('#!/bin/bash\n#SBATCH --mail-type=ALL\n#SBATCH -J runfiles\n#SBATCH -o runout.out\n#SBATCH '
                 '-e runerr.out\ncd $SLURM_SUBMIT_DIR\nfor i in {0..%i}\ndo\n    dos2unix file_"$i".sh\n    sbatch'
                 ' file_"$i".sh\ndone' % (filenums-1))
@@ -245,7 +246,12 @@ def dexom_cluster_results(in_folder, out_folder, approach, filenums=100):
     res = pd.concat(all_res, ignore_index=True)
     sol.to_csv(out_folder+"/all_sol.csv")
     res.to_csv(out_folder+"/all_res.csv")
-    # dexom_results(out_folder+"/all_res.csv", out_folder+"/all_sol.csv", out_folder+"/all_dexom")
+    unique = len(sol.drop_duplicates())
+    print("There are %i unique solutions and %i duplicates" % (unique, len(sol)-unique))
+
+    time = res["time"].cumsum()
+    print("Total computation time: %i s" % time.iloc[-1])
+    print("Average time per iteration: %i s" % (time.iloc[-1]/len(sol)))
 
     plt.clf()
     fig = res.sort_values("selected reactions").reset_index(drop=True)["selected reactions"].plot().get_figure()
@@ -261,21 +267,12 @@ def dexom_cluster_results(in_folder, out_folder, approach, filenums=100):
 
 
 if __name__ == "__main__":
-    from cobra.io import read_sbml_model, load_json_model
-    # write_batch_script1(100, iters=100)
+    from cobra.io import load_json_model
 
-    sol = dexom_cluster_results("parallel_approach1_pval01_10_real", "parallel_approach1_pval01_10_real_analysis", approach=1, filenums=100)
+    model = load_json_model("recon2_2/recon2v2_corrected.json")
+    write_rxn_enum_script(model, iters=100)
+    #
+    # sol = dexom_cluster_results("par_1_obj001", "par_1_obj001_an", approach=1, filenums=100)
 
-    folder = "parallel_approach1_pval01_10_real_analysis"
-    ol = dexom_results(folder+"/all_res.csv", folder+"/all_sol.csv", folder+"/all_dexom")
-
-    # # calculating objective values
-    # recs = load_reaction_weights("min_iMM1865/p53_deseq2_cutoff_padj_1e-6.csv")
-    # model = read_sbml_model("min_iMM1865/min_iMM1865.xml")
-    # weights = np.array([recs.get(rxn.id, 0) for rxn in model.reactions])
-    # obj = [np.dot(np.array(s[1]), weights) for s in sol.iterrows()]
-    # print("objective value range: ", min(obj), ",", max(obj))
-
-    # model = load_json_model("recon2_2/recon2v2_corrected.json")
-    # write_rxn_enum_script(model)
-
+    # folder = "par_1_newobjtol_an/"
+    # ol = dexom_results(folder+"all_res.csv", folder+"all_sol.csv", folder+"obj")
