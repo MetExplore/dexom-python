@@ -7,7 +7,7 @@ import pandas as pd
 from pathlib import Path
 from cobra.io import load_json_model, load_matlab_model, read_sbml_model
 from src.imat import imat, create_partial_variables, create_full_variables
-from src.result_functions import read_solution, get_binary_sol, write_solution
+from src.result_functions import read_solution, get_binary_sol, write_solution, get_obj_value_from_binary
 from src.model_functions import load_reaction_weights
 from src.enum_functions.enumeration import EnumSolution, get_recent_solution_and_iteration
 from src.enum_functions.icut import create_icut_constraint
@@ -68,7 +68,6 @@ def diversity_enum(model, reaction_weights, prev_sol, thr=1e-5, eps=1e-2, obj_to
     # preserve the optimality of the solution
     opt_const = create_maxdist_constraint(model, reaction_weights, prev_sol, obj_tol, "dexom_optimality", full=full)
     model.solver.add(opt_const)
-    model.solver.presolve = True
     for idx in range(1, maxiter+1):
         t0 = time.perf_counter()
         if icut:
@@ -97,10 +96,17 @@ def diversity_enum(model, reaction_weights, prev_sol, thr=1e-5, eps=1e-2, obj_to
             prev_sol_bin = get_binary_sol(prev_sol, thr)
             all_solutions.append(prev_sol)
             all_binary.append(prev_sol_bin)
+
+
+            print("maxdist obj val:", prev_sol.objective_value)
+            print("maxdist max obj val:", sum([1 for v in tempweights.values() if v != 0]))
+            get_obj_value_from_binary(prev_sol_bin, model, reaction_weights)
+
             if save:
                 write_solution(prev_sol, thr, filename=out_path+"_solution_"+time.strftime("%Y%m%d-%H%M%S")+".csv")
             t1 = time.perf_counter()
             print("time for optimizing in iteration " + str(idx) + ":", t1 - t2)
+            print("\n")
             times.append(t1 - t0)
         except:
             print("An error occured in iteration %i of dexom, check if all feasible solutions have been found" % idx)
@@ -132,7 +138,7 @@ if __name__ == "__main__":
     parser.add_argument("-m", "--model", help="Metabolic model in sbml, matlab, or json format")
     parser.add_argument("-r", "--reaction_weights", default=None,
                         help="Reaction weights in csv format (first row: reaction names, second row: weights)")
-    parser.add_argument("-p", "--prev_sol", default=None, help="starting solution or directory of recent solutions")
+    parser.add_argument("-p", "--prev_sol", default=[], help="starting solution or directory of recent solutions")
     parser.add_argument("--epsilon", type=float, default=1e-2,
                         help="Activation threshold for highly expressed reactions")
     parser.add_argument("--threshold", type=float, default=1e-5, help="Activation threshold for all reactions")
@@ -195,6 +201,12 @@ if __name__ == "__main__":
                 reaction_weights[rxn.id] = -args.obj_tol*1e-5
             elif reaction_weights[rxn.id] == 0:
                 reaction_weights[rxn.id] = -args.obj_tol*1e-5
+
+
+    model.solver.configuration.timeout = args.timelimit
+    model.tolerance = args.tol
+    model.solver.problem.parameters.mip.tolerances.mipgap.set(args.mipgap)
+    model.solver.configuration.presolve = True
 
     dexom_sol = diversity_enum(model=model, reaction_weights=reaction_weights, prev_sol=prev_sol, thr=args.threshold,
                                maxiter=args.maxiter, obj_tol=args.obj_tol, dist_anneal=a, icut=icut,
