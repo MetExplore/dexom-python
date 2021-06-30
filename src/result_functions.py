@@ -5,6 +5,7 @@ import pandas as pd
 from pathlib import Path
 from cobra import Solution
 import matplotlib.pyplot as plt
+from scipy.stats import fisher_exact
 
 
 def get_binary_sol(solution, threshold):
@@ -13,8 +14,17 @@ def get_binary_sol(solution, threshold):
 
 
 def get_obj_value_from_binary(binary, model, reaction_weights):
-    weights = np.array([reaction_weights.get(rxn.id, 0) for rxn in model.reactions])
-    obj_val = np.dot(np.array(binary), weights)
+    wei = [reaction_weights.get(rxn.id, 0) for rxn in model.reactions]
+    obj_val = sum([wei[i]*binary[i] if wei[i] >= 0 else -wei[i]*(1-binary[i]) for i in range(len(wei))])
+    max_obj = sum([abs(x) for x in reaction_weights.values()])
+    pos_wei = sum([1 for x in reaction_weights.values() if x > 0])
+    pos_true = sum([1 for i in range(len(wei)) if wei[i] > 0 and binary[i] == 1])
+    neg_wei = sum([1 for x in reaction_weights.values() if x < 0])
+    neg_true = sum([1 for i in range(len(wei)) if wei[i] < 0 and binary[i] == 0])
+    print("objective value: %.2f" % obj_val)
+    print("maximal possible value: %.2f (%.2f%s, %.2f%s)" % (max_obj, 100*pos_true/pos_wei, "% RH",
+                                                             100*neg_true/neg_wei, "% RL"))
+
     return obj_val
 
 
@@ -130,7 +140,8 @@ def analyze_permutation(perm_sols, imat_sol, sub_frame=None, sub_list=None, save
     binary = pd.Series(binary, index=solution.fluxes.index)
     hist_pathways = pd.DataFrame()
     histograms = []
-    sol_pathways = pd.Series(dtype=float)
+    # sol_pathways = pd.Series(dtype=float)
+    sol_pathways = pd.DataFrame(index=sub_list, columns=["imat", "min", "max", "mean"], dtype=float)
 
     perms = len(full_results) - 1
     pvalues = pd.DataFrame(index=sub_list, columns=["normal", "-log10(p)"], dtype=float)
@@ -148,15 +159,20 @@ def analyze_permutation(perm_sols, imat_sol, sub_frame=None, sub_list=None, save
             fig.savefig(out_path+"_histogram "+subforsave+".png")
 
         # count number of active reactions per pathway
-        sol_pathways[sub] = binary[rxns].sum()
+        # sol_pathways[sub] = binary[rxns].sum()
+        sol_pathways["imat"][sub] = binary[rxns].sum()
+        sol_pathways["min"][sub] = min(data.values)
+        sol_pathways["max"][sub] = max(data.values)
+        sol_pathways["mean"][sub] = sum(data.values)/len(data.values)
 
         # compute normalized active reactions per pathway & pvalues
         temp = data.std()
         if temp == 0.:
             temp = 1.
-        pvalues["normal"][sub] = (sol_pathways[sub] - data.mean()) / temp
+        pvalues["normal"][sub] = (sol_pathways["imat"][sub] - data.mean()) / temp
 
-        temp = min(data[data <= sol_pathways[sub]].count() / perms, data[data >= sol_pathways[sub]].count() / perms)
+        temp = min(data[data <= sol_pathways["imat"][sub]].count() / perms,
+                   data[data >= sol_pathways["imat"][sub]].count() / perms)
         if temp == 0.:
             temp = 0.001
         pvalues["-log10(p)"][sub] = -np.log10(temp)
@@ -213,32 +229,39 @@ def pathway_histograms(solutions, sub_frame, sub_list, out_path):
     return full_solutions
 
 
-if __name__ == "__main__":
-    ### permutation result analysis
+def Fischer_pathways(solpath, subframe, sublist, outpath="Fischer_pathways.csv"):
 
-    # all_files = Path("min_iMM1865/perms_to_be_analyzed").glob("*.txt")
-    #
-    # imat_sol = "min_iMM1865/imat_p53.txt"
-    # solution, binary = read_solution(imat_sol)
-    #
-    # mypath = "permutation/"
-    #
-    # subs = pd.read_csv("min_iMM1865/min_iMM1865_reactions_subsystems.csv")
-    #
-    # with open("min_iMM1865/min_iMM1865_subsystems_list.txt", "r") as file:
-    #     subsystems = file.read().split(";")
-    #
-    # full_results = analyze_permutation(all_files, imat_sol, sub_frame=subs, sub_list=subsystems,
-    #                                    savefiles=True, out_path=mypath)
-    #
-    #
-    sols = "parallel_approach1_pval05_10_analysis/all_sol.csv"
-    imat_sol = "recon2_2/recon_imatsol_pval_0-05.csv"
-
-    subframe = pd.read_csv("recon2_2/recon2v2_reactions_subsystems.csv")
-
-    with open("recon2_2/recon2v2_subsystems_list.txt", "r") as file:
+    df = pd.read_csv(solpath, dtype=int, index_col=0).drop_duplicates(ignore_index=True)
+    subframe = pd.read_csv(subframe, names=list(range(7785)))
+    with open(sublist, "r") as file:
         sublist = file.read().split(";")
 
-    analyze_permutation(sols, imat_sol, subframe, sublist, out_path="pvalcomparison/pval05_")
+    rxn_list = []
+    rxnnumber = {}
+    for sub in sublist:
+        rxns = list(subframe[subframe.isin([sub])].stack()[1].index)
+        rxn_list.append(rxns)
+        rxnnumber[sub] = len(rxns)
 
+    sol_pathways = []
+    for x in df.iterrows():
+        sol_pathways.append([sum(x[1][r]) for r in rxn_list])
+
+    pvals = {}
+    for i, sub in enumerate(sublist):
+        temp = []
+        for sol in sol_pathways:
+            table = np.array([[sol[i], len(rxn_list[i]) - sol[i]],
+                              [sum(sol) - sol[i], 7784 - len(rxn_list[i]) - sum(sol) + sol[i]]])
+            o, p = fisher_exact(table, alternative='greater')
+            temp.append(-np.log10(p))
+        pvals[sub] = temp
+    newpvals = pd.DataFrame(pvals)
+    newpvals.to_csv(outpath)
+    return newpvals
+
+
+if __name__ == "__main__":
+    # result analysis
+    Fischer_pathways("par_1_obj001_an/all_sol.csv", "recon2_2/recon2v2_reactions_subsystems.csv",
+                     "recon2_2/recon2v2_subsystems_list.txt", "par_1_obj001_an/newobj_Fischer.csv")
