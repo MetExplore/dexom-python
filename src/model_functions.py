@@ -186,18 +186,18 @@ def mouse_weights_from_gpr(model, gene_file):
 if __name__ == "__main__":
     from cobra.io import load_json_model, read_sbml_model, load_matlab_model
 
-    # model = load_json_model("recon2_2/recon2v2_corrected.json")
-    # genefile = "recon2_2/microarray_hgnc_pval_0-01.csv"
-    # rec_wei = human_weights_from_gpr(model, genefile)
-    # save_reaction_weights(rec_wei, "recon2_2/pval_0-01_reactionweights.csv")
+    model = load_json_model("recon2_2/recon2v2_corrected.json")
+    genefile = "recon2_2/pval_0-005_geneweights.csv"
+    rec_wei = human_weights_from_gpr(model, genefile)
+    save_reaction_weights(rec_wei, "recon2_2/pval_0-005_reactionweights.csv")
 
-    rec = load_reaction_weights("recon2_2/pval_0-01_reactionweights.csv")
-    for g in rec.keys():
-        if rec[g] > 0:
-            rec[g] = 1
-        elif rec[g] < 0:
-            rec[g] = -1
-    save_reaction_weights(rec, "recon2_2/pval_0-01_reactionrhrl")
+    # rec = load_reaction_weights("recon2_2/pval_0-01_reactionweights.csv")
+    # for g in rec.keys():
+    #     if rec[g] > 0:
+    #         rec[g] = 1
+    #     elif rec[g] < 0:
+    #         rec[g] = -1
+    # save_reaction_weights(rec, "recon2_2/pval_0-01_reactionrhrl")
 
     ### the result is rendered correct by modifying the _collapse_arguments function of the MinMaxBase class
     ### in /sympy/functions/elementary/miscellaneous.py

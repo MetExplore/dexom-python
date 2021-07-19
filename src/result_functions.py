@@ -229,8 +229,46 @@ def pathway_histograms(solutions, sub_frame, sub_list, out_path):
     return full_solutions
 
 
-def Fischer_pathways(solpath, subframe, sublist, outpath="Fischer_pathways.csv"):
+def Fischer_pathways(solpath, subframe, sublist, outpath="Fischer_pathways"):
 
+    df = pd.read_csv(solpath, dtype=int, index_col=0).drop_duplicates(ignore_index=True)
+    subframe = pd.read_csv(subframe, names=list(range(7785)))
+    with open(sublist, "r") as file:
+        sublist = file.read().split(";")
+
+    rxn_list = []
+    rxnnumber = {}
+    for sub in sublist:
+        rxns = list(subframe[subframe.isin([sub])].stack()[0].index)
+        rxn_list.append(rxns)
+        rxnnumber[sub] = len(rxns)
+
+    sol_pathways = []
+    for x in df.iterrows():
+        sol_pathways.append([sum(x[1][r]) for r in rxn_list]+[sum(x[1])])
+
+    pvalsu = {}
+    pvalso = {}
+    for i, sub in enumerate(sublist):
+        tempu = []
+        tempo = []
+        for sol in sol_pathways:
+            table = np.array([[sol[i], len(rxn_list[i]) - sol[i]],
+                              [sol[-1] - sol[i], 7785 - len(rxn_list[i]) - sol[-1] + sol[i]]])
+            o, pu = fisher_exact(table, alternative='less')
+            o, po = fisher_exact(table, alternative='greater')
+            tempu.append(-np.log10(pu))
+            tempo.append(-np.log10(po))
+        pvalsu[sub] = tempu
+        pvalso[sub] = tempo
+    over = pd.DataFrame(pvalso)
+    under = pd.DataFrame(pvalsu)
+    over.to_csv(outpath+"_over.csv")
+    under.to_csv(outpath+"_under.csv")
+    return over, under
+
+
+def active_reactions(solpath, subframe, sublist, outpath="pathway"):
     df = pd.read_csv(solpath, dtype=int, index_col=0).drop_duplicates(ignore_index=True)
     subframe = pd.read_csv(subframe, names=list(range(7785)))
     with open(sublist, "r") as file:
@@ -243,25 +281,43 @@ def Fischer_pathways(solpath, subframe, sublist, outpath="Fischer_pathways.csv")
         rxn_list.append(rxns)
         rxnnumber[sub] = len(rxns)
 
-    sol_pathways = []
-    for x in df.iterrows():
-        sol_pathways.append([sum(x[1][r]) for r in rxn_list])
-
-    pvals = {}
-    for i, sub in enumerate(sublist):
-        temp = []
-        for sol in sol_pathways:
-            table = np.array([[sol[i], len(rxn_list[i]) - sol[i]],
-                              [sum(sol) - sol[i], 7784 - len(rxn_list[i]) - sum(sol) + sol[i]]])
-            o, p = fisher_exact(table, alternative='greater')
-            temp.append(-np.log10(p))
-        pvals[sub] = temp
-    newpvals = pd.DataFrame(pvals)
-    newpvals.to_csv(outpath)
-    return newpvals
+    pathways_sol = []
+    for i, r in enumerate(rxn_list):
+        temp = [sum(x[1][r]) for x in df.iterrows()]
+        pathways_sol.append(temp)
+        plt.clf()
+        fig, ax = plt.subplots()
+        plt.hist(temp, bins=max(temp)-min(temp)+1, density=True)
+        plt.title("%s pval 0.05" % sublist[i])
+        plt.xlabel("number of active reactions (out of: %i)" % len(rxn_list[i]))
+        plt.ylabel("frequence among dexom solutions")
+        fig.savefig(outpath+"_%s.png" % sublist[i].replace("/", "_"))
+    return pathways_sol
 
 
 if __name__ == "__main__":
     # result analysis
-    Fischer_pathways("par_1_obj001_an/all_sol.csv", "recon2_2/recon2v2_reactions_subsystems.csv",
-                     "recon2_2/recon2v2_subsystems_list.txt", "par_1_obj001_an/newobj_Fischer.csv")
+
+    # Fischer_pathways("par_1_pval05_an/all_sol.csv", "recon2_2/recon2v2_reactions_subsystems.csv",
+    #                  "recon2_2/recon2v2_subsystems_list.txt", "par_1_pval05_an/newobj_Fischer")
+
+    # active_reactions("par_1_pval05_an/all_sol.csv", "recon2_2/recon2v2_reactions_subsystems.csv",
+    #                  "recon2_2/recon2v2_subsystems_list.txt", "pval_0-05")
+    means = []
+    sterrs = []
+    values = []
+    ys = [1, 2, 4, 8, 16, 24]
+    for i in ys:
+        df = pd.read_csv("div_%i_results.csv" % i, index_col=0)
+        means.append(df["time"].mean())
+        sterrs.append(df["time"].std())
+        values.append(df["time"].values)
+    plt.clf()
+    #plt.errorbar(y, means, sterrs, capsize=5, fmt="k.")
+    meanprops = dict(marker=".", markerfacecolor="black", markeredgecolor="black")
+    medianprops = dict(color="black")
+    plt.boxplot(values, notch=False, labels=ys, showmeans=False, meanprops=meanprops, medianprops=medianprops)
+    # plt.xticks(ticks=ys)
+    plt.xlabel('Number of cores used')
+    plt.ylabel('Computation time in seconds per iteration')
+    plt.show()

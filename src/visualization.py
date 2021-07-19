@@ -12,7 +12,7 @@ def pca_analysis(X):
     X3 = pd.read_csv("par_1_newobjtol_an/full_rxn_sol.csv", index_col=0)
 
     pca = PCA(n_components=2)
-    X_t = pd.concat([df, X2, X3])
+    X_t = pd.concat([X, X2, X3])
 
     pca.fit(X_t)
 
@@ -78,32 +78,49 @@ def pca_analysis(X):
     return pca, clusters
 
 
-def plot_Fischer_pathways(filename, sublist):
-    df = pd.read_csv(filename, index_col=0)
-    df.columns = sublist
+def plot_Fischer_pathways(filename_over, filename_under, sublist):
+    over = pd.read_csv(filename_over, index_col=0)
+    under = pd.read_csv(filename_under, index_col=0)
+    over.columns = sublist
+    under.columns = sublist
+    over = over.sort_index(axis=1, ascending=False)
+    under = under.sort_index(axis=1, ascending=False)
     plt.clf()
-    plt.figure(figsize=(20, 30))
-    fig, ax = plt.subplots(figsize=(10, 20))
-    # fig.subplots_adjust()
-    df.boxplot(vert=False)
-    plt.plot(list(df.values)[0], ax.get_yticks(), 'r.')
+    plt.figure(figsize=(25, 30))
+    fig, ax = plt.subplots(figsize=(13, 20))
+    over.boxplot(vert=False)
+    plt.plot(list(over.values)[0], ax.get_yticks(), 'r.')
+    plt.xticks(ticks=[10, 20, 30, 40])
     plt.tight_layout()
     plt.subplots_adjust(top=0.95, bottom=0.05)
-    plt.title("Overrepresentation analysis of active reactions per pathway", fontsize=23, loc='right', pad='20')
+    plt.title("Overrepresentation analysis of active reactions per pathway", fontsize=25, loc='right', pad='20')
     plt.xlabel('-log10 p-value', fontsize=15)
     plt.show()
-    return df
+
+    plt.clf()
+    plt.figure(figsize=(25, 30))
+    fig, ax = plt.subplots(figsize=(13, 20))
+    under.boxplot(vert=False)
+    plt.plot(list(under.values)[0], ax.get_yticks(), 'r.')
+    plt.xticks(ticks=[10, 20])
+    plt.tight_layout()
+    plt.subplots_adjust(top=0.95, bottom=0.05)
+    plt.title("Underrepresentation analysis of active reactions per pathway", fontsize=25, loc='right', pad='20')
+    plt.xlabel('-log10 p-value', fontsize=15)
+    plt.show()
+
+    return over, under
 
 
 if __name__=="__main__":
 
-    df = pd.read_csv("par_1_newobjtol_an/all_sol.csv", index_col=0)
-    df = df.drop_duplicates(ignore_index=True)
-    pca, clus = pca_analysis(df)
+    # df = pd.read_csv("par_1_newobjtol_an/all_sol.csv", index_col=0)
+    # df = df.drop_duplicates(ignore_index=True)
+    # pca, clus = pca_analysis(df)
 
-    # with open("recon2_2/recon2v2_subsystems_list.txt", "r") as file:
-    #     sublist = file.read().split(";")
-    # sublist = [s.replace("metabolism", "m.").replace(" Metabolism", "m.") for s in sublist]
-    # pvals = plot_Fischer_pathways("par_1_obj001_an/newobj_Fischer.csv", sublist=sublist)
+    with open("recon2_2/recon2v2_subsystems_list.txt", "r") as file:
+        sublist = file.read().split(";")
+    sublist = [s.replace("metabolism", "m.").replace(" Metabolism", "m.".replace("beta", "Beta")) for s in sublist]
+    pvals = plot_Fischer_pathways("par_1_an/newobj_Fischer_over.csv", "par_1_an/newobj_Fischer_under.csv", sublist=sublist)
 
 
