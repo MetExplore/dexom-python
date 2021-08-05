@@ -14,13 +14,13 @@ Parts of the imat code were taken from the driven package for data-driven constr
 
 [Academic license](https://www.ibm.com/academic/technology/data-science): for this, you must sign up using an academic email address.
  - after logging in, you can access the download for "ILOG CPLEX Optimization Studio"
- - download version 12.10 or higher
- - install the solver by executing the installer (.exe in Windows, .bin in Linux)
- - add the CPLEX directory to the PYTHONPATH environment variable
+ - download version 12.10 or higher of the appropriate installer for your operating system
+ - install the solver
+ - update the PYTHONPATH environment variable by adding the directory containing the `setup.py` file appropriate for you OS and python version
 
 ### Python libraries
 The python libraries needed to run the code can be found in the `requirements.txt` file.  
-They can be installed using `pip install cobrapy` etc.
+They can be installed using `pip install cobra`, `pip install numpy`, etc.
 
 ## Functions
 
@@ -28,9 +28,20 @@ These are the different functions which are available for context-specific netwo
 
 ### iMAT
 `imat.py` contains a modified version of the iMAT algorithm as defined by [(Shlomi et al. 2008)](https://pubmed.ncbi.nlm.nih.gov/18711341/).  
-In this implementation, instead of inputting raw gene expression data, the user inputs a reaction_weight file in which each reaction has already been attributed a score.  
+The main inputs of this algorithm are a model file, which must be supplied in a cobrapy-compatible format (SBML, JSON or MAT), and a reaction_weight file in which each reaction is attributed a score.  
 These reaction weights must be determined prior to launching imat, using the GPR rules present in the metabolic model.
-`model_functions.py` contains the `recon2_gpr` function, which transforms differential gene expression data into reaction weights.
+`model_functions.py` contains the `recon2_gpr` function, which transforms differential gene expression data into reaction weights for the recon 2 model, using the HGNC identifiers present in the model to connect the genes and reactions.
+
+The remaining inputs of imat are:
+- epsilon: the activation threshold of reactions with weight>0
+- threshold: the activation threshold of all reactions
+- timelimit: the solver time limit
+- feasibility: the solver feasbility tolerance
+- mipgaptol: the solver MIP gap tolerance
+- full: a bool parameter for switching between the partial & full implementation
+
+The partial implementation is the default version. In this version, binary flux indicator variables are created for each reaction with a non-zero weight.  
+In the full implementation, binary flux indicator variables are created for every reaction in the model. This does not change the result of the imat function, but can be used for some of the enumeration methods below.
 
 ### enum_functions
 
@@ -39,6 +50,9 @@ Four methods for enumerating context-specific networks are available:
 - `icut.py` contains integer-cut
 - `maxdist.py` contains distance-maximization
 - `div-enum.py` contains diversity-enumeration
+
+An explanation of these methods can be found in [(Rodriguez-Mier et al. 2021)](https://doi.org/10.1371/journal.pcbi.1008730).  
+Each of these methods can be used on its own. The same model and reaction_weights inputs must be provided as for the imat function.
 
 ## DEXOM
 
