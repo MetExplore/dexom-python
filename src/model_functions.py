@@ -140,7 +140,7 @@ def get_subsytems_from_model(model, save=True):
     return rxn_sub, sub_list
 
 
-def recon2_gpr(model, gene_file, genename="ID", genescore="t", save=True):
+def recon2_gpr(model, gene_file, genename="ID", genescore="t", save=True, filename="recon2_weights"):
     """
     Applies the GPR rules from the recon2 or recon2.2 model for creating reaction weights
 
@@ -187,7 +187,7 @@ def recon2_gpr(model, gene_file, genename="ID", genescore="t", save=True):
         else:
             reaction_weights[rxn.id] = 0
     if save:
-        save_reaction_weights(reaction_weights, "recon2_weights.csv")
+        save_reaction_weights(reaction_weights, filename+".csv")
     return reaction_weights
 
 
@@ -303,6 +303,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument("-m", "--model", help="recon 2 model in json, sbml or mat format")
     parser.add_argument("-g", "--gene_file", help="csv file containing gene HGNC identifiers and scores")
+    parser.add_argument("-f", "--filename", default="recon2_weights", help="name of the reaction_weights file")
     parser.add_argument("--gene_ID", default="ID", help="column containing the gene HGNC identifiers")
     parser.add_argument("--gene_score", default="t", help="column containing the gene score to be used")
     args = parser.parse_args()
