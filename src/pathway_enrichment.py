@@ -11,7 +11,7 @@ from statsmodels.stats.multitest import fdrcorrection
 from model_functions import get_subsytems_from_model
 
 
-def Fischer_pathways(solpath, subframe, sublist, outpath="pathway_enrichment"):
+def Fisher_pathways(solpath, subframe, sublist, outpath="pathway_enrichment"):
     """
     Performs pathway over- and underrepresentation analysis
 
@@ -46,7 +46,7 @@ def Fischer_pathways(solpath, subframe, sublist, outpath="pathway_enrichment"):
         tempo = []
         for sol in sol_pathways:
             table = np.array([[sol[i], len(rxn_list[i]) - sol[i]],
-                              [sol[-1] - sol[i], 7785 - len(rxn_list[i]) - sol[-1] + sol[i]]])
+                              [sol[-1] - sol[i], len(subframe) - len(rxn_list[i]) - sol[-1] + sol[i]]])
             o, pu = fisher_exact(table, alternative='less')
             o, po = fisher_exact(table, alternative='greater')
             tempu.append(pu)
@@ -67,7 +67,7 @@ def Fischer_pathways(solpath, subframe, sublist, outpath="pathway_enrichment"):
     return over, under, fdr
 
 
-def plot_Fischer_pathways(filename_over, filename_under, sublist, outpath="pathway_enrichment"):
+def plot_Fisher_pathways(filename_over, filename_under, sublist, outpath="pathway_enrichment"):
 
     over = pd.read_csv(filename_over, index_col=0)
     under = pd.read_csv(filename_under, index_col=0)
@@ -132,6 +132,6 @@ if __name__ == "__main__":
     else:
         subframe = pd.read_csv(args.subframe, index_col=0)
         sublist = pd.read_csv(args.sublist, sep=";").columns.to_list()
-    Fischer_pathways(solpath=args.solutions, subframe=subframe, sublist=sublist, outpath=args.out_path)
-    plot_Fischer_pathways(filename_over=args.out_path+"_pvalues_over.csv",
-                          filename_under=args.out_path+"_pvalues_under.csv", sublist=sublist, outpath=args.out_path)
+    Fisher_pathways(solpath=args.solutions, subframe=subframe, sublist=sublist, outpath=args.out_path)
+    plot_Fisher_pathways(filename_over=args.out_path+"_pvalues_over.csv",
+                         filename_under=args.out_path+"_pvalues_under.csv", sublist=sublist, outpath=args.out_path)
