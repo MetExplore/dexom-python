@@ -64,15 +64,18 @@ As previously explained, the full-DEXOM implementation defines binary indicator 
 maxdist and div-enum also have:
 - `icut`: if True, an icut constraint will be applied to prevent duplicate solutions
 
-## DEXOM
+## Parallelized DEXOM
 
 The DEXOM algorithm is a combination of several network enumeration methods.  
-`enumeration.py` contains the `write_batch_script1` function, which is used for creating a parallelization of DEXOM on a slurm computation cluster.  
-The central inputs of this function are:
+`enumeration.py` contains the `write_batch_script1` function, which is used for creating a parallelization of DEXOM on a slurm computation cluster. 
+The inputs of this function are:
 - `filenums`: the number of parallel batches which should be launched on slurm
-- `iters`: the number of div-enum iterations per batche
+- `iters`: the number of div-enum iterations per batch
 
-The results of a DEXOM run can then be evaluated with the following scripts:  
+After executing the script, the target directory should contain several bash files named `file_0.sh`, `file_1.sh` etc. depending on the `filenum` parameter that was provided.  
+In addition, there should be one `runfiles.sh` file. This file contains the commands to submit the other files as job batches on the slurm cluster.
+
+The results of a DEXOM run can be evaluated with the following scripts:  
 - `dexom_cluster_results.py`compiles and removes duplicate solutions from the results of a parallel DEXOM run.  
 - `pathway_enrichment.py` can be used to perform a pathway enrichment analysis using a one-sided hypergeometric test  
 - `result_functions.py` contains the `plot_pca` function, which performs Principal Component Analysis on the enumeration solutions
