@@ -142,7 +142,8 @@ def get_subsytems_from_model(model, save=True):
 
 def recon2_gpr(model, gene_file, genename="ID", genescore="t", save=True):
     """
-    Applies the GPR rules from the recon2 model
+    Applies the GPR rules from the recon2 or recon2.2 model for creating reaction weights
+
     Parameters
     ----------
     model: a cobrapy model
@@ -153,7 +154,7 @@ def recon2_gpr(model, gene_file, genename="ID", genescore="t", save=True):
 
     Returns
     -------
-    reaction weights: dict
+    reaction_weights: dict where keys = reaction IDs and values = weights
     """
     reaction_weights = {}
     genes = pd.read_csv(gene_file)
@@ -297,10 +298,10 @@ if __name__ == "__main__":
     ### in /sympy/functions/elementary/miscellaneous.py
     ### see https://github.com/sympy/sympy/issues/21399 and https://github.com/sympy/sympy/pull/21547 for details
 
-    description = "Applies GPR rules from the Recon 2.2 model and saves reaction weights as a csv file"
+    description = "Applies GPR rules from recon 2 model and saves reaction weights as a csv file"
 
     parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument("-m", "--model", help="recon 2.2 model in json, sbml or mat format")
+    parser.add_argument("-m", "--model", help="recon 2 model in json, sbml or mat format")
     parser.add_argument("-g", "--gene_file", help="csv file containing gene HGNC identifiers and scores")
     parser.add_argument("--gene_ID", default="ID", help="column containing the gene HGNC identifiers")
     parser.add_argument("--gene_score", default="t", help="column containing the gene score to be used")
