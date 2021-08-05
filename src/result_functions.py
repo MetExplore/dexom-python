@@ -101,7 +101,7 @@ def combine_solutions(sol_path):
     return uniquesol
 
 
-def plot_pca(solution_path, rxn_enum_solutions=None, save_name="PCA"):
+def plot_pca(solution_path, rxn_enum_solutions=None, save_name=""):
     """
     Plots a 2-dimensional PCA
 
@@ -115,6 +115,8 @@ def plot_pca(solution_path, rxn_enum_solutions=None, save_name="PCA"):
     -------
     the pca object
     """
+    if save_name != "":
+        save_name += "/"
     X = pd.read_csv(solution_path, index_col=0)
 
     if rxn_enum_solutions:
@@ -147,7 +149,7 @@ def plot_pca(solution_path, rxn_enum_solutions=None, save_name="PCA"):
     plt.scatter(x, y, color="b", label="div-enum solutions")
     plt.scatter(x[0], y[0], color="r", label="iMAT solution")
     plt.legend(fontsize="large")
-    fig.savefig(save_name+".png")
+    fig.savefig(save_name+"pca.png")
 
     return pca
 
@@ -159,7 +161,7 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--solutions", help="csv file containing diversity-enumeration solutions")
     parser.add_argument("-r", "--rxn_solutions", default=None,
                         help="(optional) csv file containing diversity-enumeration solutions")
-    parser.add_argument("-n", "--filename", default="PCA", help="name of the file which will be saved")
+    parser.add_argument("-o", "--out_path", default="", help="name of the file which will be saved")
     args = parser.parse_args()
 
-    pca = plot_pca(args.solution, rxn_enum_solutions=args.rxn_solutions, save_name=args.filename)
+    pca = plot_pca(args.solutions, rxn_enum_solutions=args.rxn_solutions, save_name=args.out_path)
