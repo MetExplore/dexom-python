@@ -102,7 +102,7 @@ To run DEXOM on a slurm cluster, call the enumeration.py script to create the ne
 ```
 python src/enum_functions/enumeration -m recon2v2/recon2v2_corrected.json -r recon2v2/pval_0-01_reactionweights.csv -p recon2v2/imatsol.csv -d recon2v2 -u mstingl -n 100 -i 100
 ```
-Then, submit the job to the slurm cluster:  
+Then, submit the job to the slurm cluster. Note that if you created the files on a Windows pc, you must use the command `dos2unix runfiles.sh` before `sbatch runfiles.sh`:  
 ```
 cd recon2v2/
 sbatch runfiles.sh
@@ -112,17 +112,5 @@ After all jobs are completed, you can analyze the results using the following sc
 ```
 python src/dexom_cluster_results -d recon2v2 -o recon2v2 -n 100
 python src/pathway_enrichment -s recon2v2/all_dexom_sols.csv -m recon2v2/recon2v2_corrected.json -o recon2v2/pathways
+python src/result_functions -s recon2v2/all_dexom_sols.csv -o recon2v2
 ```
-This last step should produce the following files in the recon2v2 folder:
-- all_outs.txt
-- all_errs.txt
-- all_divenum_res.csv
-- all_rxnenum_sols.csv
-- all_divenum_sols.csv
-- all_dexom_sols.csv
-- all_divenum_selected_reactions_ordered.png
-- output.txt
-- pathways_pvalues_over.csv
-- pathways_pvalues_under.csv
-- pathways_overrepresentation.png
-- pathways_underrepresentation.png
