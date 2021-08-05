@@ -80,8 +80,47 @@ The results of a DEXOM run can be evaluated with the following scripts:
 - `pathway_enrichment.py` can be used to perform a pathway enrichment analysis using a one-sided hypergeometric test  
 - `result_functions.py` contains the `plot_pca` function, which performs Principal Component Analysis on the enumeration solutions
 
-### Toy examples
+## Examples
+
+### Toy models
 The `toy_models.py` script contains code for generating some small metabolic models and reaction weights.  
 The toy_models folder contains some ready-to-use models and reaction weight files.  
 The `main.py` script contains a simple example of the DEXOM workflow using one of the toy models.
 
+### Recon 2.2
+The recon2v2 folder containts the model and the differential gene expression data which was used to test this new implementation.  
+In order to produce reaction weights, you can call the model_functions script from the command line. This will create a file named "pval_0-01_reactionweights.csv" in the recon2v2 folder:  
+```
+python src/model_functions -m recon2v2/recon2v2_corrected.json -g recon2v2/pval_0-01_geneweights.csv -o recon2v2/pval_0-01_reactionweights
+```
+ 
+Then, call imat to produce a first context-specific subnetwork. This will create a file named "imatsol.csv" in the recon2v2 folder:  
+```
+python src/imat -m recon2v2/recon2v2_corrected.json -r recon2v2/pval_0-01_reactionweights.csv -o recon2v2/imatsol
+```
+To run DEXOM on a slurm cluster, call the enumeration.py script to create the necessary batch files (here: 100 batches with 100 iterations). Be careful to use your own username after the `-u` input. This script assumes that you have cloned the `dexom_py` project into a `work` folder on the cluster, and that you have installed CPLEX v12.10 in the same `work` folder. Note that this step creates a file called "recon2v2_reactions_shuffled.csv", which shows the order in which rxn-enum will call the reactions from the model.  
+```
+python src/enum_functions/enumeration -m recon2v2/recon2v2_corrected.json -r recon2v2/pval_0-01_reactionweights.csv -p recon2v2/imatsol.csv -d recon2v2 -u mstingl -n 100 -i 100
+```
+Then, submit the job to the slurm cluster:  
+```
+cd recon2v2/
+sbatch runfiles.sh
+cd -
+```
+After all jobs are completed, you can analyze the results using the following scripts.  
+```
+python src/dexom_cluster_results -d recon2v2 -o recon2v2 -n 100
+python src/pathway_enrichment -s recon2v2/all_dexom_sols.csv -m recon2v2/recon2v2_corrected.json -o recon2v2/pathways
+```
+This last step should produce the following files in the recon2v2 folder:
+- all_outs.txt
+- all_errs.txt
+- all_divenum_res.csv
+- all_rxn_enum_sols.csv
+- all_div_enum_sols.csv
+- all_dexom_sols.csv
+- pathways_pvalues_over.csv
+- pathways_pvalues_under.csv
+- pathways_overrepresentation.png
+- pathways_underrepresentation.png
