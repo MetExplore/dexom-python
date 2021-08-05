@@ -2,7 +2,8 @@
 import six
 import pandas as pd
 import numpy as np
-from symengine import Add, Mul, sympify, Max, Min
+from sympy import sympify, Add, Mul, Max, Min
+# from symengine import Add, Mul, Max, Min
 import re
 from cobra.io import load_json_model, read_sbml_model, load_matlab_model
 from pathlib import Path
@@ -178,7 +179,7 @@ def recon2_gpr(model, gene_file, genename="ID", genescore="t", save=True, filena
                     new_weights[g] = -v + 0.001
                     negweights.append(-v)
             expression = ' '.join(expr_split).replace('or', '*').replace('and', '+')
-            weight = sympify(expression, evaluate=False).replace(Mul, Max).replace(Add, Min).subs(new_weights, n=21)
+            weight = sympify(expression,  evaluate=False).replace(Mul, Max).replace(Add, Min).subs(new_weights, n=21)
             if weight - 0.001 in negweights:
                 weight = -v + 0.001
             elif weight in negweights:
@@ -319,7 +320,5 @@ if __name__ == "__main__":
         print("Only SBML, JSON, and Matlab formats are supported for the models")
         model = None
 
-    genefile = pd.read_csv(args.gene_file)
-
-    reaction_weights = recon2_gpr(model=model, gene_file=genefile, genename=args.gene_ID, genescore=args.gene_score,
+    reaction_weights = recon2_gpr(model=model, gene_file=args.gene_file, genename=args.gene_ID, genescore=args.gene_score,
                                   filename=args.output, save=True)
