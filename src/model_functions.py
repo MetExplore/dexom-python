@@ -303,7 +303,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument("-m", "--model", help="recon 2 model in json, sbml or mat format")
     parser.add_argument("-g", "--gene_file", help="csv file containing gene HGNC identifiers and scores")
-    parser.add_argument("-f", "--filename", default="recon2_weights", help="name of the reaction_weights file")
+    parser.add_argument("-o", "--output", default="recon2_weights", help="name of the reaction_weights file")
     parser.add_argument("--gene_ID", default="ID", help="column containing the gene HGNC identifiers")
     parser.add_argument("--gene_score", default="t", help="column containing the gene score to be used")
     args = parser.parse_args()
@@ -322,4 +322,4 @@ if __name__ == "__main__":
     genefile = pd.read_csv(args.gene_file)
 
     reaction_weights = recon2_gpr(model=model, gene_file=genefile, genename=args.gene_ID, genescore=args.gene_score,
-                                  save=True)
+                                  filename=args.output, save=True)
