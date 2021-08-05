@@ -1,13 +1,13 @@
 
 import six
-from sympy import Add, sympify
+from symengine import Add, sympify
 from numpy import abs
 import argparse
 from pathlib import Path
 import time
 from cobra.io import load_json_model, read_sbml_model, load_matlab_model
-from src.model_functions import load_reaction_weights
-from src.result_functions import write_solution
+from model_functions import load_reaction_weights
+from result_functions import write_solution
 
 
 def create_full_variables(model, reaction_weights, epsilon, threshold):
@@ -153,8 +153,8 @@ def imat(model, reaction_weights={}, epsilon=1e-2, threshold=1e-5, timelimit=Non
         with model:
             solution = model.optimize()
             t2 = time.perf_counter()
-            print(t1-t0, "s spent before optimize call")
-            print(t2-t1, "s spent on optimize call")
+            print("iMAT:", t1-t0, "s spent before optimize call")
+            print("iMAT:", t2-t1, "s spent on optimize call")
             return solution
     finally:
         pass
@@ -195,4 +195,4 @@ if __name__ == "__main__":
     solution = imat(model, reaction_weights, epsilon=args.epsilon, threshold=args.threshold, timelimit=args.timelimit,
                     feasibility=args.tol, mipgaptol=args.mipgap)
 
-    write_solution(solution, args.threshold, args.output)
+    write_solution(solution, args.threshold, args.output+".csv")

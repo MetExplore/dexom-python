@@ -21,7 +21,7 @@ class RxnEnumSolution(object):
 
 
 def rxn_enum(model, rxn_list, init_sol, reaction_weights=None, epsilon=1., threshold=1e-1, tlim=None,
-                     feas=1e-6, mipgap=1e-3, obj_tol=1e-5, out_name="rxn_enum"):
+                     feas=1e-6, mipgap=1e-3, obj_tol=1e-2):
     """
     Reaction enumeration method
 

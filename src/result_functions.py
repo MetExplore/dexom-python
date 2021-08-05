@@ -1,11 +1,11 @@
 
-from csv import DictReader, DictWriter
 import numpy as np
 import pandas as pd
 from pathlib import Path
 from cobra import Solution
 import matplotlib.pyplot as plt
-from scipy.stats import fisher_exact
+from sklearn.decomposition import PCA
+import argparse
 
 
 def get_binary_sol(solution, threshold):
@@ -13,8 +13,27 @@ def get_binary_sol(solution, threshold):
     return binary
 
 
-def get_obj_value_from_binary(binary, model, reaction_weights):
-    wei = [reaction_weights.get(rxn.id, 0) for rxn in model.reactions]
+def get_obj_value_from_binary(binary, reaction_weights, full_weights=True, model=None):
+    """
+    Calculates the objective value of a solution,
+    as well as the fraction of active RH and inactive RL reactions
+
+    Parameters
+    ----------
+    binary
+    reaction_weights
+    full_weights: bool
+        True if reaction_weights contain every reaction from the model
+    model: required if full_weights is False
+
+    Returns
+    -------
+    The objective value
+    """
+    if full_weights:
+        wei = list(reaction_weights.values())
+    else:
+        wei = [reaction_weights.get(rxn.id, 0) for rxn in model.reactions]
     obj_val = sum([wei[i]*binary[i] if wei[i] >= 0 else -wei[i]*(1-binary[i]) for i in range(len(wei))])
     max_obj = sum([abs(x) for x in reaction_weights.values()])
     pos_wei = sum([1 for x in reaction_weights.values() if x > 0])
@@ -24,7 +43,6 @@ def get_obj_value_from_binary(binary, model, reaction_weights):
     print("objective value: %.2f" % obj_val)
     print("maximal possible value: %.2f (%.2f%s, %.2f%s)" % (max_obj, 100*pos_true/pos_wei, "% RH",
                                                              100*neg_true/neg_wei, "% RL"))
-
     return obj_val
 
 
@@ -83,241 +101,52 @@ def combine_solutions(sol_path):
     return uniquesol
 
 
+def plot_pca(solution_path, rxn_enum_solutions=None, save_name="PCA"):
+    X = pd.read_csv(solution_path, index_col=0)
 
-def analyze_permutation(perm_sols, imat_sol, sub_frame=None, sub_list=None, savefiles=True, out_path="permutation"):
-    """
+    if rxn_enum_solutions:
+        X2 = pd.read_csv(rxn_enum_solutions, index_col=0)
+        X_t = pd.concat([X, X2])
+    else:
+        X_t = X
 
-    Parameters
-    ----------
-    perm_sols: Path or list of paths
-        files containing imat binary solutions in rows
-    imat_sol: path or string
-        path to an imat solution file created with write_solution()
-    out_path: path or string
-        path and name of output file
-    sub_frame: pandas DataFrame or Series
-        a series in which each reaction is associated to a pathway
-    sub_list: list
-        a list of all pathways present in the model
+    pca = PCA(n_components=2)
+    pca.fit(X_t)
 
-    Returns
-    -------
-    full_results: pandas DataFrame
-        header: reaction names
-        row 0: subsystem/pathway
-        rows 1+: binary solutions
-    """
-    all_list = []
-    if isinstance(sub_frame, pd.DataFrame):
-        all_list.append(sub_frame)
-    elif type(sub_frame) == str:
-        all_list.append(pd.read_csv(sub_frame, index_col=None))
-    if type(perm_sols) == str:
-        perm_sols = [perm_sols]
-    for filename in perm_sols:
-        df = pd.read_csv(filename, index_col=0, header=0)
-        df.columns = sub_frame.columns
-        all_list.append(df)
+    comp = pca.transform(X)
+    x = [c[0] for c in comp]
+    y = [c[1] for c in comp]
 
-    full_results = pd.concat(all_list, axis=0, ignore_index=True)
+    if rxn_enum_solutions:
+        comp2 = pca.transform(X2)
+        x2 = [c[0] for c in comp2]
+        y2 = [c[1] for c in comp2]
 
-    solution, binary = read_solution(imat_sol)
-
-    if not sub_list:
-        sub_list = full_results.T.agg(pd.unique)[0]
-        sub_list = [x for x in sub_list if x == x]  # removes nan values
-
-    rxn_freq = full_results[1:].sum()
-    rxn_freq /= len(full_results)-1
-
-
-    path_max_act = {}
-    for sub in sub_list:
-        rxns = full_results[full_results.isin([sub])].stack()[0].index
-        path_max_act[sub] = max(rxn_freq[rxns])
-    path_max_act = pd.Series(list(path_max_act.values()), index=list(path_max_act.keys()))
-
-    binary = pd.Series(binary, index=solution.fluxes.index)
-    hist_pathways = pd.DataFrame()
-    histograms = []
-    # sol_pathways = pd.Series(dtype=float)
-    sol_pathways = pd.DataFrame(index=sub_list, columns=["imat", "min", "max", "mean"], dtype=float)
-
-    perms = len(full_results) - 1
-    pvalues = pd.DataFrame(index=sub_list, columns=["normal", "-log10(p)"], dtype=float)
-
-    for sub in sub_list:
-        rxns = full_results[full_results.isin([sub])].stack()[0].index
-        # create pathway histograms
-        data = full_results[1:][rxns].sum(axis=1)
-        hist_pathways[sub] = data.values
-        subforsave = sub.replace("/", " ")
-        plt.clf()
-        fig = data.hist(bins=np.arange(min(data), max(data) + 2)).get_figure()
-        histograms.append((fig, out_path+"_histogram "+subforsave+".png"))
-        if savefiles:
-            fig.savefig(out_path+"_histogram "+subforsave+".png")
-
-        # count number of active reactions per pathway
-        # sol_pathways[sub] = binary[rxns].sum()
-        sol_pathways["imat"][sub] = binary[rxns].sum()
-        sol_pathways["min"][sub] = min(data.values)
-        sol_pathways["max"][sub] = max(data.values)
-        sol_pathways["mean"][sub] = sum(data.values)/len(data.values)
-
-        # compute normalized active reactions per pathway & pvalues
-        temp = data.std()
-        if temp == 0.:
-            temp = 1.
-        pvalues["normal"][sub] = (sol_pathways["imat"][sub] - data.mean()) / temp
-
-        temp = min(data[data <= sol_pathways["imat"][sub]].count() / perms,
-                   data[data >= sol_pathways["imat"][sub]].count() / perms)
-        if temp == 0.:
-            temp = 0.001
-        pvalues["-log10(p)"][sub] = -np.log10(temp)
-
-    # create pvalue vulcanoplot
     plt.clf()
-    pval_ax = pvalues.plot.scatter(0, 1, figsize=(20, 20))
-    for i in range(len(pvalues)):
-        pval_ax.annotate(pvalues.index[i], (pvalues["normal"][i], pvalues["-log10(p)"][i]))
-    pval_fig = pval_ax.get_figure()
-    if savefiles:
-        pval_fig.savefig(out_path + "_scatterplot.png")
+    fig, ax = plt.subplots(figsize=(10, 10))
+    plt.xticks(fontsize=12)
+    plt.yticks(fontsize=14)
+    plt.xlabel('Principal Component 1', fontsize=20)
+    plt.ylabel('Principal Component 2', fontsize=20)
+    plt.title("PCA of enumeration solutions", fontsize=20)
+    if rxn_enum_solutions:
+        plt.scatter(x2, y2, color="g", label="rxn-enum solutions")
+    plt.scatter(x, y, color="b", label="div-enum solutions")
+    plt.scatter(x[0], y[0], color="r", label="iMAT solution")
+    plt.legend(fontsize="large")
+    fig.savefig(save_name+".png")
 
-        # save files to path
-        full_results.to_csv(out_path+"_all_solutions.txt", index=False)
-        rxn_freq.to_csv(out_path+"_reaction_frequency.csv", sep=";")
-        path_max_act.to_csv(out_path+"_pathway_maximal_frequency.csv", sep=";")
-
-        sol_pathways.to_csv(out_path+"_pathways.csv", sep=";")
-        pvalues.to_csv(out_path+"_pvalues.csv", sep=";")
-
-    return full_results
-
-
-def pathway_histograms(solutions, sub_frame, sub_list, out_path):
-
-    full_list = []
-    hist_pathways = pd.DataFrame()
-    histograms = []
-
-    if isinstance(sub_frame, pd.DataFrame):
-        full_list.append(sub_frame)
-    if type(solutions) == str:
-        solutions = [solutions]
-    for filename in solutions:
-        df = pd.read_csv(filename, index_col=0, header=0)
-        mapp = {df.columns[i]: sub_frame.columns[i] for i in range(len(df.columns))}
-        df.rename(mapp, axis=1, inplace=True)
-        full_list.append(df)
-    full_solutions = pd.concat(full_list, axis=0, ignore_index=True)
-
-    for sub in sub_list:
-        rxns = full_solutions[full_solutions.isin([sub])].stack()[0].index
-
-        # create pathway histograms
-        data = full_solutions[1:][rxns].sum(axis=1)
-        hist_pathways[sub] = data.values
-        subforsave = sub.replace("/", " ")
-        plt.clf()
-        fig = data.hist(bins=np.arange(min(data), max(data) + 2)).get_figure()
-        histograms.append((fig, out_path+"_histogram "+subforsave+".png"))
-        #fig.savefig(out_path+"_histogram "+subforsave+".png")
-
-    return full_solutions
-
-
-def Fischer_pathways(solpath, subframe, sublist, outpath="Fischer_pathways"):
-
-    df = pd.read_csv(solpath, dtype=int, index_col=0).drop_duplicates(ignore_index=True)
-    subframe = pd.read_csv(subframe, names=list(range(7785)))
-    with open(sublist, "r") as file:
-        sublist = file.read().split(";")
-
-    rxn_list = []
-    rxnnumber = {}
-    for sub in sublist:
-        rxns = list(subframe[subframe.isin([sub])].stack()[0].index)
-        rxn_list.append(rxns)
-        rxnnumber[sub] = len(rxns)
-
-    sol_pathways = []
-    for x in df.iterrows():
-        sol_pathways.append([sum(x[1][r]) for r in rxn_list]+[sum(x[1])])
-
-    pvalsu = {}
-    pvalso = {}
-    for i, sub in enumerate(sublist):
-        tempu = []
-        tempo = []
-        for sol in sol_pathways:
-            table = np.array([[sol[i], len(rxn_list[i]) - sol[i]],
-                              [sol[-1] - sol[i], 7785 - len(rxn_list[i]) - sol[-1] + sol[i]]])
-            o, pu = fisher_exact(table, alternative='less')
-            o, po = fisher_exact(table, alternative='greater')
-            tempu.append(-np.log10(pu))
-            tempo.append(-np.log10(po))
-        pvalsu[sub] = tempu
-        pvalso[sub] = tempo
-    over = pd.DataFrame(pvalso)
-    under = pd.DataFrame(pvalsu)
-    over.to_csv(outpath+"_over.csv")
-    under.to_csv(outpath+"_under.csv")
-    return over, under
-
-
-def active_reactions(solpath, subframe, sublist, outpath="pathway"):
-    df = pd.read_csv(solpath, dtype=int, index_col=0).drop_duplicates(ignore_index=True)
-    subframe = pd.read_csv(subframe, names=list(range(7785)))
-    with open(sublist, "r") as file:
-        sublist = file.read().split(";")
-
-    rxn_list = []
-    rxnnumber = {}
-    for sub in sublist:
-        rxns = list(subframe[subframe.isin([sub])].stack()[1].index)
-        rxn_list.append(rxns)
-        rxnnumber[sub] = len(rxns)
-
-    pathways_sol = []
-    for i, r in enumerate(rxn_list):
-        temp = [sum(x[1][r]) for x in df.iterrows()]
-        pathways_sol.append(temp)
-        plt.clf()
-        fig, ax = plt.subplots()
-        plt.hist(temp, bins=max(temp)-min(temp)+1, density=True)
-        plt.title("%s pval 0.05" % sublist[i])
-        plt.xlabel("number of active reactions (out of: %i)" % len(rxn_list[i]))
-        plt.ylabel("frequence among dexom solutions")
-        fig.savefig(outpath+"_%s.png" % sublist[i].replace("/", "_"))
-    return pathways_sol
+    return pca
 
 
 if __name__ == "__main__":
-    # result analysis
+    description = "Plots a 2-dimensional PCA of enumeration solutions and saves as png"
 
-    # Fischer_pathways("par_1_pval05_an/all_sol.csv", "recon2_2/recon2v2_reactions_subsystems.csv",
-    #                  "recon2_2/recon2v2_subsystems_list.txt", "par_1_pval05_an/newobj_Fischer")
+    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
+    parser.add_argument("-s", "--solutions", help="csv file containing diversity-enumeration solutions")
+    parser.add_argument("-r", "--rxn_solutions", default=None,
+                        help="(optional) csv file containing diversity-enumeration solutions")
+    parser.add_argument("-n", "--filename", default="PCA", help="name of the file which will be saved")
+    args = parser.parse_args()
 
-    # active_reactions("par_1_pval05_an/all_sol.csv", "recon2_2/recon2v2_reactions_subsystems.csv",
-    #                  "recon2_2/recon2v2_subsystems_list.txt", "pval_0-05")
-    means = []
-    sterrs = []
-    values = []
-    ys = [1, 2, 4, 8, 16, 24]
-    for i in ys:
-        df = pd.read_csv("div_%i_results.csv" % i, index_col=0)
-        means.append(df["time"].mean())
-        sterrs.append(df["time"].std())
-        values.append(df["time"].values)
-    plt.clf()
-    #plt.errorbar(y, means, sterrs, capsize=5, fmt="k.")
-    meanprops = dict(marker=".", markerfacecolor="black", markeredgecolor="black")
-    medianprops = dict(color="black")
-    plt.boxplot(values, notch=False, labels=ys, showmeans=False, meanprops=meanprops, medianprops=medianprops)
-    # plt.xticks(ticks=ys)
-    plt.xlabel('Number of cores used')
-    plt.ylabel('Computation time in seconds per iteration')
-    plt.show()
+    pca = plot_pca(args.solution, rxn_enum_solutions=args.rxn_solutions, save_name=args.filename)

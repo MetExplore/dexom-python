@@ -1,7 +1,7 @@
 
 from cobra import Model, Reaction, Metabolite
 from cobra.io import save_json_model
-from csv import DictWriter
+from model_functions import save_reaction_weights
 
 
 def create_reaction(model, rname, formula, gene_rule=None, fullname=None, lower_bound=0., upper_bound=1000.):
@@ -81,10 +81,7 @@ def small4M(export=False, solver='cplex'):
 
     if export:
         save_json_model(model, "small4M.json")
-        with open('small4M_weights.csv', 'w+', newline='') as csvfile:
-            writer = DictWriter(csvfile, fieldnames=reaction_weights.keys())
-            writer.writeheader()
-            writer.writerow(reaction_weights)
+        save_reaction_weights(reaction_weights, "small4M_weights.csv")
 
     return model, reaction_weights
 
@@ -144,10 +141,7 @@ def small4S(export=False, solver='cplex'):
 
     if export:
         save_json_model(model, "small4S.json")
-        with open('small4S_weights.csv', 'w+', newline='') as csvfile:
-            writer = DictWriter(csvfile, fieldnames=reaction_weights.keys())
-            writer.writeheader()
-            writer.writerow(reaction_weights)
+        save_reaction_weights(reaction_weights, "small4S_weights.csv")
 
     return model, reaction_weights
 
@@ -211,9 +205,6 @@ def dagNet(num_layers, num_metabolites_per_layer, export=False, solver='cplex'):
 
     if export:
         save_json_model(model, "dagNet"+str(num_layers)+str(num_metabolites_per_layer)+".json")
-        with open('dagNet'+str(num_layers)+str(num_metabolites_per_layer)+'_weights.csv', 'w+', newline='') as csvfile:
-            writer = DictWriter(csvfile, fieldnames=reaction_weights.keys())
-            writer.writeheader()
-            writer.writerow(reaction_weights)
+        save_reaction_weights(reaction_weights, 'dagNet'+str(num_layers)+str(num_metabolites_per_layer)+'_weights.csv')
 
     return model, reaction_weights

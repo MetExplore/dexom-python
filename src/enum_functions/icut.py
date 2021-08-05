@@ -2,7 +2,7 @@
 import six
 import time
 import numpy as np
-from sympy import sympify
+from symengine import sympify
 from src.imat import imat
 from src.result_functions import get_binary_sol
 from src.enum_functions.enumeration import EnumSolution
@@ -119,12 +119,3 @@ def icut(model, reaction_weights=None, epsilon=1e-2, threshold=1e-5, tlim=None, 
     else:
         print("partial icut iterations: ", i+1)
     return solution
-
-
-if __name__ == "__main__":
-    from cobra.io import load_json_model
-    from src.model_functions import load_reaction_weights
-    model = load_json_model("recon2_2/recon2v2_corrected.json")
-    reaction_weights = load_reaction_weights("recon2_2/microarray_hgnc_pval_0-01_weights.csv")
-
-    sol = icut(model, reaction_weights)

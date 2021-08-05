@@ -1,45 +1,32 @@
+from cobra.io import load_json_model
+from model_functions import load_reaction_weights
+from result_functions import write_solution
+from imat import imat
+from enum_functions.rxn_enum import rxn_enum
+from enum_functions.diversity_enum import diversity_enum
+
 if __name__ == '__main__':
-    import time
-    from cobra.io import read_sbml_model, load_matlab_model, load_json_model, save_json_model
 
-    from src.model_functions import load_reaction_weights
-    from src.result_functions import write_solution, read_solution
-    from src.imat import imat
-    from src.enum_functions.diversity_enum import diversity_enum
-    from src.enum_functions.enumeration import dexom_results
+    model = load_json_model("toy_models/small4M.json")
+    reaction_weights = load_reaction_weights("toy_models/small4M_weights.csv")
 
-
-    t3 = time.perf_counter()
-    model = load_json_model("recon2_2/recon2v2_corrected.json")
-    reaction_weights = load_reaction_weights("recon2_2/microarray_hgnc_pval_0-05_weights.csv")
-
-    # model = read_sbml_model("min_iMM1865/min_iMM1865.xml")
-    # reaction_weights = load_reaction_weights("min_iMM1865/p53_deseq2_cutoff_padj_1e-6.csv",)
-    #
     eps = 1e-2  # threshold of activity for highly expressed reactions
     thr = 1e-5  # threshold of activity for all reactions
-    obj_tol = 1e-3  # variance allowed for the objective_value
-    tlim = 6000  # time limit (in seconds) for the imat model.optimisation() call
+    obj_tol = 1e-2  # variance allowed for the objective_value
+    tlim = 600  # time limit (in seconds) for the imat model.optimisation() call
     tol = 1e-6  # feasibility tolerance for the solver
     mipgap = 1e-3  # mip gap tolerance for the solver
-    maxiter = 10
+    maxiter = 10  # maximum number of iterations
+    dist_anneal = 0.9  # diversity-enumeration parameter
     model.solver = "cplex"
-    # model.solver.configuration.verbosity = 3
-    model.solver.configuration.presolve = True
-    #
-    t0 = time.perf_counter()
-    print('import time: ', t0 - t3)
-    # #
-    # imat_solution = imat(model, reaction_weights, epsilon=eps, threshold=thr, timelimit=tlim, feasibility=tol,
-    #                      mipgaptol=mipgap, full=False)
-    # write_solution(imat_solution, thr, "recon2_2/recon_imatsol_pval_0-05.csv")
-    # t1 = time.perf_counter()
-    # print('total imat time: ', t1-t0)
-    imat_solution, binary = read_solution("recon2_2/recon_imatsol_pval_0-05.csv")
 
-    div_sol = diversity_enum(model, reaction_weights, prev_sol=imat_solution, maxiter=10, out_path="recon_dexom")
+    imat_solution = imat(model=model, reaction_weights=reaction_weights, epsilon=eps, threshold=thr, timelimit=tlim,
+                         feasibility=tol, mipgaptol=mipgap)
+    write_solution(solution=imat_solution, threshold=thr, filename="toy_models/small4M_imatsol")
 
-    solutions = dexom_results("recon_dexom_results.csv", "recon_dexom_solutions.csv", "recon_dexom")
-    #
-    # #clean_model(model, reaction_weights)
+    rxn_sol = rxn_enum(model=model, rxn_list=[], init_sol=imat_solution, reaction_weights=reaction_weights, epsilon=eps,
+             threshold=thr, tlim=tlim, feas=tol, mipgap=mipgap, obj_tol=obj_tol)
+    rxn_sol.unique_binary.to_csv("toy_models/small4M_rxnenum_solutions.csv")
 
+    div_sol = diversity_enum(model=model, prev_sol=imat_solution, reaction_weights=reaction_weights, eps=eps, thr=thr,
+                             obj_tol=obj_tol, maxiter=maxiter, out_path="toy_models/small4M_divenum")

@@ -1,11 +1,16 @@
 
+
+import argparse
+import pandas as pd
+from pathlib import Path
+from cobra.io import load_json_model, load_matlab_model, read_sbml_model
+from src.imat import imat, create_partial_variables, create_full_variables
+from src.result_functions import read_solution, get_binary_sol, write_solution, get_obj_value_from_binary
+from src.model_functions import load_reaction_weights
+from src.enum_functions.enumeration import EnumSolution, get_recent_solution_and_iteration
 import six
 import time
-import numpy as np
-from sympy import sympify, Add
-from src.imat import imat
-from src.result_functions import get_binary_sol
-from src.enum_functions.enumeration import EnumSolution
+from symengine import Add, sympify
 from src.enum_functions.icut import create_icut_constraint
 
 
@@ -84,7 +89,8 @@ def create_maxdist_objective(model, reaction_weights, prev_sol, prev_sol_bin, on
     return objective
 
 
-def maxdist(model, reaction_weights, prev_sol, threshold=1e-4, obj_tol=1e-3, maxiter=10, full=False, only_ones=False):
+def maxdist(model, reaction_weights, prev_sol, threshold=1e-4, obj_tol=1e-3, maxiter=10, out_path="maxdist", icut=True,
+            full=False, only_ones=False):
     """
     Parameters
     maximal distance enumeration
@@ -117,11 +123,12 @@ def maxdist(model, reaction_weights, prev_sol, threshold=1e-4, obj_tol=1e-3, max
     model.solver.add(opt_const)
     for i in range(maxiter):
         t0 = time.perf_counter()
-        # adding the icut constraint to prevent the algorithm from finding the same solutions
-        const = create_icut_constraint(model, reaction_weights, threshold, prev_sol, prev_sol_bin,
-                                       name="icut_"+str(i), full=full)
-        model.solver.add(const)
-        icut_constraints.append(const)
+        if icut:
+            # adding the icut constraint to prevent the algorithm from finding the same solutions
+            const = create_icut_constraint(model, reaction_weights, threshold, prev_sol, prev_sol_bin,
+                                           name="icut_"+str(i), full=full)
+            model.solver.add(const)
+            icut_constraints.append(const)
         # defining the objective: minimize the number of overlapping ones and zeros
         objective = create_maxdist_objective(model, reaction_weights, prev_sol, prev_sol_bin, only_ones, full)
         model.objective = objective
@@ -132,12 +139,89 @@ def maxdist(model, reaction_weights, prev_sol, threshold=1e-4, obj_tol=1e-3, max
             all_solutions.append(prev_sol)
             all_binary.append(prev_sol_bin)
         except:
-            print("An error occured in iter %i of maxdist, check if all feasible solutions have been found" % (i+1))
-            break
+            print("An error occured in iter %i of maxdis" % (i+1))
         t1 = time.perf_counter()
         print("time for iteration "+str(i+1)+": ", t1-t0)
 
     model.solver.remove([const for const in icut_constraints if const in model.solver.constraints])
     model.solver.remove(opt_const)
     solution = EnumSolution(all_solutions, all_binary, all_solutions[0].objective_value)
+    sol = pd.DataFrame(solution.binary)
+    sol.to_csv(out_path+"_solutions.csv")
     return solution
+
+
+if __name__ == "__main__":
+    description = "Performs the distance-maximization enumeration algorithm"
+
+    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
+    parser.add_argument("-m", "--model", help="Metabolic model in sbml, matlab, or json format")
+    parser.add_argument("-r", "--reaction_weights", default=None,
+                        help="Reaction weights in csv format (first row: reaction names, second row: weights)")
+    parser.add_argument("-p", "--prev_sol", default=[], help="starting solution or directory of recent solutions")
+    parser.add_argument("--epsilon", type=float, default=1e-2,
+                        help="Activation threshold for highly expressed reactions")
+    parser.add_argument("--threshold", type=float, default=1e-5, help="Activation threshold for all reactions")
+    parser.add_argument("-t", "--timelimit", type=int, default=None, help="Solver time limit")
+    parser.add_argument("-i", "--maxiter", type=int, default=10, help="Iteration limit")
+    parser.add_argument("--tol", type=float, default=1e-6, help="Solver feasibility tolerance")
+    parser.add_argument("--mipgap", type=float, default=1e-3, help="Solver MIP gap tolerance")
+    parser.add_argument("--obj_tol", type=float, default=1e-2,
+                        help="objective value tolerance, as a fraction of the original value")
+    parser.add_argument("-o", "--output", default="div_enum", help="Base name of output files, without format")
+    parser.add_argument("--noicut", action='store_true', help="Use this flag to remove the icut constraint")
+    parser.add_argument("--full", action='store_true', help="Use this flag to assign non-zero weights to all reactions")
+    args = parser.parse_args()
+
+    fileformat = Path(args.model).suffix
+    if fileformat == ".sbml" or fileformat == ".xml":
+        model = read_sbml_model(args.model)
+    elif fileformat == '.json':
+        model = load_json_model(args.model)
+    elif fileformat == ".mat":
+        model = load_matlab_model(args.model)
+    else:
+        print("Only SBML, JSON, and Matlab formats are supported for the models")
+        model = None
+
+    try:
+        model.solver = 'cplex'
+    except:
+        print("cplex is not available or not properly installed")
+
+    reaction_weights = {}
+    if args.reaction_weights:
+        reaction_weights = load_reaction_weights(args.reaction_weights)
+
+    a = args.dist_anneal
+    if "." in args.prev_sol:
+        prev_sol, prev_bin = read_solution(args.prev_sol, model, reaction_weights)
+        model = create_partial_variables(model, reaction_weights, epsilon=args.epsilon)
+    elif args.prev_sol:
+        prev_sol, i = get_recent_solution_and_iteration(args.prev_sol, args.startsol_num)
+        a = a ** i
+        model = create_partial_variables(model, reaction_weights, epsilon=args.epsilon)
+    else:
+        prev_sol = imat(model, reaction_weights, epsilon=args.epsilon, threshold=args.threshold,
+                        timelimit=args.timelimit, feasibility=args.tol, mipgaptol=args.mipgap)
+
+    icut = True
+    if args.noicut:
+      icut = False
+
+    save = False
+    if args.save:
+        save = True
+
+    full = False
+    if args.full:
+        full = True
+
+    model.solver.configuration.timeout = args.timelimit
+    model.tolerance = args.tol
+    model.solver.problem.parameters.mip.tolerances.mipgap.set(args.mipgap)
+    model.solver.configuration.presolve = True
+
+    maxdist_sol = maxdist(model=model, reaction_weights=reaction_weights, prev_sol=prev_sol, threshold=args.threshold,
+                          obj_tol=args.obj_tol, maxiter=args.maxiter, out_path=args.output, icut=icut, full=args.full,
+                          only_ones=False)

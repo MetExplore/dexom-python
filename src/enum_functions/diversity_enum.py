@@ -40,13 +40,17 @@ def diversity_enum(model, reaction_weights, prev_sol, thr=1e-5, eps=1e-2, obj_to
     obj_tol: float
         variance allowed in the objective_values of the solutions
     maxiter: foat
-        maximum number of solutions to check for
+        maximum number of solutions to search for
     dist_anneal: float
         parameter which influences the probability of selecting reactions
+    out_path: str
+        path to which the results are saved
     icut: bool
-        determines whether icut constraints are applied or not
-    only_ones: bool
-        determines if the hamming distance is only calculated with ones, or with ones & zeros
+        if True, icut constraints are applied
+    full: bool
+        if True, the full-DEXOM implementation is used
+    save: bool
+        if True, every individual solution is saved in the iMAT solution format
     Returns
     -------
 
@@ -61,6 +65,9 @@ def diversity_enum(model, reaction_weights, prev_sol, thr=1e-5, eps=1e-2, obj_to
     for rid in reaction_weights.keys():
         if reaction_weights[rid] == 0:
             pass
+        elif full and "x_"+rid not in model.solver.variables:
+            model = create_full_variables(model=model, reaction_weights=reaction_weights, epsilon=eps, threshold=thr)
+            break
         elif "rh_"+rid+"_pos" not in model.solver.variables and "rl_"+rid not in model.solver.variables:
             model = create_partial_variables(model=model, reaction_weights=reaction_weights, epsilon=eps)
             break
@@ -97,26 +104,19 @@ def diversity_enum(model, reaction_weights, prev_sol, thr=1e-5, eps=1e-2, obj_to
             all_solutions.append(prev_sol)
             all_binary.append(prev_sol_bin)
 
-
-            print("maxdist obj val:", prev_sol.objective_value)
-            print("maxdist max obj val:", sum([1 for v in tempweights.values() if v != 0]))
-            get_obj_value_from_binary(prev_sol_bin, model, reaction_weights)
-
             if save:
                 write_solution(prev_sol, thr, filename=out_path+"_solution_"+time.strftime("%Y%m%d-%H%M%S")+".csv")
             t1 = time.perf_counter()
             print("time for optimizing in iteration " + str(idx) + ":", t1 - t2)
-            print("\n")
             times.append(t1 - t0)
         except:
-            print("An error occured in iteration %i of dexom, check if all feasible solutions have been found" % idx)
+            print("An error occured in iteration %i of dexom, no solution was returned" % idx)
             times.append(0.)
-            break
+            # break
 
     model.solver.remove([const for const in icut_constraints if const in model.solver.constraints])
     model.solver.remove(opt_const)
     solution = EnumSolution(all_solutions, all_binary, all_solutions[0].objective_value)
-
 
     df = pd.DataFrame({"selected reactions": selected_recs, "time": times})
     sol = pd.DataFrame(solution.binary)
@@ -132,7 +132,7 @@ def diversity_enum(model, reaction_weights, prev_sol, thr=1e-5, eps=1e-2, obj_to
 
 
 if __name__ == "__main__":
-    description = "Performs the reaction enumeration algorithm on a specified list of reactions"
+    description = "Performs the diversity-enumeration algorithm"
 
     parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument("-m", "--model", help="Metabolic model in sbml, matlab, or json format")
@@ -146,7 +146,7 @@ if __name__ == "__main__":
     parser.add_argument("-i", "--maxiter", type=int, default=10, help="Iteration limit")
     parser.add_argument("--tol", type=float, default=1e-6, help="Solver feasibility tolerance")
     parser.add_argument("--mipgap", type=float, default=1e-3, help="Solver MIP gap tolerance")
-    parser.add_argument("--obj_tol", type=float, default=1e-3,
+    parser.add_argument("--obj_tol", type=float, default=1e-2,
                         help="objective value tolerance, as a fraction of the original value")
     parser.add_argument("-o", "--output", default="div_enum", help="Base name of output files, without format")
     parser.add_argument("-a", "--dist_anneal", type=float, default=0.995, help="annealing distance")
@@ -195,13 +195,9 @@ if __name__ == "__main__":
     if args.save:
         save = True
 
+    full = False
     if args.full:
-        for rxn in model.reactions:
-            if rxn.id not in reaction_weights:
-                reaction_weights[rxn.id] = -args.obj_tol*1e-5
-            elif reaction_weights[rxn.id] == 0:
-                reaction_weights[rxn.id] = -args.obj_tol*1e-5
-
+        full = True
 
     model.solver.configuration.timeout = args.timelimit
     model.tolerance = args.tol
@@ -210,4 +206,4 @@ if __name__ == "__main__":
 
     dexom_sol = diversity_enum(model=model, reaction_weights=reaction_weights, prev_sol=prev_sol, thr=args.threshold,
                                maxiter=args.maxiter, obj_tol=args.obj_tol, dist_anneal=a, icut=icut,
-                               out_path=args.output, full=False, save=save)
+                               out_path=args.output, full=args.full, save=save)
