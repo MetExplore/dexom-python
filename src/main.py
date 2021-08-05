@@ -6,6 +6,7 @@ from enum_functions.rxn_enum import rxn_enum
 from enum_functions.diversity_enum import diversity_enum
 
 if __name__ == '__main__':
+    # for testing DEXOM on a toy example
 
     model = load_json_model("toy_models/small4M.json")
     reaction_weights = load_reaction_weights("toy_models/small4M_weights.csv")
@@ -18,7 +19,6 @@ if __name__ == '__main__':
     mipgap = 1e-3  # mip gap tolerance for the solver
     maxiter = 10  # maximum number of iterations
     dist_anneal = 0.9  # diversity-enumeration parameter
-    model.solver = "cplex"
 
     imat_solution = imat(model=model, reaction_weights=reaction_weights, epsilon=eps, threshold=thr, timelimit=tlim,
                          feasibility=tol, mipgaptol=mipgap)
