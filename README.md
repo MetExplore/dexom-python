@@ -33,15 +33,15 @@ These reaction weights must be determined prior to launching imat, using the GPR
 `model_functions.py` contains the `recon2_gpr` function, which transforms differential gene expression data into reaction weights for the recon 2 model, using the HGNC identifiers present in the model to connect the genes and reactions.
 
 The remaining inputs of imat are:
-- epsilon: the activation threshold of reactions with weight>0
-- threshold: the activation threshold of all reactions
-- timelimit: the solver time limit
-- feasibility: the solver feasbility tolerance
-- mipgaptol: the solver MIP gap tolerance
-- full: a bool parameter for switching between the partial & full implementation
+- `epsilon`: the activation threshold of reactions with weight>0
+- `threshold`: the activation threshold of all reactions
+- `timelimit`: the solver time limit
+- `feasibility`: the solver feasbility tolerance
+- `mipgaptol`: the solver MIP gap tolerance
+- `full`: a bool parameter for switching between the partial & full-DEXOM implementation
 
 The partial implementation is the default version. In this version, binary flux indicator variables are created for each reaction with a non-zero weight.  
-In the full implementation, binary flux indicator variables are created for every reaction in the model. This does not change the result of the imat function, but can be used for some of the enumeration methods below.
+In the full-DEXOM implementation, binary flux indicator variables are created for every reaction in the model. This does not change the result of the imat function, but can be used for some of the enumeration methods below.
 
 ### enum_functions
 
@@ -53,6 +53,16 @@ Four methods for enumerating context-specific networks are available:
 
 An explanation of these methods can be found in [(Rodriguez-Mier et al. 2021)](https://doi.org/10.1371/journal.pcbi.1008730).  
 Each of these methods can be used on its own. The same model and reaction_weights inputs must be provided as for the imat function.
+
+New parameters for all 4 methods are:
+- `prev_sol`: a starting imat solution
+- `obj_tol`: a relative tolerance on the imat objective value for the optimality of the solutions  
+icut, maxiter, and div-enum also have:
+- `maxiter`: the maximum number of iterations to run
+- `full`: set to True to use the full-DEXOM implementation  
+As previously explained, the full-DEXOM implementation defines binary indicator variables for all reactions in the model. Although only the reactions with non-zero weights have an impact on the imat objective function, the distance maximization function which is used in maxdist and div-enum can make use of the binary indicators for all reactions. This increases the distance between the solutions, but requires significantly more computation time.  
+maxdist and div-enum also have:
+- `icut`: if True, an icut constraint will be applied to prevent duplicate solutions
 
 ## DEXOM
 
