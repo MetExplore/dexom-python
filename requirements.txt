@@ -4,4 +4,3 @@ six
 symengine
 scipy
 matplotlib
-symengine
