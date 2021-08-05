@@ -117,9 +117,11 @@ This last step should produce the following files in the recon2v2 folder:
 - all_outs.txt
 - all_errs.txt
 - all_divenum_res.csv
-- all_rxn_enum_sols.csv
-- all_div_enum_sols.csv
+- all_rxnenum_sols.csv
+- all_divenum_sols.csv
 - all_dexom_sols.csv
+- all_divenum_selected_reactions_ordered.png
+- output.txt
 - pathways_pvalues_over.csv
 - pathways_pvalues_under.csv
 - pathways_overrepresentation.png
