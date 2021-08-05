@@ -68,9 +68,14 @@ maxdist and div-enum also have:
 
 The DEXOM algorithm is a combination of several network enumeration methods.  
 `enumeration.py` contains the `write_batch_script1` function, which is used for creating a parallelization of DEXOM on a slurm computation cluster.  
-`dexom_cluster_results.py`compiles and removes duplicate solutions from the results of a parallel DEXOM run.  
-`pathway_enrichment.py` can be used to perform a pathway enrichment analysis using a one-sided hypergeometric test  
-`result_functions.py` contains the `plot_pca` function, which performs Principal Component Analysis on the enumeration solutions
+The central inputs of this function are:
+- `filenums`: the number of parallel batches which should be launched on slurm
+- `iters`: the number of div-enum iterations per batche
+
+The results of a DEXOM run can then be evaluated with the following scripts:  
+- `dexom_cluster_results.py`compiles and removes duplicate solutions from the results of a parallel DEXOM run.  
+- `pathway_enrichment.py` can be used to perform a pathway enrichment analysis using a one-sided hypergeometric test  
+- `result_functions.py` contains the `plot_pca` function, which performs Principal Component Analysis on the enumeration solutions
 
 ### Toy examples
 The `toy_models.py` script contains code for generating some small metabolic models and reaction weights.  
