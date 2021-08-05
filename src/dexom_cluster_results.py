@@ -133,7 +133,7 @@ def analyze_dexom_cluster_results(in_folder, out_folder, approach=1, filenums=10
     print(output_file[-1])
 
     rxn = rxn.drop_duplicates(ignore_index=True)
-    rxn.to_csv(out_folder+"all_rxn_enum_sols.csv")
+    rxn.to_csv(out_folder+"all_rxnenum_sols.csv")
     sol = sol.drop_duplicates(ignore_index=True)
     sol.to_csv(out_folder+"all_divenum_sols.csv")
 
