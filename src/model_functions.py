@@ -86,7 +86,7 @@ def save_reaction_weights(reaction_weights, filename):
     return df["weights"]
 
 
-def get_all_reactions_from_model(model, save=True, shuffle=False):
+def get_all_reactions_from_model(model, save=True, shuffle=False, out_path=""):
     """
 
     Parameters
@@ -96,17 +96,20 @@ def get_all_reactions_from_model(model, save=True, shuffle=False):
         by default, exports the reactions in a csv format
     shuffle: bool
         set to True to shuffle the order of the reactions
-
+    out_path: str
+        output path
     Returns
     -------
     A list of all reactions in the model
     """
     rxn_list = [r.id for r in model.reactions]
+    if out_path != "":
+        out_path += "/"
     if save:
-        pd.Series(rxn_list).to_csv(model.id + "_reactions.csv", header=False, index=False)
+        pd.Series(rxn_list).to_csv(out_path + model.id + "_reactions.csv", header=False, index=False)
     if shuffle:
         np.random.shuffle(rxn_list)
-        pd.Series(rxn_list).to_csv(model.id + "_reactions_shuffled.csv", header=False, index=False)
+        pd.Series(rxn_list).to_csv(out_path + model.id + "_reactions_shuffled.csv", header=False, index=False)
     return rxn_list
 
 

@@ -192,7 +192,8 @@ if __name__ == "__main__":
         else:
             print("Only SBML, JSON, and Matlab formats are supported for the models")
             model = None
-        reactionlist = get_all_reactions_from_model(model, save=True, shuffle=True)
+        get_all_reactions_from_model(model, save=True, shuffle=True, out_path=args.directory)
+        reactionlist = args.directory+"/"+model.id+"_reactions_shuffled.csv"
 
     write_batch_script1(directory=args.directory, username=args.username, modelfile=args.model,
                         weightfile=args.reaction_weights, reactionlist=reactionlist, imatsol=args.prev_sol,
