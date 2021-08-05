@@ -102,6 +102,19 @@ def combine_solutions(sol_path):
 
 
 def plot_pca(solution_path, rxn_enum_solutions=None, save_name="PCA"):
+    """
+    Plots a 2-dimensional PCA
+
+    Parameters
+    ----------
+    solution_path: csv file of enumeration solutions
+    rxn_enum_solutions: if specified, will plot these solutions in a different color
+    save_name: name of the file to save
+
+    Returns
+    -------
+    the pca object
+    """
     X = pd.read_csv(solution_path, index_col=0)
 
     if rxn_enum_solutions:
