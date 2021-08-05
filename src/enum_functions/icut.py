@@ -49,19 +49,21 @@ def create_icut_constraint(model, reaction_weights, threshold, prev_sol, prev_so
     return constraint
 
 
-def icut(model, reaction_weights=None, epsilon=1e-2, threshold=1e-5, tlim=None, feas=1e-6, mipgap=1e-3, obj_tol=1e-5,
-         maxiter=10, full=False):
+def icut(model, prev_sol=None, reaction_weights=None, eps=1e-2, thr=1e-5, tlim=None, feas=1e-6, mipgap=1e-3,
+         obj_tol=1e-5, maxiter=10, full=False):
     """
     integer-cut method
 
     Parameters
     ----------
     model: cobrapy Model
+    prev_sol: imat Solution object
+        an imat solution used as a starting point
     reaction_weights: dict
         keys = reactions and values = weights
-    epsilon: float
+    eps: float
         activation threshold in imat
-    threshold: float
+    thr: float
         detection threshold of activated reactions
     tlim: int
         time limit for imat
@@ -79,36 +81,37 @@ def icut(model, reaction_weights=None, epsilon=1e-2, threshold=1e-5, tlim=None, 
     solution: EnumSolution object
         In the case of integer-cut, all_solutions and unique_solutions are identical
     """
-    new_solution = imat(model, reaction_weights,
-                        epsilon=epsilon, threshold=threshold, timelimit=tlim, feasibility=feas, mipgaptol=mipgap, full=full)
-    new_solution_binary = get_binary_sol(new_solution, threshold)
-    optimal_objective_value = new_solution.objective_value - obj_tol
+    if not prev_sol:
+        prev_sol = imat(model, reaction_weights,
+                        epsilon=eps, threshold=thr, timelimit=tlim, feasibility=feas, mipgaptol=mipgap, full=full)
+    prev_sol_binary = get_binary_sol(prev_sol, thr)
+    optimal_objective_value = prev_sol.objective_value - obj_tol
 
-    all_solutions = [new_solution]
-    all_solutions_binary = [new_solution_binary]
+    all_solutions = [prev_sol]
+    all_solutions_binary = [prev_sol_binary]
     icut_constraints = []
 
     for i in range(maxiter):
         t0 = time.perf_counter()
 
-        const = create_icut_constraint(model, reaction_weights, threshold, new_solution, new_solution_binary,
+        const = create_icut_constraint(model, reaction_weights, thr, prev_sol, prev_sol_binary,
                                        name="icut_"+str(i), full=full)
         model.solver.add(const)
         icut_constraints.append(const)
 
         try:
-            new_solution = imat(model, reaction_weights, epsilon=epsilon,
-                                threshold=threshold, timelimit=tlim, feasibility=feas, mipgaptol=mipgap, full=full)
+            prev_sol = imat(model, reaction_weights, epsilon=eps, threshold=thr, timelimit=tlim, feasibility=feas,
+                            mipgaptol=mipgap, full=full)
         except:
             print("An error occured in iteration %i of icut, check if all feasible solutions have been found" % (i+1))
             break
         t1 = time.perf_counter()
         print("time for iteration "+str(i+1)+": ", t1-t0)
 
-        if new_solution.objective_value >= optimal_objective_value:
-            all_solutions.append(new_solution)
-            new_solution_binary = get_binary_sol(new_solution, threshold)
-            all_solutions_binary.append(new_solution_binary)
+        if prev_sol.objective_value >= optimal_objective_value:
+            all_solutions.append(prev_sol)
+            prev_sol_binary = get_binary_sol(prev_sol, thr)
+            all_solutions_binary.append(prev_sol)
         else:
             break
 

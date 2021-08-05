@@ -20,8 +20,8 @@ class RxnEnumSolution(object):
         self.unique_reactions = unique_reactions
 
 
-def rxn_enum(model, rxn_list, init_sol, reaction_weights=None, epsilon=1., threshold=1e-1, tlim=None,
-                     feas=1e-6, mipgap=1e-3, obj_tol=1e-2):
+def rxn_enum(model, reaction_weights, rxn_list, prev_sol, eps=1., thr=1e-1, tlim=None, feas=1e-6, mipgap=1e-3,
+             obj_tol=1e-2):
     """
     Reaction enumeration method
 
@@ -30,9 +30,9 @@ def rxn_enum(model, rxn_list, init_sol, reaction_weights=None, epsilon=1., thres
     model: cobrapy Model
     reaction_weights: dict
         keys = reactions and values = weights
-    epsilon: float
+    eps: float
         activation threshold in imat
-    threshold: float
+    thr: float
         detection threshold of activated reactions
     tlim: int
         time limit for imat
@@ -46,13 +46,13 @@ def rxn_enum(model, rxn_list, init_sol, reaction_weights=None, epsilon=1., thres
     -------
     solution: RxnEnumSolution object
     """
-    init_sol_bin = get_binary_sol(init_sol, threshold)
-    optimal_objective_value = init_sol.objective_value - init_sol.objective_value * obj_tol
+    prev_sol_bin = get_binary_sol(prev_sol, thr)
+    optimal_objective_value = prev_sol.objective_value - prev_sol.objective_value * obj_tol
 
-    all_solutions = [initial_solution]
-    all_solutions_binary = [init_sol_bin]
-    unique_solutions = [initial_solution]
-    unique_solutions_binary = [init_sol_bin]
+    all_solutions = [prev_sol]
+    all_solutions_binary = [prev_sol_bin]
+    unique_solutions = [prev_sol]
+    unique_solutions_binary = [prev_sol_bin]
     all_reactions = []  # for each solution, save which reaction was activated/inactived by the algorithm
     unique_reactions = []
 
@@ -63,7 +63,7 @@ def rxn_enum(model, rxn_list, init_sol, reaction_weights=None, epsilon=1., thres
             if rid in model.reactions:
                 rxn = model_temp.reactions.get_by_id(rid)
                 # for active fluxes, check inactivation
-                if init_sol_bin[idx] == 1:
+                if prev_sol_bin[idx] == 1:
                     rxn.bounds = (0., 0.)
                 # for inactive fluxes, check activation
                 else:
@@ -71,10 +71,10 @@ def rxn_enum(model, rxn_list, init_sol, reaction_weights=None, epsilon=1., thres
                     # for inactive reversible fluxes, check activation in backwards direction
                     if rxn.lower_bound < 0.:
                         try:
-                            rxn.upper_bound = -threshold
-                            temp_sol = imat(model_temp, reaction_weights, epsilon=epsilon,
-                                            threshold=threshold, timelimit=tlim, feasibility=feas, mipgaptol=mipgap)
-                            temp_sol_bin = get_binary_sol(temp_sol, threshold)
+                            rxn.upper_bound = -thr
+                            temp_sol = imat(model_temp, reaction_weights, epsilon=eps,
+                                            threshold=thr, timelimit=tlim, feasibility=feas, mipgaptol=mipgap)
+                            temp_sol_bin = get_binary_sol(temp_sol, thr)
                             if temp_sol.objective_value >= optimal_objective_value:
                                 all_solutions.append(temp_sol)
                                 all_solutions_binary.append(temp_sol_bin)
@@ -88,12 +88,12 @@ def rxn_enum(model, rxn_list, init_sol, reaction_weights=None, epsilon=1., thres
                         finally:
                             rxn.upper_bound = upper_bound_temp
                     # for all inactive fluxes, check activation in forwards direction
-                    rxn.lower_bound = threshold
+                    rxn.lower_bound = thr
                 # for all fluxes: compute solution with new bounds
                 try:
-                    temp_sol = imat(model_temp, reaction_weights, epsilon=epsilon,
-                                    threshold=threshold, timelimit=tlim, feasibility=feas, mipgaptol=mipgap)
-                    temp_sol_bin = [1 if np.abs(flux) >= threshold else 0 for flux in temp_sol.fluxes]
+                    temp_sol = imat(model_temp, reaction_weights, epsilon=eps,
+                                    threshold=thr, timelimit=tlim, feasibility=feas, mipgaptol=mipgap)
+                    temp_sol_bin = [1 if np.abs(flux) >= thr else 0 for flux in temp_sol.fluxes]
                     if temp_sol.objective_value >= optimal_objective_value:
                         all_solutions.append(temp_sol)
                         all_solutions_binary.append(temp_sol_bin)
@@ -204,8 +204,9 @@ if __name__ == "__main__":
         initial_solution = imat(model, reaction_weights, epsilon=args.epsilon, threshold=args.threshold,
                                 timelimit=args.timelimit, feasibility=args.tol, mipgaptol=args.mipgap)
 
-    solution = rxn_enum(model, rxn_list, initial_solution, reaction_weights, args.epsilon, args.threshold,
-                                args.timelimit, args.tol, args.mipgap, args.obj_tol, args.output)
+    solution = rxn_enum(model=model, rxn_list=rxn_list, prev_sol=initial_solution, reaction_weights=reaction_weights,
+                        eps=args.epsilon, thr=args.threshold, tlim=args.timelimit, feas=args.tol, mipgap=args.mipgap,
+                        obj_tol=args.obj_tol)
 
     uniques = pd.DataFrame(solution.unique_binary)
     uniques.to_csv(args.output+"_solutions.csv")

@@ -89,7 +89,7 @@ def create_maxdist_objective(model, reaction_weights, prev_sol, prev_sol_bin, on
     return objective
 
 
-def maxdist(model, reaction_weights, prev_sol, threshold=1e-4, obj_tol=1e-3, maxiter=10, out_path="maxdist", icut=True,
+def maxdist(model, reaction_weights, prev_sol, threshold=1e-4, obj_tol=1e-2, maxiter=10, out_path="maxdist", icut=True,
             full=False, only_ones=False):
     """
     Parameters
