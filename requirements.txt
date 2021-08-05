@@ -1,7 +1,7 @@
 cobra
 numpy
 six
-sympy
+symengine
 scipy
 matplotlib
 symengine
