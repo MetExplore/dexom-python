@@ -113,7 +113,7 @@ def get_all_reactions_from_model(model, save=True, shuffle=False, out_path=""):
     return rxn_list
 
 
-def get_subsytems_from_model(model, save=True):
+def get_subsytems_from_model(model, save=True, out_path=""):
     """
     Creates a list of all subsystems of a model and their associated reactions
     Parameters
@@ -126,6 +126,8 @@ def get_subsytems_from_model(model, save=True):
     rxn_sub: a DataFrame with reaction names as index and subsystem name as column
     sub_list: a list of subsystems
     """
+    if out_path != "":
+        out_path += "/"
     rxn_sub = {}
     sub_list = []
     i = 0
@@ -138,8 +140,8 @@ def get_subsytems_from_model(model, save=True):
         sub_list.pop()
     rxn_sub = pd.DataFrame.from_dict(rxn_sub, orient="index", columns=["ID", "subsystem"])
     if save:
-        rxn_sub.to_csv(model.id+"_reactions_subsystems.csv")
-        with open(model.id+"_subsystems_list.txt", "w+") as file:
+        rxn_sub.to_csv(out_path+model.id+"_reactions_subsystems.csv")
+        with open(out_path+model.id+"_subsystems_list.txt", "w+") as file:
             file.write(";".join(sub_list))
     return rxn_sub, sub_list
 

@@ -113,7 +113,7 @@ if __name__ == "__main__":
                                                             "required if subframe & sublist are absent")
     parser.add_argument("--sublist", default=None, help="List of all pathways/subsystems in the model")
     parser.add_argument("--subframe", default=None, help="csv file assigning reactions to pathways/subsystemts")
-    parser.add_argument("-o", "--out_path", default="pathway_enrichment", help="Path to which output files are written")
+    parser.add_argument("-o", "--out_path", default="", help="Path to which output files are written")
 
     args = parser.parse_args()
 
@@ -128,7 +128,7 @@ if __name__ == "__main__":
         else:
             print("Only SBML, JSON, and Matlab formats are supported for the models")
             model = None
-        subframe, sublist = get_subsytems_from_model(model, save=True)
+        subframe, sublist = get_subsytems_from_model(model, save=True, out_path=args.out_path)
     else:
         subframe = pd.read_csv(args.subframe, index_col=0)
         sublist = pd.read_csv(args.sublist, sep=";").columns.to_list()
