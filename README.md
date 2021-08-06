@@ -115,6 +115,6 @@ python src/dexom_cluster_results -i recon2v2/ -o recon2v2/ -n 100
 python src/pathway_enrichment -s recon2v2/all_dexom_sols.csv -m recon2v2/recon2v2_corrected.json -o recon2v2/
 python src/result_functions -s recon2v2/all_dexom_sols.csv -o recon2v2/
 ```
-The file `all_dexom_solutions.csv` contains all unique solutions found by DEXOM.  
+The file `all_dexom_sols.csv` contains all unique solutions found by DEXOM.  
 The file `output.txt` contains the average computation time per iteration and the proportion of duplicate solutions.  
 The `.png` files contain boxplots of the the pathway enrichment tests as well as a 2D PCA plot.
