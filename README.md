@@ -18,12 +18,6 @@ Parts of the imat code were taken from the driven package for data-driven constr
  - install the solver
  - update the PYTHONPATH environment variable by adding the directory containing the `setup.py` file appropriate for you OS and python version
 
-### Installation
-After cloning the repository and setting up a python environment, run:  
-```
-python setup.py install
-```
-
 ## Functions
 
 These are the different functions which are available for context-specific network extraction
