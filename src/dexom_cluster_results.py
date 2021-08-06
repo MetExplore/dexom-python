@@ -148,7 +148,7 @@ if __name__ == "__main__":
     description = "Compiles and analyzes results from parallel DEXOM"
 
     parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument("-d", "--directory", default="", help="Path in which the cluster results were saved")
+    parser.add_argument("-i", "--in_path", default="", help="Path in which the cluster results were saved")
     parser.add_argument("-o", "--out_path", default="", help="Path in which to save compiled results")
     parser.add_argument("-n", "--filenums", type=int, default=100, help="number of parallel threads")
     parser.add_argument("-a", "--approach", type=int, default=1,
@@ -156,5 +156,5 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    analyze_dexom_cluster_results(in_folder=args.directory, out_folder=args.out_path, approach=args.approach,
+    analyze_dexom_cluster_results(in_folder=args.in_path, out_folder=args.out_path, approach=args.approach,
                                   filenums=args.filenums)
