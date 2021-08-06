@@ -173,7 +173,7 @@ if __name__ == "__main__":
     parser.add_argument("-t", "--timelimit", type=int, default=None, help="Solver time limit")
     parser.add_argument("--tol", type=float, default=1e-6, help="Solver feasibility tolerance")
     parser.add_argument("--mipgap", type=float, default=1e-3, help="Solver MIP gap tolerance")
-    parser.add_argument("-o", "--output", default="imat_solution.csv", help="Name of the output file")
+    parser.add_argument("-o", "--output", default="imat_solution", help="Path of the output file, without format")
 
     args = parser.parse_args()
 

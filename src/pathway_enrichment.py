@@ -11,7 +11,7 @@ from statsmodels.stats.multitest import fdrcorrection
 from model_functions import get_subsytems_from_model
 
 
-def Fisher_pathways(solpath, subframe, sublist, outpath="pathway_enrichment"):
+def Fisher_pathways(solpath, subframe, sublist, outpath=""):
     """
     Performs pathway over- and underrepresentation analysis
 
@@ -26,6 +26,8 @@ def Fisher_pathways(solpath, subframe, sublist, outpath="pathway_enrichment"):
     -------
     csv files containing -log10 FDR-adjusted p-values
     """
+    if out_path != "":
+        out_path += "/"
     df = pd.read_csv(solpath, dtype=int, index_col=0)
 
     rxn_list = []
@@ -62,8 +64,8 @@ def Fisher_pathways(solpath, subframe, sublist, outpath="pathway_enrichment"):
     t, fdr = fdrcorrection(under.values.flatten())
     under = pd.DataFrame(-np.log10(fdr).reshape(under.shape), columns=under.columns)
 
-    over.to_csv(outpath+"_pvalues_over.csv")
-    under.to_csv(outpath+"_pvalues_under.csv")
+    over.to_csv(outpath+"pathways_pvalues_over.csv")
+    under.to_csv(outpath+"pathways_pvalues_under.csv")
     return over, under, fdr
 
 
@@ -86,7 +88,7 @@ def plot_Fisher_pathways(filename_over, filename_under, sublist, outpath="pathwa
     plt.title("Overrepresentation analysis of active reactions per pathway", fontsize=15, loc='right', pad='20')
     plt.xlabel('-log10 adj. p-value', fontsize=15)
     plt.axvline(2.301, color="b")
-    fig.savefig(outpath+"_overrepresentation.png")
+    fig.savefig(outpath+"pathways_overrepresentation.png")
 
     plt.clf()
     fig, ax = plt.subplots(figsize=(7, 20))
@@ -99,7 +101,7 @@ def plot_Fisher_pathways(filename_over, filename_under, sublist, outpath="pathwa
     plt.title("Underrepresentation analysis of active reactions per pathway", fontsize=15, loc='right', pad='20')
     plt.xlabel('-log10 adj. p-value', fontsize=15)
     plt.axvline(2.301, color="b")
-    fig.savefig(outpath+"_underrepresentation.png")
+    fig.savefig(outpath+"pathways_underrepresentation.png")
 
     return over, under
 
@@ -113,7 +115,7 @@ if __name__ == "__main__":
                                                             "required if subframe & sublist are absent")
     parser.add_argument("--sublist", default=None, help="List of all pathways/subsystems in the model")
     parser.add_argument("--subframe", default=None, help="csv file assigning reactions to pathways/subsystemts")
-    parser.add_argument("-o", "--out_path", default="", help="Path to which output files are written")
+    parser.add_argument("-o", "--out_path", default="", help="Path to which the output file is written")
 
     args = parser.parse_args()
 
@@ -133,5 +135,5 @@ if __name__ == "__main__":
         subframe = pd.read_csv(args.subframe, index_col=0)
         sublist = pd.read_csv(args.sublist, sep=";").columns.to_list()
     Fisher_pathways(solpath=args.solutions, subframe=subframe, sublist=sublist, outpath=args.out_path)
-    plot_Fisher_pathways(filename_over=args.out_path+"_pvalues_over.csv",
-                         filename_under=args.out_path+"_pvalues_under.csv", sublist=sublist, outpath=args.out_path)
+    plot_Fisher_pathways(filename_over=args.out_path+"pathways_pvalues_over.csv", sublist=sublist,
+                         filename_under=args.out_path+"pathways_pvalues_under.csv", outpath=args.out_path)

@@ -103,8 +103,6 @@ def get_all_reactions_from_model(model, save=True, shuffle=False, out_path=""):
     A list of all reactions in the model
     """
     rxn_list = [r.id for r in model.reactions]
-    if out_path != "":
-        out_path += "/"
     if save:
         pd.Series(rxn_list).to_csv(out_path + model.id + "_reactions.csv", header=False, index=False)
     if shuffle:
@@ -126,8 +124,7 @@ def get_subsytems_from_model(model, save=True, out_path=""):
     rxn_sub: a DataFrame with reaction names as index and subsystem name as column
     sub_list: a list of subsystems
     """
-    if out_path != "":
-        out_path += "/"
+
     rxn_sub = {}
     sub_list = []
     i = 0
@@ -309,7 +306,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument("-m", "--model", help="recon 2 model in json, sbml or mat format")
     parser.add_argument("-g", "--gene_file", help="csv file containing gene HGNC identifiers and scores")
-    parser.add_argument("-o", "--output", default="recon2_weights", help="name of the reaction_weights file")
+    parser.add_argument("-o", "--output", default="recon2_weights",
+                        help="Path to which the reaction_weights file is saved")
     parser.add_argument("--gene_ID", default="ID", help="column containing the gene HGNC identifiers")
     parser.add_argument("--gene_score", default="t", help="column containing the gene score to be used")
     args = parser.parse_args()
@@ -325,5 +323,5 @@ if __name__ == "__main__":
         print("Only SBML, JSON, and Matlab formats are supported for the models")
         model = None
 
-    reaction_weights = recon2_gpr(model=model, gene_file=args.gene_file, genename=args.gene_ID, genescore=args.gene_score,
-                                  filename=args.output, save=True)
+    reaction_weights = recon2_gpr(model=model, gene_file=args.gene_file, genename=args.gene_ID,
+                                  genescore=args.gene_score, filename=args.output, save=True)

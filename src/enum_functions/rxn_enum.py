@@ -157,7 +157,7 @@ if __name__ == "__main__":
     parser.add_argument("--mipgap", type=float, default=1e-3, help="Solver MIP gap tolerance")
     parser.add_argument("--obj_tol", type=float, default=1e-3,
                         help="objective value tolerance, as a fraction of the original value")
-    parser.add_argument("-o", "--output", default="rxn_enum", help="Base name of output files, without format")
+    parser.add_argument("-o", "--output", default="rxn_enum", help="Path of output files, without format")
     parser.add_argument("--save", action="store_true", help="Use this flag to save each solution individually")
     args = parser.parse_args()
 

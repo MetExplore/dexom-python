@@ -115,8 +115,6 @@ def plot_pca(solution_path, rxn_enum_solutions=None, save_name=""):
     -------
     the pca object
     """
-    if save_name != "":
-        save_name += "/"
     X = pd.read_csv(solution_path, index_col=0)
 
     if rxn_enum_solutions:
