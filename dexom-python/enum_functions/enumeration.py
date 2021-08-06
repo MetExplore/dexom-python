@@ -39,7 +39,7 @@ def write_rxn_enum_script(directory, modelfile, weightfile, reactionlist, imatso
             f.write('cd /home/mstingl/work/dexom_py\nmodule purge\nmodule load system/Python-3.7.4\nsource env/bin/'
                     'activate\nexport PYTHONPATH=${PYTHONPATH}:"/home/mstingl/work/CPLEX_Studio1210/cplex/python/3.7'
                     '/x86-64_linux"\n')
-            f.write('python src/enum_functions/rxn_enum.py -o %s/rxn_enum_%i --range %i_%i -m %s -r %s -l %s -p %s '
+            f.write('python dexom-python/enum_functions/rxn_enum.py -o %s/rxn_enum_%i --range %i_%i -m %s -r %s -l %s -p %s '
                     '-t 6000 --save\n' % (directory, i, i*iters, i*iters+iters, modelfile, weightfile, reactionlist,
                                           imatsol))
     with open(directory+"/runfiles.sh", "w+") as f:
@@ -54,13 +54,13 @@ def write_batch_script1(directory, username, modelfile, weightfile, reactionlist
             f.write('#!/bin/bash\n#SBATCH -p workq\n#SBATCH --mail-type=ALL\n#SBATCH --mem=64G\n#SBATCH -c 24\n'
                     '#SBATCH -t 10:00:00\n#SBATCH -J dexom1_%i\n#SBATCH -o dex1out%i.out\n#SBATCH -e dex1err%i.out\n'
                     % (i, i, i))
-            f.write('cd /home/%s/work/dexom_py\nmodule purge\nmodule load system/Python-3.7.4\nsource env/bin/'
+            f.write('cd /home/%s/work/dexom-python\nmodule purge\nmodule load system/Python-3.7.4\nsource env/bin/'
                     'activate\nexport PYTHONPATH=${PYTHONPATH}:"/home/%s/work/CPLEX_Studio1210/cplex/python/3.7'
                     '/x86-64_linux"\n' % (username, username))
-            f.write('python src/enum_functions/rxn_enum.py -o %srxn_enum_%i --range %i_%i -m %s -r %s -l %s -p %s '
+            f.write('python dexom-python/enum_functions/rxn_enum.py -o %srxn_enum_%i --range %i_%i -m %s -r %s -l %s -p %s '
                     '-t 600 --save\n' % (directory, i, i*5, i*5+5, modelfile, weightfile, reactionlist, imatsol))
             a = (1-1/(filenums*2*(iters/10)))**i
-            f.write('python src/enum_functions/diversity_enum.py -o %sdiv_enum_%i -m %s -r %s -p '
+            f.write('python dexom-python/enum_functions/diversity_enum.py -o %sdiv_enum_%i -m %s -r %s -p '
                     '%srxn_enum_%i_solution_0.csv -a %.5f -i %i --obj_tol %.4f'
                     % (directory, i, modelfile, weightfile, directory, i, a, iters, objtol))
     with open(directory+"runfiles.sh", "w+") as f:
@@ -71,6 +71,9 @@ def write_batch_script1(directory, username, modelfile, weightfile, reactionlist
 
 
 def write_batch_script2(filenums):
+    """
+    Warning: this function has not been updated with recent changes to DEXOM
+    """
     paths = sorted(list(Path("parallel_approach2/").glob("*solution_*.csv")), key=os.path.getctime)
     paths.reverse()
     for i in range(filenums):
@@ -82,7 +85,7 @@ def write_batch_script2(filenums):
                     'activate\nexport PYTHONPATH=${PYTHONPATH}:"/home/mstingl/work/CPLEX_Studio1210/cplex/python/3.7'
                     '/x86-64_linux"\n')
             sol = str(paths[i]).replace("\\", "/")
-            f.write('python src/enum_functions/diversity_enum.py -o parallel_approach2/div_enum_%i_0 -m '
+            f.write('python dexom-python/enum_functions/diversity_enum.py -o parallel_approach2/div_enum_%i_0 -m '
                     'min_iMM1865/min_iMM1865.xml -r min_iMM1865/p53_deseq2_cutoff_padj_1e-6.csv -p %s -i 1 -a 0.99 '
                     '--save --full' % (i, sol))
     with open("parallel_approach2/dexomstart.sh", "w+") as f:
@@ -91,7 +94,7 @@ def write_batch_script2(filenums):
         f.write('cd /home/mstingl/work/dexom_py\nmodule purge\nmodule load system/Python-3.7.4\nsource env/bin/'
                 'activate\nexport PYTHONPATH=${PYTHONPATH}:"/home/mstingl/work/CPLEX_Studio1210/cplex/python/3.7'
                 '/x86-64_linux"\n')
-        f.write('python src/enum_functions/diversity_enum.py -o parallel_approach2/div_enum -m '
+        f.write('python dexom-python/enum_functions/diversity_enum.py -o parallel_approach2/div_enum -m '
                 'min_iMM1865/min_iMM1865.xml -r min_iMM1865/p53_deseq2_cutoff_padj_1e-6.csv -p parallel_approach2 '
                 '-i 1 -a 0.99 -s 100 --save --full')
     with open("parallel_approach2/rundexoms.sh", "w+") as f:
