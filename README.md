@@ -99,7 +99,7 @@ Then, call imat to produce a first context-specific subnetwork. This will create
 ```
 python src/imat -m recon2v2/recon2v2_corrected.json -r recon2v2/pval_0-01_reactionweights.csv -o recon2v2/imat_
 ```
-To run DEXOM on a slurm cluster, call the enumeration.py script to create the necessary batch files (here: 100 batches with 100 iterations). Be careful to use your own username after the `-u` input. This script assumes that you have cloned the `dexom_py` project into a `work` folder on the cluster, and that you have installed CPLEX v12.10 in the same `work` folder. Note that this step creates a file called "recon2v2_reactions_shuffled.csv", which shows the order in which rxn-enum will call the reactions from the model.  
+To run DEXOM on a slurm cluster, call the enumeration.py script to create the necessary batch files (here: 100 batches with 100 iterations). Be careful to use your own username after the `-u` input. This script assumes that you have cloned the `dexom-python` project into a `work` folder on the cluster, and that you have installed CPLEX v12.10 in the same `work` folder. Note that this step creates a file called "recon2v2_reactions_shuffled.csv", which shows the order in which rxn-enum will call the reactions from the model.  
 ```
 python src/enum_functions/enumeration -m recon2v2/recon2v2_corrected.json -r recon2v2/pval_0-01_reactionweights.csv -p recon2v2/imat_solution.csv -o recon2v2/ -u mstingl -n 100 -i 100
 ```
