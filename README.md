@@ -18,9 +18,11 @@ Parts of the imat code were taken from the driven package for data-driven constr
  - install the solver
  - update the PYTHONPATH environment variable by adding the directory containing the `setup.py` file appropriate for you OS and python version
 
-### Python libraries
-The python libraries needed to run the code can be found in the `requirements.txt` file.  
-They can be installed using `pip install cobra`, `pip install numpy`, etc.
+### Installation
+After cloning the repository and setting up a python environment, run:  
+```
+python setup.py install
+```
 
 ## Functions
 
@@ -92,16 +94,16 @@ The recon2v2 folder containts the model and the differential gene expression dat
 In order to produce reaction weights, you can call the model_functions script from the command line.  
 This will create a file named "pval_0-01_reactionweights.csv" in the recon2v2 folder:  
 ```
-python src/model_functions -m recon2v2/recon2v2_corrected.json -g recon2v2/pval_0-01_geneweights.csv -o recon2v2/pval_0-01_reactionweights
+python dexom_python/model_functions -m recon2v2/recon2v2_corrected.json -g recon2v2/pval_0-01_geneweights.csv -o recon2v2/pval_0-01_reactionweights
 ```
  
 Then, call imat to produce a first context-specific subnetwork. This will create a file named "imat_solution.csv" in the recon2v2 folder:  
 ```
-python src/imat -m recon2v2/recon2v2_corrected.json -r recon2v2/pval_0-01_reactionweights.csv -o recon2v2/imat_
+python dexom_python/imat -m recon2v2/recon2v2_corrected.json -r recon2v2/pval_0-01_reactionweights.csv -o recon2v2/imat_
 ```
 To run DEXOM on a slurm cluster, call the enumeration.py script to create the necessary batch files (here: 100 batches with 100 iterations). Be careful to use your own username after the `-u` input. This script assumes that you have cloned the `dexom-python` project into a `work` folder on the cluster, and that you have installed CPLEX v12.10 in the same `work` folder. Note that this step creates a file called "recon2v2_reactions_shuffled.csv", which shows the order in which rxn-enum will call the reactions from the model.  
 ```
-python src/enum_functions/enumeration -m recon2v2/recon2v2_corrected.json -r recon2v2/pval_0-01_reactionweights.csv -p recon2v2/imat_solution.csv -o recon2v2/ -u mstingl -n 100 -i 100
+python dexom_python/enum_functions/enumeration -m recon2v2/recon2v2_corrected.json -r recon2v2/pval_0-01_reactionweights.csv -p recon2v2/imat_solution.csv -o recon2v2/ -u mstingl -n 100 -i 100
 ```
 Then, submit the job to the slurm cluster. Note that if you created the files on a Windows pc, you must use the command `dos2unix runfiles.sh` before `sbatch runfiles.sh`:  
 ```
@@ -111,9 +113,9 @@ cd -
 ```
 After all jobs are completed, you can analyze the results using the following scripts:  
 ```
-python src/dexom_cluster_results -i recon2v2/ -o recon2v2/ -n 100
-python src/pathway_enrichment -s recon2v2/all_dexom_sols.csv -m recon2v2/recon2v2_corrected.json -o recon2v2/
-python src/result_functions -s recon2v2/all_dexom_sols.csv -o recon2v2/
+python dexom_python/dexom_cluster_results -i recon2v2/ -o recon2v2/ -n 100
+python dexom_python/pathway_enrichment -s recon2v2/all_dexom_sols.csv -m recon2v2/recon2v2_corrected.json -o recon2v2/
+python dexom_python/result_functions -s recon2v2/all_dexom_sols.csv -o recon2v2/
 ```
 The file `all_dexom_sols.csv` contains all unique solutions found by DEXOM.  
 The file `output.txt` contains the average computation time per iteration and the proportion of duplicate solutions.  
