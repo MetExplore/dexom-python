@@ -8,7 +8,7 @@ import numpy as np
 from scipy.stats import fisher_exact
 from matplotlib import rcParams
 from statsmodels.stats.multitest import fdrcorrection
-from model_functions import get_subsytems_from_model
+from dexom_python.model_functions import get_subsytems_from_model
 
 
 def Fisher_pathways(solpath, subframe, sublist, outpath=""):

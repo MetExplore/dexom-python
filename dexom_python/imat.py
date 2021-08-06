@@ -6,8 +6,8 @@ import argparse
 from pathlib import Path
 import time
 from cobra.io import load_json_model, read_sbml_model, load_matlab_model
-from model_functions import load_reaction_weights
-from result_functions import write_solution
+from dexom_python.model_functions import load_reaction_weights
+from dexom_python.result_functions import write_solution
 
 
 def create_full_variables(model, reaction_weights, epsilon, threshold):

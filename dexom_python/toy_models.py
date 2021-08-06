@@ -1,7 +1,7 @@
 
 from cobra import Model, Reaction, Metabolite
 from cobra.io import save_json_model
-from model_functions import save_reaction_weights
+from dexom_python.model_functions import save_reaction_weights
 
 
 def create_reaction(model, rname, formula, gene_rule=None, fullname=None, lower_bound=0., upper_bound=1000.):

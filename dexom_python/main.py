@@ -1,11 +1,11 @@
 
 import pandas as pd
 from cobra.io import load_json_model
-from model_functions import load_reaction_weights
-from result_functions import write_solution
-from imat import imat
-from enum_functions.rxn_enum import rxn_enum
-from enum_functions.diversity_enum import diversity_enum
+from dexom_python.model_functions import load_reaction_weights
+from dexom_python.result_functions import write_solution
+from dexom_python.imat import imat
+from dexom_python.enum_functions.rxn_enum import rxn_enum
+from dexom_python.enum_functions.diversity_enum import diversity_enum
 
 if __name__ == '__main__':
     # for testing DEXOM on a toy example
