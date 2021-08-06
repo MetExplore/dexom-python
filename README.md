@@ -89,7 +89,8 @@ The `main.py` script contains a simple example of the DEXOM workflow using one o
 
 ### Recon 2.2
 The recon2v2 folder containts the model and the differential gene expression data which was used to test this new implementation.  
-In order to produce reaction weights, you can call the model_functions script from the command line. This will create a file named "pval_0-01_reactionweights.csv" in the recon2v2 folder:  
+In order to produce reaction weights, you can call the model_functions script from the command line.  
+This will create a file named "pval_0-01_reactionweights.csv" in the recon2v2 folder:  
 ```
 python src/model_functions -m recon2v2/recon2v2_corrected.json -g recon2v2/pval_0-01_geneweights.csv -o recon2v2/pval_0-01_reactionweights
 ```
@@ -108,9 +109,12 @@ cd recon2v2/
 sbatch runfiles.sh
 cd -
 ```
-After all jobs are completed, you can analyze the results using the following scripts.  
+After all jobs are completed, you can analyze the results using the following scripts:  
 ```
 python src/dexom_cluster_results -i recon2v2/ -o recon2v2/ -n 100
 python src/pathway_enrichment -s recon2v2/all_dexom_sols.csv -m recon2v2/recon2v2_corrected.json -o recon2v2/
 python src/result_functions -s recon2v2/all_dexom_sols.csv -o recon2v2/
 ```
+The file `all_dexom_solutions.csv` contains all unique solutions found by DEXOM.  
+The file `output.txt` contains the average computation time per iteration and the proportion of duplicate solutions.  
+The `.png` files contain boxplots of the the pathway enrichment tests as well as a 2D PCA plot.
