@@ -57,7 +57,8 @@ def rxn_enum(model, reaction_weights, rxn_list, prev_sol, eps=1., thr=1e-1, tlim
     unique_reactions = []
 
     if not rxn_list:
-        rxn_list = list(model.reactions)
+        rxns = list(model.reactions)
+        rxn_list = [r.id for r in rxns]
     for idx, rid in enumerate(rxn_list):
         with model as model_temp:
             if rid in model.reactions:

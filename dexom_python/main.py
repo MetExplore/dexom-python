@@ -1,3 +1,5 @@
+
+import pandas as pd
 from cobra.io import load_json_model
 from model_functions import load_reaction_weights
 from result_functions import write_solution
@@ -22,11 +24,11 @@ if __name__ == '__main__':
 
     imat_solution = imat(model=model, reaction_weights=reaction_weights, epsilon=eps, threshold=thr, timelimit=tlim,
                          feasibility=tol, mipgaptol=mipgap)
-    write_solution(solution=imat_solution, threshold=thr, filename="toy_models/small4M_imatsol")
+    write_solution(solution=imat_solution, threshold=thr, filename="toy_models/small4M_imatsol.csv")
 
-    rxn_sol = rxn_enum(model=model, rxn_list=[], init_sol=imat_solution, reaction_weights=reaction_weights, epsilon=eps,
-             threshold=thr, tlim=tlim, feas=tol, mipgap=mipgap, obj_tol=obj_tol)
-    rxn_sol.unique_binary.to_csv("toy_models/small4M_rxnenum_solutions.csv")
+    rxn_sol = rxn_enum(model=model, rxn_list=[], prev_sol=imat_solution, reaction_weights=reaction_weights, eps=eps,
+             thr=thr, tlim=tlim, feas=tol, mipgap=mipgap, obj_tol=obj_tol)
+    pd.DataFrame(rxn_sol.unique_binary).to_csv("toy_models/small4M_rxnenum_solutions.csv")
 
     div_sol = diversity_enum(model=model, prev_sol=imat_solution, reaction_weights=reaction_weights, eps=eps, thr=thr,
                              obj_tol=obj_tol, maxiter=maxiter, out_path="toy_models/small4M_divenum")
