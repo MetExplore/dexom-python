@@ -3,9 +3,9 @@ import six
 import time
 import numpy as np
 from symengine import sympify
-from src.imat import imat
-from src.result_functions import get_binary_sol
-from src.enum_functions.enumeration import EnumSolution
+from dexom_python.imat import imat
+from dexom_python.result_functions import get_binary_sol
+from dexom_python.enum_functions.enumeration import EnumSolution
 
 
 def create_icut_constraint(model, reaction_weights, threshold, prev_sol, prev_sol_binary, name, full=False):

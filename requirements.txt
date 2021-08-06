@@ -1,6 +1,0 @@
-cobra
-numpy
-six
-symengine
-scipy
-matplotlib

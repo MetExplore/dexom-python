@@ -3,7 +3,6 @@ import six
 import pandas as pd
 import numpy as np
 from sympy import sympify, Add, Mul, Max, Min
-# from symengine import Add, Mul, Max, Min
 import re
 from cobra.io import load_json_model, read_sbml_model, load_matlab_model
 from pathlib import Path

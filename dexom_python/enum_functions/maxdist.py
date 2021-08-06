@@ -4,14 +4,14 @@ import argparse
 import pandas as pd
 from pathlib import Path
 from cobra.io import load_json_model, load_matlab_model, read_sbml_model
-from src.imat import imat, create_partial_variables, create_full_variables
-from src.result_functions import read_solution, get_binary_sol, write_solution, get_obj_value_from_binary
-from src.model_functions import load_reaction_weights
-from src.enum_functions.enumeration import EnumSolution, get_recent_solution_and_iteration
+from dexom_python.imat import imat, create_partial_variables, create_full_variables
+from dexom_python.result_functions import read_solution, get_binary_sol, write_solution, get_obj_value_from_binary
+from dexom_python.model_functions import load_reaction_weights
+from dexom_python.enum_functions.enumeration import EnumSolution, get_recent_solution_and_iteration
 import six
 import time
 from symengine import Add, sympify
-from src.enum_functions.icut import create_icut_constraint
+from dexom_python.enum_functions.icut import create_icut_constraint
 
 
 def create_maxdist_constraint(model, reaction_weights, prev_sol, obj_tol, name="maxdist_optimality", full=False):

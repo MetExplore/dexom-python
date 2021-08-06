@@ -26,8 +26,6 @@ def Fisher_pathways(solpath, subframe, sublist, outpath=""):
     -------
     csv files containing -log10 FDR-adjusted p-values
     """
-    if out_path != "":
-        out_path += "/"
     df = pd.read_csv(solpath, dtype=int, index_col=0)
 
     rxn_list = []

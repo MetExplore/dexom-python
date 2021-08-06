@@ -13,10 +13,12 @@ requirements = [
         'six',
         'scipy',
         'symengine',
-        'matplotlib']
+        'matplotlib',
+        'sklearn',
+        'statsmodels']
 
 setup(
-    name='dexom-python',
+    name='dexom_python',
     version="0.1",
     packages = find_packages('.'),
     install_requires=requirements,

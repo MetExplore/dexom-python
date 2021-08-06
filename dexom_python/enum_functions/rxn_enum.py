@@ -4,9 +4,9 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 from cobra.io import load_json_model, read_sbml_model, load_matlab_model
-from src.imat import imat, create_partial_variables, create_full_variables
-from src.model_functions import load_reaction_weights
-from src.result_functions import read_solution, get_binary_sol, write_solution
+from dexom_python.imat import imat, create_partial_variables, create_full_variables
+from dexom_python.model_functions import load_reaction_weights
+from dexom_python.result_functions import read_solution, get_binary_sol, write_solution
 
 
 class RxnEnumSolution(object):
