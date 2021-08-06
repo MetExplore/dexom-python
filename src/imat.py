@@ -195,4 +195,4 @@ if __name__ == "__main__":
     solution = imat(model, reaction_weights, epsilon=args.epsilon, threshold=args.threshold, timelimit=args.timelimit,
                     feasibility=args.tol, mipgaptol=args.mipgap)
 
-    write_solution(solution, args.threshold, args.output+".csv")
+    write_solution(solution, args.threshold, args.output+"solution.csv")
