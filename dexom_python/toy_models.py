@@ -208,3 +208,72 @@ def dagNet(num_layers, num_metabolites_per_layer, export=False, solver='cplex'):
         save_reaction_weights(reaction_weights, 'dagNet'+str(num_layers)+str(num_metabolites_per_layer)+'_weights.csv')
 
     return model, reaction_weights
+
+
+def r13m10(export=False, solver='cplex'):
+    model = Model(id_or_model="r13m10", name="r13m10_cobra")
+    model.solver = solver
+    metabolite_names = ['a', 'b', 'e', 'g', 'h', 'i', 'j', 'f', 'c', 'd']
+    metabolites = [Metabolite(m) for m in metabolite_names]
+    model.add_metabolites(metabolites)
+
+    reaction_names = ['EX_a', 'EX_b', 'EX_e', 'EX_g', 'EX_h', 'EX_i', 'EX_j', 'R_a_f', 'R_ab_cd', 'R_ef_gh', 'R_f_i',
+                      'R_cj_i', 'R_d_j']
+    reaction_formulas = [
+         {'a': -1.},
+         {'b': -1.},
+         {'e': -1.},
+         {'g': -1.},
+         {'h': -1.},
+         {'i': -1.},
+         {'j': -1.},
+         {'a': -2., 'f': 1.},
+         {'a': -1., 'b': -1., 'c': 2., 'd': 3.},
+         {'e': -1., 'f': -1., 'g': 1., 'h': 5.},
+         {'f': -1., 'i': 1.},
+         {'c': -2., 'j': -1., 'i': 3.},
+         {'d': -1., 'j': 1.}]
+
+    reaction_bounds = [
+        (-10., 50.),
+        (-10., 50.),
+        (-10., 50.),
+        (-50., 50.),
+        (-50., 50.),
+        (-20., 50.),
+        (-50., 50.),
+        (-50., 50.),
+        (0., 50.),
+        (0., 100.),
+        (-100., 100.),
+        (0., 100.),
+        (-10., 10.),
+    ]
+    gene_rules = ['G_IMP_A', 'G_IMP_B', 'G_IMP_E', 'G_IMP_G', 'G_IMP_H', 'G_IMP_I', 'G_IMP_J', 'G_A_F', 'G_AB_CD',
+                  'G_EF_GH', 'G_F_I', 'G_CJ_I', 'G_D_J']
+
+    for idx, react_name in enumerate(reaction_names):
+        create_reaction(model, react_name, reaction_formulas[idx], gene_rule=gene_rules[idx],
+                        lower_bound=reaction_bounds[idx][0], upper_bound=reaction_bounds[idx][1])
+
+    # create reaction weights
+    reaction_weights = {}
+    rh_reactions = ['EX_a', 'R_a_f']
+    rl_reactions = ['EX_b', 'EX_e', 'EX_i']
+
+    for rname in reaction_names:
+        if rname in rh_reactions:
+            reaction_weights[rname] = 1.
+        elif rname in rl_reactions:
+            reaction_weights[rname] = -1.
+        else:
+            reaction_weights[rname] = 0.
+
+    if export:
+        save_json_model(model, "tests/model/example_r13m10.json")
+        save_reaction_weights(reaction_weights, "tests/model/example_r13m10_weights.csv")
+    return model, reaction_weights
+
+
+if __name__ == '__main__':
+    m = r13m10(export=True)

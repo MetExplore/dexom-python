@@ -1,96 +1,48 @@
 
-import six
 import pandas as pd
 import numpy as np
-from sympy import sympify, Add, Mul, Max, Min
-import re
-from cobra.io import load_json_model, read_sbml_model, load_matlab_model
 from pathlib import Path
-import argparse
+from cobra.io import load_json_model, read_sbml_model, load_matlab_model
 
 
-def clean_model(model, reaction_weights=None, full=False):
+def read_model(modelfile):
+    fileformat = Path(modelfile).suffix
+    model = None
+    if fileformat == ".sbml" or fileformat == ".xml":
+        model = read_sbml_model(modelfile)
+    elif fileformat == '.json':
+        model = load_json_model(modelfile)
+    elif fileformat == ".mat":
+        model = load_matlab_model(modelfile)
+    elif fileformat == "":
+        print("Wrong model path")
+    else:
+        print("Only SBML, JSON, and Matlab formats are supported for the models")
+
+    try:
+        model.solver = 'cplex'
+    except:
+        print("cplex is not available or not properly installed")
+
+    return model
+
+
+def check_model_options(model, timelimit=None, feasibility=None, mipgaptol=None, verbosity=None):
+    model.solver.configuration.timeout = timelimit
+    model.tolerance = feasibility if feasibility else 1e-6
+    model.solver.problem.parameters.mip.tolerances.mipgap.set(mipgaptol) if mipgaptol else None
+    model.solver.configuration.verbosity = verbosity if verbosity else 1
+    model.solver.configuration.presolve = True
+    return model
+
+
+def get_all_reactions_from_model(model, save=True, shuffle=True, out_path=""):
     """
-    removes variables and constraints added to the model.solver during imat
 
     Parameters
     ----------
     model: cobra.Model
-        a model that has previously been passed to imat
-    reaction_weights: dict
-        the same reaction weights used for the imat
-    full: bool
-        the same bool used for the imat calculation
-    """
-    if full:
-        for rxn in model.reactions:
-            rid = rxn.id
-            if "x_"+rid in model.solver.variables:
-                model.solver.remove(model.solver.variables["x_"+rid])
-                model.solver.remove(model.solver.variables["xf_"+rid])
-                model.solver.remove(model.solver.variables["xr_"+rid])
-                model.solver.remove(model.solver.constraints["xr_"+rid+"_upper"])
-                model.solver.remove(model.solver.constraints["xr_"+rid+"_lower"])
-                model.solver.remove(model.solver.constraints["xf_"+rid+"_upper"])
-                model.solver.remove(model.solver.constraints["xf_"+rid+"_lower"])
-    else:
-        for rid, weight in six.iteritems(reaction_weights):
-            if weight > 0. and "rh_"+rid+"_pos" in model.solver.variables:
-                model.solver.remove(model.solver.variables["rh_"+rid+"_pos"])
-                model.solver.remove(model.solver.variables["rh_"+rid+"_neg"])
-                model.solver.remove(model.solver.constraints["rh_"+rid+"_pos_bound"])
-                model.solver.remove(model.solver.constraints["rh_"+rid+"_neg_bound"])
-            elif weight < 0. and "rl_"+rid in model.solver.variables:
-                model.solver.remove(model.solver.variables["rl_"+rid])
-                model.solver.remove(model.solver.constraints["rl_"+rid+"_upper"])
-                model.solver.remove(model.solver.constraints["rl_"+rid+"_lower"])
 
-
-def load_reaction_weights(filename, rxn_names="reactions", weight_names="weights"):
-    """
-    loads reaction weights from a .csv file
-    Parameters
-    ----------
-    filename: str
-        the path + name of a .csv file containing reaction weights
-    rxn_names: str
-        the name of the column containing the reaction names
-    weight_names: str
-        the name of the column containing the weights
-
-    Returns
-    -------
-    a dict of reaction weights
-    """
-    df = pd.read_csv(filename)
-    df.index = df[rxn_names]
-    reaction_weights = df[weight_names].to_dict()
-    return {k: float(v) for k, v in reaction_weights.items() if float(v) == float(v)}
-
-
-def save_reaction_weights(reaction_weights, filename):
-    """
-    Parameters
-    ----------
-    reaction_weights: dict
-        a dictionary where keys = reaction IDs and values = weights
-    filename: str
-    Returns
-    -------
-    the reaction_weights dict as a pandas DataFrame
-    """
-    df = pd.DataFrame(reaction_weights.items(), columns=["reactions", "weights"])
-    df.to_csv(filename)
-    df.index = df["reactions"]
-    return df["weights"]
-
-
-def get_all_reactions_from_model(model, save=True, shuffle=False, out_path=""):
-    """
-
-    Parameters
-    ----------
-    model: a cobrapy model
     save: bool
         by default, exports the reactions in a csv format
     shuffle: bool
@@ -99,7 +51,7 @@ def get_all_reactions_from_model(model, save=True, shuffle=False, out_path=""):
         output path
     Returns
     -------
-    A list of all reactions in the model
+    rxn_list: A list of all reactions in the model
     """
     rxn_list = [r.id for r in model.reactions]
     if save:
@@ -110,18 +62,22 @@ def get_all_reactions_from_model(model, save=True, shuffle=False, out_path=""):
     return rxn_list
 
 
-def get_subsytems_from_model(model, save=True, out_path=""):
+def get_subsystems_from_model(model, save=True, out_path=""):
     """
     Creates a list of all subsystems of a model and their associated reactions
+
     Parameters
     ----------
-    model: a cobrapy model
+    model: cobra.Model
+
     save: bool
 
     Returns
     -------
-    rxn_sub: a DataFrame with reaction names as index and subsystem name as column
-    sub_list: a list of subsystems
+    rxn_sub: pandas.DataFrame
+        a DataFrame with reaction names as index and subsystem name as column
+    sub_list: list
+        a list of subsystems
     """
 
     rxn_sub = {}
@@ -142,185 +98,42 @@ def get_subsytems_from_model(model, save=True, out_path=""):
     return rxn_sub, sub_list
 
 
-def recon2_gpr(model, gene_file, genename="ID", genescore="t", save=True, filename="recon2_weights"):
+def save_reaction_weights(reaction_weights, filename):
     """
-    Applies the GPR rules from the recon2 or recon2.2 model for creating reaction weights
-
     Parameters
     ----------
-    model: a cobrapy model
-    gene_file: the path to a csv file containing gene scores
-    genename: the column containing the gene IDs
-    genescore: the column containing the gene scores
-    save: if True, saves the reaction weights as a csv file
+    reaction_weights: dict
+        a dictionary where keys = reaction IDs and values = weights
+    filename: str
 
     Returns
     -------
-    reaction_weights: dict where keys = reaction IDs and values = weights
+    reaction_weights: as a pandas.DataFrame
     """
-    reaction_weights = {}
-    genes = pd.read_csv(gene_file)
-    gene_weights = pd.DataFrame(genes[genescore])
-    gene_weights.index = genes[genename]
-    gene_weights = {idx.replace(':', '_'): np.max(gene_weights.loc[idx][genescore]) for idx in gene_weights.index}
-
-    for rxn in model.reactions:
-        if len(rxn.genes) > 0:
-            expr_split = rxn.gene_reaction_rule.replace("(", "( ").replace(")", " )").split()
-            expr_split = [s.replace(':', '_') if ':' in s else s for s in expr_split]
-            rxngenes = re.sub('and|or|\(|\)', '', rxn.gene_reaction_rule).split()
-            gen_list = set([s.replace(':', '_') for s in rxngenes if ':' in s])
-            new_weights = {g: gene_weights.get(g, 0) for g in gen_list}
-            negweights = []
-            for g, v in new_weights.items():
-                if v < 0 and -v not in new_weights.values():
-                    new_weights[g] = -v
-                    negweights.append(-v)
-                elif v < 0:
-                    new_weights[g] = -v + 0.001
-                    negweights.append(-v)
-            expression = ' '.join(expr_split).replace('or', '*').replace('and', '+')
-            weight = sympify(expression,  evaluate=False).replace(Mul, Max).replace(Add, Min).subs(new_weights, n=21)
-            if weight - 0.001 in negweights:
-                weight = -v + 0.001
-            elif weight in negweights:
-                weight = -weight
-            reaction_weights[rxn.id] = weight
-        else:
-            reaction_weights[rxn.id] = 0
-    if save:
-        save_reaction_weights(reaction_weights, filename+".csv")
-    return reaction_weights
+    df = pd.DataFrame(reaction_weights.items(), columns=["reactions", "weights"])
+    df.to_csv(filename)
+    df.index = df["reactions"]
+    return df["weights"]
 
 
-def recon1_gpr(model, gene_file, genename="ID", genescore="t", save=True):
+def load_reaction_weights(filename, rxn_names="reactions", weight_names="weights"):
     """
-    Applies the GPR rules from the recon1 model
+    loads reaction weights from a .csv file
+
     Parameters
     ----------
-    model: a cobrapy model
-    gene_file: the path to a csv file containing gene scores
-    genename: the column containing the gene IDs
-    genescore: the column containing the gene scores
-    save: if True, saves the reaction weights as a csv file
+    filename: str
+        the path + name of a .csv file containing reaction weights
+    rxn_names: str
+        the name of the column containing the reaction names
+    weight_names: str
+        the name of the column containing the weights
 
     Returns
     -------
-    reaction weights: dict
+    reaction_weights: dict
     """
-    reaction_weights = {}
-
-    genes = pd.read_csv(gene_file)
-    gene_weights = pd.DataFrame(genes[genescore])
-    gene_weights.index = genes[genename]
-    gene_weights = {"g_"+str(idx): np.max(gene_weights.loc[idx][genescore]) for idx in gene_weights.index}
-
-    for rxn in model.reactions:
-        if len(rxn.genes) > 0:
-            expr_split = rxn.gene_reaction_rule.replace("(", "( ").replace(")", " )").split()
-            expr_split = ["g_"+s[:-4] if '_' in s else s for s in expr_split]
-            rxngenes = re.sub('and|or|\(|\)', '', rxn.gene_reaction_rule).split()
-            gen_list = set(["g_"+s[:-4] for s in rxngenes if '_' in s])
-            new_weights = {g: gene_weights.get(g, 0) for g in gen_list}
-            negweights = []
-            for g, v in new_weights.items():
-                if v < 0 and -v not in new_weights.values():
-                    new_weights[g] = -v
-                    negweights.append(-v)
-                elif v < 0:
-                    new_weights[g] = -v + 0.001
-                    negweights.append(-v)
-            expression = ' '.join(expr_split).replace('or', '*').replace('and', '+')
-            weight = sympify(expression, evaluate=False).replace(Mul, Max).replace(Add, Min).subs(new_weights, n=21)
-            if weight - 0.001 in negweights:
-                weight = -v + 0.001
-            elif weight in negweights:
-                weight = -weight
-            reaction_weights[rxn.id] = weight
-        else:
-            reaction_weights[rxn.id] = 0
-    if save:
-        save_reaction_weights(reaction_weights, "recon1_weights.csv")
-    return reaction_weights
-
-
-def iMM1865_gpr(model, gene_file, genename="ID", genescore="t", save=True):
-    """
-    Applies the GPR rules from the iMM1865 model
-    Parameters
-    ----------
-    model: a cobrapy model
-    gene_file: the path to a csv file containing gene scores
-    genename: the column containing the gene IDs
-    genescore: the column containing the gene scores
-    save: if True, saves the reaction weights as a csv file
-
-    Returns
-    -------
-    reaction weights: dict
-    """
-    reaction_weights = {}
-
-    genes = pd.read_csv(gene_file)
-    gene_weights = pd.DataFrame(genes[genescore])
-    gene_weights.index = genes[genename]
-    gene_weights = {"g_"+str(idx): np.max(gene_weights.loc[idx][genescore]) for idx in gene_weights.index}
-
-    for rxn in model.reactions:
-        if len(rxn.genes) > 0:
-            expr_split = rxn.gene_reaction_rule.split()
-            expr_split = ["g_"+s if s.isdigit() else s for s in expr_split]
-            rxngenes = re.sub('and|or|\(|\)', '', rxn.gene_reaction_rule).split()
-            gen_list = set(["g_"+s for s in rxngenes if s.isdigit()])
-            new_weights = {g: gene_weights.get(g, 0) for g in gen_list}
-            negweights = []
-            for g, v in new_weights.items():
-                if v < 0 and -v not in new_weights.values():
-                    new_weights[g] = -v
-                    negweights.append(-v)
-                elif v < 0:
-                    new_weights[g] = -v + 0.001
-                    negweights.append(-v)
-            expression = " ".join(expr_split).replace("or", "*").replace("and", "+")
-            weight = sympify(expression, evaluate=False).replace(Mul, Max).replace(Add, Min).subs(new_weights, n=21)
-            if weight - 0.001 in negweights:
-                weight = -v + 0.001
-            elif weight in negweights:
-                weight = -weight
-            reaction_weights[rxn.id] = weight
-        else:
-            reaction_weights[rxn.id] = 0
-    if save:
-        save_reaction_weights(reaction_weights, "iMM1865_weights.csv")
-    return reaction_weights
-
-
-if __name__ == "__main__":
-    ### the GPR result is rendered correct by modifying the _collapse_arguments function of the MinMaxBase class
-    ### in /sympy/functions/elementary/miscellaneous.py
-    ### see https://github.com/sympy/sympy/issues/21399 and https://github.com/sympy/sympy/pull/21547 for details
-
-    description = "Applies GPR rules from recon 2 model and saves reaction weights as a csv file"
-
-    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument("-m", "--model", help="recon 2 model in json, sbml or mat format")
-    parser.add_argument("-g", "--gene_file", help="csv file containing gene HGNC identifiers and scores")
-    parser.add_argument("-o", "--output", default="recon2_weights",
-                        help="Path to which the reaction_weights file is saved")
-    parser.add_argument("--gene_ID", default="ID", help="column containing the gene HGNC identifiers")
-    parser.add_argument("--gene_score", default="t", help="column containing the gene score to be used")
-    args = parser.parse_args()
-
-    fileformat = Path(args.model).suffix
-    if fileformat == ".sbml" or fileformat == ".xml":
-        model = read_sbml_model(args.model)
-    elif fileformat == '.json':
-        model = load_json_model(args.model)
-    elif fileformat == ".mat":
-        model = load_matlab_model(args.model)
-    else:
-        print("Only SBML, JSON, and Matlab formats are supported for the models")
-        model = None
-
-    reaction_weights = recon2_gpr(model=model, gene_file=args.gene_file, genename=args.gene_ID,
-                                  genescore=args.gene_score, filename=args.output, save=True)
+    df = pd.read_csv(filename)
+    df.index = df[rxn_names]
+    reaction_weights = df[weight_names].to_dict()
+    return {k: float(v) for k, v in reaction_weights.items() if float(v) == float(v)}

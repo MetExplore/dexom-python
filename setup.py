@@ -8,25 +8,31 @@ import sys
 
 requirements = [
         'cobra',
-        'numpy',
+        'numpy==1.20',
         'six',
-        'scipy',
+        'scipy==1.7',
         'symengine',
         'matplotlib',
         'sklearn',
         'statsmodels']
 
+with open("README.md", "r", encoding="utf-8") as fh:
+    long_description = fh.read()
+
 setup(
-    name='dexom_python',
-    version="0.1",
+    name='dexom_python_maxstingl',
+    version='1.0',
     packages=find_packages('.'),
     install_requires=requirements,
     include_package_data=True,
     author='Maximilian Stingl',
-    author_email='maximilian.ha.stingl@gmail.com',
-    description='Python implementation of DEXOM',
+    author_email='maximilian.h.a.stingl@gmail.com',
+    description='Python implementation of DEXOM using cobrapy',
+    long_description=long_description,
+    long_description_content_type="text/markdown",
+    url="https://github.com/MaximilianSti/dexom_python",
     classifiers=[
-        'Development Status :: 4 - Beta',
+        'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Education',
         'Intended Audience :: Healthcare Industry',
         'Intended Audience :: Science/Research',
@@ -34,5 +40,6 @@ setup(
         'Topic :: Utilities',
         'Programming Language :: Python :: 3.7'
     ],
+    python_requires=">=3.7",
 )
 sys.path.append('dexom_python')
