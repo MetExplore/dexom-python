@@ -1,0 +1,20 @@
+reaction,fluxes,binary
+EX_A,0.0,0
+EX_D,0.0,0
+EX_X,0.0,0
+EX_C,0.0,0
+EX_Z,0.0,0
+EX_G,0.0,0
+EX_Y,0.0,0
+EX_T,0.0,0
+RAB,0.0,0
+RBC,0.0,0
+RFG,0.0,0
+RCF,0.0,0
+RDE,0.0,0
+REF1,0.0,0
+REF2,0.0,0
+REF3,0.0,0
+RBE,0.0,0
+objective value: 3.000000
+solver status: optimal

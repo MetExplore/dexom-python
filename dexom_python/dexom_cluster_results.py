@@ -6,10 +6,22 @@ import argparse
 
 
 def analyze_dexom_cluster_results(in_folder, out_folder, approach=1, filenums=100):
+    """
 
+    Parameters
+    ----------
+    in_folder: folder containing dexom results
+    out_folder: folder in which output files will be saved
+    approach: which parallelization approach was used (1, 2, or 3, see enum_functions/enumeration for details)
+    filenums: number of parallel dexom threads that were run
+
+    Returns
+    -------
+
+    """
     output_file = []
     # concatenating all .out files from the cluster
-    if approach == 1:
+    if approach == 1 or approach == 3:
         fileout = 'dex1out'
         fileerr = 'dex1err'
         with open(out_folder+'all_outs.txt', 'w+') as outfile:
@@ -39,19 +51,22 @@ def analyze_dexom_cluster_results(in_folder, out_folder, approach=1, filenums=10
     print(output_file[-1])
 
     all_rxn = []
-    for i in range(filenums):
-        try:
-            if approach == 1:
-                filename = in_folder + 'rxn_enum_%i_solutions.csv' % i
-            elif approach == 2:
-                filename = Path(in_folder).glob("div_enum_%i_*_solutions.csv" % i)
-                filename = str(list(filename)[0])
-            rxn = pd.read_csv(filename, index_col=0)
-            all_rxn.append(rxn)
-        except:
-            pass
-    rxn = pd.concat(all_rxn, ignore_index=True)
-    if approach == 1:
+    if approach == 3:
+        rxn = pd.read_csv(in_folder+"rxn_enum_solutions.csv", index_col=0)
+    else:
+        for i in range(filenums):
+            try:
+                if approach == 1:
+                    filename = in_folder + 'rxn_enum_%i_solutions.csv' % i
+                elif approach == 2:
+                    filename = Path(in_folder).glob("div_enum_%i_*_solutions.csv" % i)
+                    filename = str(list(filename)[0])
+                rxn = pd.read_csv(filename, index_col=0)
+                all_rxn.append(rxn)
+            except:
+                pass
+        rxn = pd.concat(all_rxn, ignore_index=True)
+    if approach == 1 or approach == 3:
         unique = len(rxn.drop_duplicates())
         output_file.append("There are %i unique solutions and %i duplicates" % (unique, len(rxn) - unique))
         print(output_file[-1])
@@ -88,7 +103,7 @@ def analyze_dexom_cluster_results(in_folder, out_folder, approach=1, filenums=10
     print(output_file[-1])
     all_res = []
     all_sol = []
-    if approach == 1:
+    if approach == 1 or approach == 3:
         for i in range(filenums):
             try:
                 solname = in_folder + 'div_enum_%i_solutions.csv' % i

@@ -1,17 +1,16 @@
 
 
 import argparse
-import pandas as pd
-from pathlib import Path
-from cobra.io import load_json_model, load_matlab_model, read_sbml_model
-from dexom_python.imat import imat, create_partial_variables, create_full_variables
-from dexom_python.result_functions import read_solution, get_binary_sol, write_solution, get_obj_value_from_binary
-from dexom_python.model_functions import load_reaction_weights
-from dexom_python.enum_functions.enumeration import EnumSolution, get_recent_solution_and_iteration
 import six
 import time
+import pandas as pd
+import numpy as np
 from symengine import Add, sympify
 from dexom_python.enum_functions.icut import create_icut_constraint
+from dexom_python.imat import imat, create_partial_variables, create_full_variables
+from dexom_python.result_functions import read_solution
+from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options
+from dexom_python.enum_functions.enumeration import EnumSolution, get_recent_solution_and_iteration
 
 
 def create_maxdist_constraint(model, reaction_weights, prev_sol, obj_tol, name="maxdist_optimality", full=False):
@@ -43,7 +42,7 @@ def create_maxdist_constraint(model, reaction_weights, prev_sol, obj_tol, name="
                 y_variables.append([y_neg, y_pos])
                 y_weights.append(weight)
             elif weight < 0:
-                x_variables.append(model.solver.variables["rl_" + rid])
+                x_variables.append(sympify("1") - model.solver.variables["rl_" + rid])  # uses new variable implementation
                 x_weights.append(abs(weight))
 
     lower_opt = prev_sol.objective_value - prev_sol.objective_value * obj_tol
@@ -80,7 +79,7 @@ def create_maxdist_objective(model, reaction_weights, prev_sol, prev_sol_bin, on
                 elif not only_ones:
                     expr += 1 - (y_neg + y_pos)
             elif weight < 0:
-                x_rl = model.solver.variables["rl_" + rid]
+                x_rl = sympify("1") - model.solver.variables["rl_" + rid]  # uses new variable implementation
                 if prev_sol_bin[rid_loc] == 1:
                     expr += 1 - x_rl
                 elif not only_ones:
@@ -92,14 +91,15 @@ def create_maxdist_objective(model, reaction_weights, prev_sol, prev_sol_bin, on
 def maxdist(model, reaction_weights, prev_sol, threshold=1e-4, obj_tol=1e-2, maxiter=10, out_path="maxdist", icut=True,
             full=False, only_ones=False):
     """
-    Parameters
     maximal distance enumeration
+
+    Parameters
     ----------
     model: cobrapy Model
     reaction_weights: dict
-        keys = reactions and values = weights
-    prev_sol: Solution instance
-        a previous imat solution
+        keys are reactions and values are weights
+    prev_sol: Solution object
+        a previously computed imat solution
     threshold: float
         detection threshold of activated reactions
     obj_tol: float
@@ -108,13 +108,15 @@ def maxdist(model, reaction_weights, prev_sol, threshold=1e-4, obj_tol=1e-2, max
         maximum number of solutions to check for
     only_ones: bool
         determines if the hamming distance is only calculated with ones, or with ones & zeros
+
     Returns
     -------
 
     """
+    tol = model.solver.configuration.tolerances.feasibility
     icut_constraints = []
     all_solutions = [prev_sol]
-    prev_sol_bin = get_binary_sol(prev_sol, threshold)
+    prev_sol_bin = (np.abs(prev_sol.fluxes) >= threshold-tol).values.astype(int)
     all_binary = [prev_sol_bin]
 
     # adding the optimality constraint: the new objective value must be equal to the previous objective value
@@ -125,8 +127,7 @@ def maxdist(model, reaction_weights, prev_sol, threshold=1e-4, obj_tol=1e-2, max
         t0 = time.perf_counter()
         if icut:
             # adding the icut constraint to prevent the algorithm from finding the same solutions
-            const = create_icut_constraint(model, reaction_weights, threshold, prev_sol, prev_sol_bin,
-                                           name="icut_"+str(i), full=full)
+            const = create_icut_constraint(model, reaction_weights, threshold, prev_sol, name="icut_"+str(i), full=full)
             model.solver.add(const)
             icut_constraints.append(const)
         # defining the objective: minimize the number of overlapping ones and zeros
@@ -135,7 +136,7 @@ def maxdist(model, reaction_weights, prev_sol, threshold=1e-4, obj_tol=1e-2, max
         try:
             with model:
                 prev_sol = model.optimize()
-            prev_sol_bin = get_binary_sol(prev_sol, threshold)
+            prev_sol_bin = (np.abs(prev_sol.fluxes) >= threshold-tol).values.astype(int)
             all_solutions.append(prev_sol)
             all_binary.append(prev_sol_bin)
         except:
@@ -159,7 +160,7 @@ if __name__ == "__main__":
     parser.add_argument("-r", "--reaction_weights", default=None,
                         help="Reaction weights in csv format (first row: reaction names, second row: weights)")
     parser.add_argument("-p", "--prev_sol", default=[], help="starting solution or directory of recent solutions")
-    parser.add_argument("--epsilon", type=float, default=1e-2,
+    parser.add_argument("-e", "--epsilon", type=float, default=1e-2,
                         help="Activation threshold for highly expressed reactions")
     parser.add_argument("--threshold", type=float, default=1e-5, help="Activation threshold for all reactions")
     parser.add_argument("-t", "--timelimit", type=int, default=None, help="Solver time limit")
@@ -173,21 +174,8 @@ if __name__ == "__main__":
     parser.add_argument("--full", action='store_true', help="Use this flag to assign non-zero weights to all reactions")
     args = parser.parse_args()
 
-    fileformat = Path(args.model).suffix
-    if fileformat == ".sbml" or fileformat == ".xml":
-        model = read_sbml_model(args.model)
-    elif fileformat == '.json':
-        model = load_json_model(args.model)
-    elif fileformat == ".mat":
-        model = load_matlab_model(args.model)
-    else:
-        print("Only SBML, JSON, and Matlab formats are supported for the models")
-        model = None
-
-    try:
-        model.solver = 'cplex'
-    except:
-        print("cplex is not available or not properly installed")
+    model = read_model(args.model)
+    check_model_options(model, timelimit=args.timelimit, feasibility=args.tol, mipgaptol=args.mipgap)
 
     reaction_weights = {}
     if args.reaction_weights:
@@ -202,25 +190,11 @@ if __name__ == "__main__":
         a = a ** i
         model = create_partial_variables(model, reaction_weights, epsilon=args.epsilon)
     else:
-        prev_sol = imat(model, reaction_weights, epsilon=args.epsilon, threshold=args.threshold,
-                        timelimit=args.timelimit, feasibility=args.tol, mipgaptol=args.mipgap)
+        prev_sol = imat(model, reaction_weights, epsilon=args.epsilon, threshold=args.threshold)
 
-    icut = True
-    if args.noicut:
-      icut = False
-
-    save = False
-    if args.save:
-        save = True
-
-    full = False
-    if args.full:
-        full = True
-
-    model.solver.configuration.timeout = args.timelimit
-    model.tolerance = args.tol
-    model.solver.problem.parameters.mip.tolerances.mipgap.set(args.mipgap)
-    model.solver.configuration.presolve = True
+    icut = False if args.noicut else True
+    save = True if args.save else False
+    full = True if args.full else False
 
     maxdist_sol = maxdist(model=model, reaction_weights=reaction_weights, prev_sol=prev_sol, threshold=args.threshold,
                           obj_tol=args.obj_tol, maxiter=args.maxiter, out_path=args.output, icut=icut, full=args.full,
