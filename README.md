@@ -4,6 +4,8 @@ This is a python implementation of DEXOM (Diversity-based enumeration of optimal
 The original project, which was developped in MATLAB, can be found here: https://github.com/MetExplore/dexom  
 Parts of the imat code were taken from the driven package for data-driven constraint-based analysis: https://github.com/opencobra/driven
 
+API documentation is available here: https://dexom-python.readthedocs.io/en/latest/
+
 ## Requirements
 - Python 3.7+
 - CPLEX 12.10+
@@ -20,7 +22,7 @@ Parts of the imat code were taken from the driven package for data-driven constr
 
 ## Functions
 
-These are the different functions which are available for context-specific network extraction
+These are the different functions which are available for context-specific metabolic subnetwork extraction
 
 ### apply_gpr
 The `gpr_rules.py` script can be used to transform gene expression data into reaction weights, for a limited selection of models.  
@@ -58,7 +60,7 @@ An explanation of these methods can be found in [(Rodriguez-Mier et al. 2021)](h
 Each of these methods can be used on its own. The same model and reaction_weights inputs must be provided as for the imat function.
 
 Additional parameters for all 4 methods are:
-- `prev_sol`: a starting imat solution
+- `prev_sol`: a starting imat solution (if none is provided, a new one will be computed)  
 - `obj_tol`: a relative tolerance on the imat objective value for the optimality of the solutions  
 icut, maxiter, and div-enum also have two additional parameters:
 - `maxiter`: the maximum number of iterations to run
@@ -71,9 +73,11 @@ maxdist and div-enum also have one additional parameter:
 
 The DEXOM algorithm is a combination of several network enumeration methods.  
 `enumeration.py` contains the `write_batch_script1` function, which is used for creating a parallelization of DEXOM on a slurm computation cluster. 
-The inputs of this function are:
+The main inputs of this function are:
 - `filenums`: the number of parallel batches which should be launched on slurm
-- `iters`: the number of div-enum iterations per batch
+- `iters`: the number of div-enum iterations per batch  
+
+Other inputs are used for personalizing the directories and filenames on the cluster.
 
 After executing the script, the target directory should contain several bash files named `file_0.sh`, `file_1.sh` etc. depending on the `filenum` parameter that was provided.  
 In addition, there should be one `runfiles.sh` file. This file contains the commands to submit the other files as job batches on the slurm cluster.
