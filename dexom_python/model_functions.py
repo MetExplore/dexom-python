@@ -58,7 +58,8 @@ def get_all_reactions_from_model(model, save=True, shuffle=True, out_path=""):
         pd.Series(rxn_list).to_csv(out_path + model.id + "_reactions.csv", header=False, index=False)
     if shuffle:
         np.random.shuffle(rxn_list)
-        pd.Series(rxn_list).to_csv(out_path + model.id + "_reactions_shuffled.csv", header=False, index=False)
+        if save:
+            pd.Series(rxn_list).to_csv(out_path + model.id + "_reactions_shuffled.csv", header=False, index=False)
     return rxn_list
 
 

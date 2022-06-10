@@ -1,9 +1,10 @@
-
+import pandas as pd
 import pytest
 import pathlib
 import cobra
 import numpy as np
 import dexom_python.model_functions as mf
+import dexom_python.gpr_rules as gr
 import dexom_python.imat as im
 import dexom_python.result_functions as rf
 
@@ -18,6 +19,13 @@ def model():
 def reaction_weights():
     file = str(pathlib.Path(__file__).parent.joinpath("model", "example_r13m10_weights.csv"))
     return mf.load_reaction_weights(file)
+
+
+@pytest.fixture()
+def gene_weights():
+    genes = pd.read_csv(str(pathlib.Path(__file__).parent.joinpath("model", "example_r13m10_expression.csv")))
+    genes.index = genes.pop("ID")
+    return gr.expression2qualitative(genes, save=False)
 
 
 @pytest.fixture()
@@ -67,6 +75,19 @@ def test_save_reaction_weights(model):
 
 def test_load_reaction_weights(model, reaction_weights):
     assert sum([r.id in reaction_weights.keys() for r in model.reactions])==13
+
+
+# Testing apply_gpr
+
+
+def test_expression2qualitative(gene_weights):
+    assert False not in (gene_weights.value_counts().sort_values().values == (5, 5, 10))
+
+
+def test_apply_gpr(model, gene_weights, reaction_weights):
+    weights = pd.Series(gene_weights["expr"].values, index=gene_weights.index).to_dict()
+    test_wei = gr.apply_gpr(model, weights, "test", save=False)
+    assert test_wei==reaction_weights
 
 
 # Testing imat
