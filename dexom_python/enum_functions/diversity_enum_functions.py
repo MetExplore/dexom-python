@@ -4,12 +4,12 @@ import six
 import time
 import numpy as np
 import pandas as pd
-from dexom_python.imat import imat, create_partial_variables, create_full_variables, create_new_partial_variables
+from dexom_python.imat_functions import imat, create_partial_variables, create_full_variables, create_new_partial_variables
 from dexom_python.result_functions import read_solution, write_solution
 from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options
 from dexom_python.enum_functions.enumeration import EnumSolution, get_recent_solution_and_iteration
-from dexom_python.enum_functions.icut import create_icut_constraint
-from dexom_python.enum_functions.maxdist import create_maxdist_constraint, create_maxdist_objective
+from dexom_python.enum_functions.icut_functions import create_icut_constraint
+from dexom_python.enum_functions.maxdist_functions import create_maxdist_constraint, create_maxdist_objective
 
 
 def diversity_enum(model, reaction_weights, prev_sol, eps=1e-3, thr=1e-5, obj_tol=1e-3, maxiter=10, dist_anneal=0.995,

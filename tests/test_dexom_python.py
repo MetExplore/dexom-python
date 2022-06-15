@@ -5,8 +5,9 @@ import cobra
 import numpy as np
 import dexom_python.model_functions as mf
 import dexom_python.gpr_rules as gr
-import dexom_python.imat as im
+import dexom_python.imat_functions as im
 import dexom_python.result_functions as rf
+import dexom_python.enum_functions as enum
 
 
 @pytest.fixture()
@@ -142,3 +143,25 @@ def test_read_solution(model):
     file = str(pathlib.Path(__file__).parent.joinpath("model", "example_r13m10_imatsolution.csv"))
     solution, binary = rf.read_solution(file)
     assert len(binary) == len(solution.fluxes)
+
+
+# Testing enumeration functions
+
+
+def test_rxn_enum(model, reaction_weights, imatsol):
+    rxn_sol = enum.rxn_enum(model=model, reaction_weights=reaction_weights, prev_sol=imatsol)
+    assert len(rxn_sol.all_solutions) == 18 and len(rxn_sol.all_binary) == 18
+
+
+def test_icut_partial(model, reaction_weights):
+    icut_sol = enum.icut(model=model, reaction_weights=reaction_weights, prev_sol=imatsol, maxiter=10, full=False)
+    assert np.isclose(icut_sol.objective_value, 4.) and len(icut_sol.solutions) == 3
+
+
+def test_icut_full(model, reaction_weights):
+    icut_sol = enum.icut(model=model, reaction_weights=reaction_weights, prev_sol=imatsol, maxiter=10, full=True)
+    assert np.isclose(icut_sol.objective_value, 4.) and len(icut_sol.solutions) == 11
+
+
+def test_maxdist_partial(model, reaction_weights):
+    assert True

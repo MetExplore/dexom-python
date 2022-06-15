@@ -2,7 +2,7 @@
 import argparse
 import pandas as pd
 import numpy as np
-from dexom_python.imat import imat, create_new_partial_variables, create_full_variables
+from dexom_python.imat_functions import imat, create_new_partial_variables, create_full_variables
 from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options
 from dexom_python.result_functions import read_solution, write_solution
 
@@ -18,7 +18,7 @@ class RxnEnumSolution(object):
         self.unique_reactions = unique_reactions
 
 
-def rxn_enum(model, reaction_weights, rxn_list, prev_sol, eps=1., thr=1e-1, obj_tol=1e-2):
+def rxn_enum(model, reaction_weights, prev_sol, rxn_list=[], eps=1., thr=1e-1, obj_tol=1e-2):
     """
     Reaction enumeration method
 
@@ -57,7 +57,8 @@ def rxn_enum(model, reaction_weights, rxn_list, prev_sol, eps=1., thr=1e-1, obj_
     if not rxn_list:
         rxns = list(model.reactions)
         rxn_list = [r.id for r in rxns]
-    for idx, rid in enumerate(rxn_list):
+    for rid in rxn_list:
+        idx = np.where(prev_sol.fluxes.index == rid)[0][0]
         with model as model_temp:
             if rid in model.reactions:
                 rxn = model_temp.reactions.get_by_id(rid)
@@ -70,16 +71,20 @@ def rxn_enum(model, reaction_weights, rxn_list, prev_sol, eps=1., thr=1e-1, obj_
                     # for inactive reversible fluxes, check activation in backwards direction
                     if rxn.lower_bound < 0.:
                         try:
+                            print("starting "+rid+"_backwards")
                             rxn.upper_bound = -thr
                             temp_sol = imat(model_temp, reaction_weights, epsilon=eps, threshold=thr)
+                            print("passed " + rid + "_backwards imat")
                             temp_sol_bin = (np.abs(temp_sol.fluxes) >= thr-tol).values.astype(int)
                             if temp_sol.objective_value >= optimal_objective_value:
                                 all_solutions.append(temp_sol)
                                 all_solutions_binary.append(temp_sol_bin)
-                                if temp_sol_bin not in unique_solutions_binary:
+                                print("passed " + rid + "_backwards objective value")
+                                if not np.any(np.all(temp_sol_bin == unique_solutions_binary, axis=1)):
                                     unique_solutions.append(temp_sol)
                                     unique_solutions_binary.append(temp_sol_bin)
                                     unique_reactions.append(rid+"_backwards")
+                                    print("passed " + rid + "_backwards unique")
                         except:
                             print("An error occurred with reaction %s_reverse. "
                                   "Check feasibility of the model when this reaction is irreversible." % rid)
@@ -92,16 +97,20 @@ def rxn_enum(model, reaction_weights, rxn_list, prev_sol, eps=1., thr=1e-1, obj_
                         rxn.lower_bound = rxn.upper_bound
                 # for all fluxes: compute solution with new bounds
                 try:
+                    print("starting " + rid)
                     temp_sol = imat(model_temp, reaction_weights, epsilon=eps, threshold=thr)
+                    print("passed " + rid + " imat")
                     temp_sol_bin = (np.abs(temp_sol.fluxes) >= thr-tol).values.astype(int)
                     if temp_sol.objective_value >= optimal_objective_value:
                         all_solutions.append(temp_sol)
                         all_solutions_binary.append(temp_sol_bin)
                         all_reactions.append(rid)
-                        if temp_sol_bin not in unique_solutions_binary:
+                        print("passed " + rid + " objective value")
+                        if not np.any(np.all(temp_sol_bin == unique_solutions_binary, axis=1)):
                             unique_solutions.append(temp_sol)
                             unique_solutions_binary.append(temp_sol_bin)
                             unique_reactions.append(rid)
+                            print("passed " + rid + " unique")
                 except:
                     if prev_sol_bin[idx] == 1:
                         print("An error occurred with reaction %s. "

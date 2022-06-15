@@ -176,8 +176,7 @@ if __name__ == "__main__":
     model = read_model(args.model)
     model_list = ["human1", "recon1", "recon2", "iMM1865", "zebrafish1"]
 
-    genes = pd.read_csv(args.gene_file)
-    genes.index = genes.pop(args.gene_ID)
+    genes = pd.read_csv(args.gene_file).set_index(args.gene_ID)
     if args.convert:
         genes = expression2qualitative(genes, column_list=[args.gene_score], proportion=args.threshold,
                                        outpath=args.output+"_qual_geneweights")
