@@ -7,6 +7,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from cobra.io import load_json_model, load_matlab_model, read_sbml_model
 from dexom_python.result_functions import read_solution
+from dexom_python.imat_functions import create_new_partial_variables, create_full_variables
 from scipy.spatial.distance import pdist, squareform
 from dexom_python.model_functions import get_all_reactions_from_model
 
@@ -39,6 +40,20 @@ class EnumSolution(object):
         self.solutions = solutions
         self.binary = binary
         self.objective_value = objective_value
+
+
+def create_enum_variables(model, reaction_weights, eps=1e-2, thr=1e-5, full=False):
+    for rid in reaction_weights.keys():
+        if reaction_weights[rid] == 0:
+            pass
+        elif full and "x_"+rid not in model.solver.variables:
+            model = create_full_variables(model=model, reaction_weights=reaction_weights, epsilon=eps, threshold=thr)
+            break
+        elif not full and "rh_"+rid+"_pos" not in model.solver.variables and "rl_"+rid not in model.solver.variables:
+            model = create_new_partial_variables(model=model, reaction_weights=reaction_weights, epsilon=eps,
+                                                 threshold=thr)  # uses new variable implementation
+            break
+    return model
 
 
 def get_recent_solution_and_iteration(dirpath, startsol_num):

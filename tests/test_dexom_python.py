@@ -31,7 +31,9 @@ def gene_weights():
 
 @pytest.fixture()
 def imatsol(model, reaction_weights):
-    return im.imat(model, reaction_weights, epsilon=1, threshold=1e-3)
+    file = str(pathlib.Path(__file__).parent.joinpath("model", "example_r13m10_imatsolution.csv"))
+    solution, binary = rf.read_solution(file)
+    return solution
 
 
 # Testing model_functions
@@ -109,8 +111,9 @@ def test_create_full_variables(model, reaction_weights):
     assert len(model.variables) == 65 and len(model.constraints) == 75
 
 
-def test_imat(imatsol):
-    assert np.isclose(imatsol.objective_value, 4.)
+def test_imat(model, reaction_weights):
+    solution = im.imat(model, reaction_weights, epsilon=1, threshold=1e-3)
+    assert np.isclose(solution.objective_value, 4.)
 
 
 def test_imat_noweights(model):
@@ -133,15 +136,13 @@ def test_imat_noflux(model):
 # Testing result_functions
 
 
+def test_read_solution(imatsol):
+    assert np.isclose(imatsol.objective_value, 4.) and len(imatsol.fluxes) == 13
+
+
 def test_write_solution(model, imatsol):
     file = str(pathlib.Path(__file__).parent.joinpath("model", "example_r13m10_imatsolution.csv"))
     solution, binary = rf.write_solution(model, imatsol, threshold=1e-3, filename=file)
-    assert len(binary) == len(solution.fluxes)
-
-
-def test_read_solution(model):
-    file = str(pathlib.Path(__file__).parent.joinpath("model", "example_r13m10_imatsolution.csv"))
-    solution, binary = rf.read_solution(file)
     assert len(binary) == len(solution.fluxes)
 
 
@@ -150,18 +151,36 @@ def test_read_solution(model):
 
 def test_rxn_enum(model, reaction_weights, imatsol):
     rxn_sol = enum.rxn_enum(model=model, reaction_weights=reaction_weights, prev_sol=imatsol)
-    assert len(rxn_sol.all_solutions) == 18 and len(rxn_sol.all_binary) == 18
+    assert len(rxn_sol.all_solutions) == 9 and len(rxn_sol.all_binary) == 9
 
 
-def test_icut_partial(model, reaction_weights):
+def test_icut_partial(model, reaction_weights, imatsol):
     icut_sol = enum.icut(model=model, reaction_weights=reaction_weights, prev_sol=imatsol, maxiter=10, full=False)
     assert np.isclose(icut_sol.objective_value, 4.) and len(icut_sol.solutions) == 3
 
 
-def test_icut_full(model, reaction_weights):
+def test_icut_full(model, reaction_weights, imatsol):
     icut_sol = enum.icut(model=model, reaction_weights=reaction_weights, prev_sol=imatsol, maxiter=10, full=True)
     assert np.isclose(icut_sol.objective_value, 4.) and len(icut_sol.solutions) == 11
 
 
-def test_maxdist_partial(model, reaction_weights):
-    assert True
+def test_maxdist_partial(model, reaction_weights, imatsol):
+    maxdist_sol = enum.maxdist(model=model, reaction_weights=reaction_weights, prev_sol=imatsol, maxiter=4, full=False,)
+    assert np.isclose(maxdist_sol.objective_value, 4.) and len(maxdist_sol.solutions) == 3
+
+
+def test_maxdist_full(model, reaction_weights, imatsol):
+    maxdist_sol = enum.maxdist(model=model, reaction_weights=reaction_weights, prev_sol=imatsol, maxiter=4, full=True,)
+    assert np.isclose(maxdist_sol.objective_value, 4.) and len(maxdist_sol.solutions) == 3
+
+
+def test_diversity_enum_partial(model, reaction_weights, imatsol):
+    div_enum_sol, div_enum_res = enum.diversity_enum(model=model, reaction_weights=reaction_weights, prev_sol=imatsol,
+                                                     maxiter=4, full=False)
+    assert np.isclose(div_enum_sol.objective_value, 4.) and len(div_enum_sol.solutions) == 3
+
+
+def test_diversity_enum_full(model, reaction_weights, imatsol):
+    div_enum_sol, div_enum_res = enum.diversity_enum(model=model, reaction_weights=reaction_weights, prev_sol=imatsol,
+                                                     maxiter=4, full=True)
+    assert np.isclose(div_enum_sol.objective_value, 4.) and len(div_enum_sol.solutions) == 3

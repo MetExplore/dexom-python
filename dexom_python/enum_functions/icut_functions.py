@@ -5,6 +5,7 @@ import numpy as np
 from symengine import sympify
 from dexom_python.imat_functions import imat
 from dexom_python.enum_functions.enumeration import EnumSolution
+from dexom_python.enum_functions.enumeration import create_enum_variables
 
 
 def create_icut_constraint(model, reaction_weights, threshold, prev_sol, name, full=False):
@@ -78,9 +79,11 @@ def icut(model, prev_sol=None, reaction_weights=None, eps=1e-2, thr=1e-5, obj_to
     solution: EnumSolution object
         In the case of integer-cut, all_solutions and unique_solutions are identical
     """
-    tol = model.solver.configuration.tolerances.feasibility
     if not prev_sol:
         prev_sol = imat(model, reaction_weights, epsilon=eps, threshold=thr, full=full)
+    else:
+        model = create_enum_variables(model=model, reaction_weights=reaction_weights, eps=eps, thr=thr, full=full)
+    tol = model.solver.configuration.tolerances.feasibility
     prev_sol_binary = (np.abs(prev_sol.fluxes) >= thr-tol).values.astype(int)
     optimal_objective_value = prev_sol.objective_value - obj_tol*prev_sol.objective_value
 

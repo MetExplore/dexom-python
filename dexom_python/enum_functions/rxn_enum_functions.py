@@ -2,9 +2,10 @@
 import argparse
 import pandas as pd
 import numpy as np
-from dexom_python.imat_functions import imat, create_new_partial_variables, create_full_variables
+from dexom_python.imat_functions import imat
 from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options
 from dexom_python.result_functions import read_solution, write_solution
+from dexom_python.enum_functions.enumeration import create_enum_variables
 
 
 class RxnEnumSolution(object):
@@ -71,20 +72,16 @@ def rxn_enum(model, reaction_weights, prev_sol, rxn_list=[], eps=1., thr=1e-1, o
                     # for inactive reversible fluxes, check activation in backwards direction
                     if rxn.lower_bound < 0.:
                         try:
-                            print("starting "+rid+"_backwards")
                             rxn.upper_bound = -thr
                             temp_sol = imat(model_temp, reaction_weights, epsilon=eps, threshold=thr)
-                            print("passed " + rid + "_backwards imat")
                             temp_sol_bin = (np.abs(temp_sol.fluxes) >= thr-tol).values.astype(int)
                             if temp_sol.objective_value >= optimal_objective_value:
                                 all_solutions.append(temp_sol)
                                 all_solutions_binary.append(temp_sol_bin)
-                                print("passed " + rid + "_backwards objective value")
                                 if not np.any(np.all(temp_sol_bin == unique_solutions_binary, axis=1)):
                                     unique_solutions.append(temp_sol)
                                     unique_solutions_binary.append(temp_sol_bin)
                                     unique_reactions.append(rid+"_backwards")
-                                    print("passed " + rid + "_backwards unique")
                         except:
                             print("An error occurred with reaction %s_reverse. "
                                   "Check feasibility of the model when this reaction is irreversible." % rid)
@@ -97,20 +94,16 @@ def rxn_enum(model, reaction_weights, prev_sol, rxn_list=[], eps=1., thr=1e-1, o
                         rxn.lower_bound = rxn.upper_bound
                 # for all fluxes: compute solution with new bounds
                 try:
-                    print("starting " + rid)
                     temp_sol = imat(model_temp, reaction_weights, epsilon=eps, threshold=thr)
-                    print("passed " + rid + " imat")
                     temp_sol_bin = (np.abs(temp_sol.fluxes) >= thr-tol).values.astype(int)
                     if temp_sol.objective_value >= optimal_objective_value:
                         all_solutions.append(temp_sol)
                         all_solutions_binary.append(temp_sol_bin)
                         all_reactions.append(rid)
-                        print("passed " + rid + " objective value")
                         if not np.any(np.all(temp_sol_bin == unique_solutions_binary, axis=1)):
                             unique_solutions.append(temp_sol)
                             unique_solutions_binary.append(temp_sol_bin)
                             unique_reactions.append(rid)
-                            print("passed " + rid + " unique")
                 except:
                     if prev_sol_bin[idx] == 1:
                         print("An error occurred with reaction %s. "
@@ -197,7 +190,7 @@ if __name__ == "__main__":
 
     if args.prev_sol:
         initial_solution, initial_binary = read_solution(args.prev_sol, model, reaction_weights)
-        model = create_new_partial_variables(model, reaction_weights, args.epsilon, args.threshold)
+        model = create_enum_variables(model, reaction_weights, eps=args.epsilon, thr=args.threshold, full=False)
     else:
         initial_solution = imat(model, reaction_weights, epsilon=args.epsilon, threshold=args.threshold)
 

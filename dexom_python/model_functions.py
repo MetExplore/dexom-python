@@ -5,7 +5,7 @@ from pathlib import Path
 from cobra.io import load_json_model, read_sbml_model, load_matlab_model
 
 
-def read_model(modelfile):
+def read_model(modelfile, solver='cplex'):
     fileformat = Path(modelfile).suffix
     model = None
     if fileformat == ".sbml" or fileformat == ".xml":
@@ -20,19 +20,22 @@ def read_model(modelfile):
         print("Only SBML, JSON, and Matlab formats are supported for the models")
 
     try:
-        model.solver = 'cplex'
+        model.solver = solver
     except:
-        print("cplex is not available or not properly installed")
+        print("The solver: %s is not available or not properly installed" % solver)
 
     return model
 
 
-def check_model_options(model, timelimit=None, feasibility=None, mipgaptol=None, verbosity=None):
+def check_model_options(model, timelimit=None, feasibility=1e-6, mipgaptol=1e-3, verbosity=1):
     model.solver.configuration.timeout = timelimit
-    model.tolerance = feasibility if feasibility else 1e-6
-    model.solver.problem.parameters.mip.tolerances.mipgap.set(mipgaptol) if mipgaptol else None
-    model.solver.configuration.verbosity = verbosity if verbosity else 1
+    model.tolerance = feasibility
+    model.solver.configuration.verbosity = verbosity
     model.solver.configuration.presolve = True
+    if model.solver == 'cplex':
+        model.solver.problem.parameters.mip.tolerances.mipgap.set(mipgaptol)
+    else:
+        print('setting the MIP gap tolerance is only available with the cplex solver')
     return model
 
 
