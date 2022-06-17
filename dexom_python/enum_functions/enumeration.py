@@ -7,6 +7,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from cobra.io import load_json_model, load_matlab_model, read_sbml_model
 from dexom_python.result_functions import read_solution
+from dexom_python.imat_functions import create_new_partial_variables, create_full_variables
 from scipy.spatial.distance import pdist, squareform
 from dexom_python.model_functions import get_all_reactions_from_model
 
@@ -17,14 +18,42 @@ class EnumSolution(object):
 
     Parameters
     ----------
-    solutions: pandas dataframe containing flux values with reaction ids as index
-    binary: list containing reaction activity (0 for inactive, 1 for active)
-    objective_value: objective value returned by the solver at the end of the optimization
+    solutions: list
+        list of pandas dataframes containing flux values with reaction ids as index
+    binary: list
+        list containing binary arrays of reaction activity (0 for inactive, 1 for active)
+    objective_value: float
+        objective value returned by the solver at the end of the optimization
     """
     def __init__(self, solutions, binary, objective_value):
+        """
+
+        Parameters
+        ----------
+        solutions: list
+            list of pandas dataframes containing flux values with reaction ids as index
+        binary: list
+            list containing binary arrays of reaction activity (0 for inactive, 1 for active)
+        objective_value: float
+            objective value returned by the solver at the end of the optimization
+        """
         self.solutions = solutions
         self.binary = binary
         self.objective_value = objective_value
+
+
+def create_enum_variables(model, reaction_weights, eps=1e-2, thr=1e-5, full=False):
+    for rid in reaction_weights.keys():
+        if reaction_weights[rid] == 0:
+            pass
+        elif full and "x_"+rid not in model.solver.variables:
+            model = create_full_variables(model=model, reaction_weights=reaction_weights, epsilon=eps, threshold=thr)
+            break
+        elif not full and "rh_"+rid+"_pos" not in model.solver.variables and "rl_"+rid not in model.solver.variables:
+            model = create_new_partial_variables(model=model, reaction_weights=reaction_weights, epsilon=eps,
+                                                 threshold=thr)  # uses new variable implementation
+            break
+    return model
 
 
 def get_recent_solution_and_iteration(dirpath, startsol_num):
@@ -50,7 +79,7 @@ def write_rxn_enum_script(directory, modelfile, weightfile, reactionlist, imatso
             f.write('cd /home/%s/work/dexom_py\nmodule purge\nmodule load system/Python-3.7.4\nsource env/bin/'
                     'activate\nexport PYTHONPATH=${PYTHONPATH}:"/home/%s/work/CPLEX_Studio1210/cplex/python/3.7'
                     '/x86-64_linux"\n' % (username, username))
-            f.write('python dexom_python/enum_functions/rxn_enum.py -o %s/rxn_enum_%i --range %i_%i -m %s -r %s -l %s '
+            f.write('python dexom_python/enum_functions/rxn_enum_functions.py -o %s/rxn_enum_%i --range %i_%i -m %s -r %s -l %s '
                     '-p %s -t 6000 --save -e %s --threshold %s --tol %s\n' % (directory, i, i*iters, i*iters+iters,
                     modelfile, weightfile, reactionlist, imatsol, eps, thr, tol))
     with open(directory+"/rxn_runfiles.sh", "w+") as f:
@@ -70,7 +99,7 @@ def write_batch_script_divenum(directory, username, modelfile, weightfile, rxnso
                     'activate\nexport PYTHONPATH=${PYTHONPATH}:"/home/%s/save/CPLEX_Studio1210/cplex/python/3.7'
                     '/x86-64_linux"\n' % (username, username))
             a = (1-1/(filenums*2*(iters/10)))**i
-            f.write('python dexom_python/enum_functions/diversity_enum.py -o %sdiv_enum_%i -m %s -r %s -p '
+            f.write('python dexom_python/enum_functions/diversity_enum_functions.py -o %sdiv_enum_%i -m %s -r %s -p '
                     '%s%s_solution_%i.csv -a %.5f -i %i --obj_tol %.4f -e %s --threshold %s --tol %s -t %i'
                     % (directory, i, modelfile, weightfile, directory, rxnsols, i, a, iters, objtol, eps, thr, tol, t))
     with open(directory+"runfiles.sh", "w+") as f:
@@ -89,10 +118,10 @@ def write_batch_script1(directory, username, modelfile, weightfile, reactionlist
             f.write('cd /home/%s/work/dexom-python\nmodule purge\nmodule load system/Python-3.7.4\nsource env/bin/'
                     'activate\nexport PYTHONPATH=${PYTHONPATH}:"/home/%s/save/CPLEX_Studio1210/cplex/python/3.7'
                     '/x86-64_linux"\n' % (username, username))
-            f.write('python dexom_python/enum_functions/rxn_enum.py -o %srxn_enum_%i --range %i_%i -m %s -r %s -l %s -p %s '
+            f.write('python dexom_python/enum_functions/rxn_enum_functions.py -o %srxn_enum_%i --range %i_%i -m %s -r %s -l %s -p %s '
                     '-t 600 --save\n' % (directory, i, i*5, i*5+5, modelfile, weightfile, reactionlist, imatsol))
             a = (1-1/(filenums*2*(iters/10)))**i
-            f.write('python dexom_python/enum_functions/diversity_enum.py -o %sdiv_enum_%i -m %s -r %s -p '
+            f.write('python dexom_python/enum_functions/diversity_enum_functions.py -o %sdiv_enum_%i -m %s -r %s -p '
                     '%srxn_enum_%i_solution_0.csv -a %.5f -i %i --obj_tol %.4f'
                     % (directory, i, modelfile, weightfile, directory, i, a, iters, objtol))
     with open(directory+"runfiles.sh", "w+") as f:
@@ -117,7 +146,7 @@ def write_batch_script2(filenums):
                     'activate\nexport PYTHONPATH=${PYTHONPATH}:"/home/mstingl/work/CPLEX_Studio1210/cplex/python/3.7'
                     '/x86-64_linux"\n')
             sol = str(paths[i]).replace("\\", "/")
-            f.write('python dexom_python/enum_functions/diversity_enum.py -o parallel_approach2/div_enum_%i_0 -m '
+            f.write('python dexom_python/enum_functions/diversity_enum_functions.py -o parallel_approach2/div_enum_%i_0 -m '
                     'min_iMM1865/min_iMM1865.xml -r min_iMM1865/p53_deseq2_cutoff_padj_1e-6.csv -p %s -i 1 -a 0.99 '
                     '--save --full' % (i, sol))
     with open("parallel_approach2/dexomstart.sh", "w+") as f:
@@ -126,7 +155,7 @@ def write_batch_script2(filenums):
         f.write('cd /home/mstingl/work/dexom_py\nmodule purge\nmodule load system/Python-3.7.4\nsource env/bin/'
                 'activate\nexport PYTHONPATH=${PYTHONPATH}:"/home/mstingl/work/CPLEX_Studio1210/cplex/python/3.7'
                 '/x86-64_linux"\n')
-        f.write('python dexom_python/enum_functions/diversity_enum.py -o parallel_approach2/div_enum -m '
+        f.write('python dexom_python/enum_functions/diversity_enum_functions.py -o parallel_approach2/div_enum -m '
                 'min_iMM1865/min_iMM1865.xml -r min_iMM1865/p53_deseq2_cutoff_padj_1e-6.csv -p parallel_approach2 '
                 '-i 1 -a 0.99 -s 100 --save --full')
     with open("parallel_approach2/rundexoms.sh", "w+") as f:

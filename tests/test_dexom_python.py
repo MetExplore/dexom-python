@@ -1,11 +1,13 @@
-
+import pandas as pd
 import pytest
 import pathlib
 import cobra
 import numpy as np
 import dexom_python.model_functions as mf
-import dexom_python.imat as im
+import dexom_python.gpr_rules as gr
+import dexom_python.imat_functions as im
 import dexom_python.result_functions as rf
+import dexom_python.enum_functions as enum
 
 
 @pytest.fixture()
@@ -21,8 +23,17 @@ def reaction_weights():
 
 
 @pytest.fixture()
+def gene_weights():
+    genes = pd.read_csv(str(pathlib.Path(__file__).parent.joinpath("model", "example_r13m10_expression.csv")))
+    genes.index = genes.pop("ID")
+    return gr.expression2qualitative(genes, save=False)
+
+
+@pytest.fixture()
 def imatsol(model, reaction_weights):
-    return im.imat(model, reaction_weights, epsilon=1, threshold=1e-3)
+    file = str(pathlib.Path(__file__).parent.joinpath("model", "example_r13m10_imatsolution.csv"))
+    solution, binary = rf.read_solution(file)
+    return solution
 
 
 # Testing model_functions
@@ -46,7 +57,7 @@ def test_get_all_reactions_from_model(model):
 
 def test_get_subsystems_from_model(model):
     rxn_sub, sublist = mf.get_subsystems_from_model(model, save=False)
-    assert len(rxn_sub)==13 and len(sublist)==0
+    assert len(rxn_sub) == 13 and len(sublist) == 0
 
 
 def test_save_reaction_weights(model):
@@ -66,7 +77,20 @@ def test_save_reaction_weights(model):
 
 
 def test_load_reaction_weights(model, reaction_weights):
-    assert sum([r.id in reaction_weights.keys() for r in model.reactions])==13
+    assert sum([r.id in reaction_weights.keys() for r in model.reactions]) == 13
+
+
+# Testing apply_gpr
+
+
+def test_expression2qualitative(gene_weights):
+    assert False not in (gene_weights.value_counts().sort_values().values == (5, 5, 10))
+
+
+def test_apply_gpr(model, gene_weights, reaction_weights):
+    weights = pd.Series(gene_weights["expr"].values, index=gene_weights.index).to_dict()
+    test_wei = gr.apply_gpr(model, weights, "test", save=False)
+    assert test_wei == reaction_weights
 
 
 # Testing imat
@@ -87,8 +111,9 @@ def test_create_full_variables(model, reaction_weights):
     assert len(model.variables) == 65 and len(model.constraints) == 75
 
 
-def test_imat(imatsol):
-    assert np.isclose(imatsol.objective_value, 4.)
+def test_imat(model, reaction_weights):
+    solution = im.imat(model, reaction_weights, epsilon=1, threshold=1e-3)
+    assert np.isclose(solution.objective_value, 4.)
 
 
 def test_imat_noweights(model):
@@ -111,13 +136,57 @@ def test_imat_noflux(model):
 # Testing result_functions
 
 
+def test_read_solution(imatsol):
+    assert np.isclose(imatsol.objective_value, 4.) and len(imatsol.fluxes) == 13
+
+
 def test_write_solution(model, imatsol):
     file = str(pathlib.Path(__file__).parent.joinpath("model", "example_r13m10_imatsolution.csv"))
     solution, binary = rf.write_solution(model, imatsol, threshold=1e-3, filename=file)
     assert len(binary) == len(solution.fluxes)
 
 
-def test_read_solution(model):
-    file = str(pathlib.Path(__file__).parent.joinpath("model", "example_r13m10_imatsolution.csv"))
-    solution, binary = rf.read_solution(file)
-    assert len(binary) == len(solution.fluxes)
+# Testing enumeration functions
+
+
+def test_rxn_enum(model, reaction_weights, imatsol):
+    rxn_sol = enum.rxn_enum(model=model, reaction_weights=reaction_weights, prev_sol=imatsol)
+    assert len(rxn_sol.all_solutions) == 9 and len(rxn_sol.all_binary) == 9
+
+
+def test_icut_partial(model, reaction_weights, imatsol):
+    icut_sol = enum.icut(model=model, reaction_weights=reaction_weights, prev_sol=imatsol, maxiter=10, full=False)
+    assert np.isclose(icut_sol.objective_value, 4.) and len(icut_sol.solutions) == 3
+
+
+def test_icut_full(model, reaction_weights, imatsol):
+    icut_sol = enum.icut(model=model, reaction_weights=reaction_weights, prev_sol=imatsol, maxiter=10, full=True)
+    assert np.isclose(icut_sol.objective_value, 4.) and len(icut_sol.solutions) == 11
+
+
+def test_maxdist_partial(model, reaction_weights, imatsol):
+    maxdist_sol = enum.maxdist(model=model, reaction_weights=reaction_weights, prev_sol=imatsol, maxiter=4, full=False,)
+    assert np.isclose(maxdist_sol.objective_value, 4.) and len(maxdist_sol.solutions) == 3
+
+
+def test_maxdist_full(model, reaction_weights, imatsol):
+    maxdist_sol = enum.maxdist(model=model, reaction_weights=reaction_weights, prev_sol=imatsol, maxiter=4, full=True,)
+    assert np.isclose(maxdist_sol.objective_value, 4.) and len(maxdist_sol.solutions) == 3
+
+
+def test_diversity_enum_partial(model, reaction_weights, imatsol):
+    div_enum_sol, div_enum_res = enum.diversity_enum(model=model, reaction_weights=reaction_weights, prev_sol=imatsol,
+                                                     maxiter=4, full=False)
+    assert np.isclose(div_enum_sol.objective_value, 4.) and len(div_enum_sol.solutions) == 3
+
+
+def test_diversity_enum_full(model, reaction_weights, imatsol):
+    div_enum_sol, div_enum_res = enum.diversity_enum(model=model, reaction_weights=reaction_weights, prev_sol=imatsol,
+                                                     maxiter=4, full=True)
+    assert np.isclose(div_enum_sol.objective_value, 4.) and len(div_enum_sol.solutions) == 3
+
+
+def test_plot_pca():
+    file = str(pathlib.Path(__file__).parent.joinpath("model", "example_r13m10_rxnenum_solutions.csv"))
+    pca = rf.plot_pca(file, save=False)
+    assert np.shape(pca.components_) == (2, 13)

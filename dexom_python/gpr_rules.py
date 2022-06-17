@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 from symengine import sympify, Add, Mul, Max, Min
 from dexom_python.model_functions import read_model, save_reaction_weights
+pd.options.mode.chained_assignment = None
 
 
 def replace_MulMax_AddMin(expression):
@@ -20,17 +21,18 @@ def replace_MulMax_AddMin(expression):
             return expression.func(*replaced_args)
 
 
-def expression2qualitative(expression_file, column_idx=-1, percentage=25, method="keep", save=True, outpath="geneweights"):
+def expression2qualitative(genes, column_list=[], proportion=0.25, method="keep", save=True,
+                           outpath="geneweights"):
     """
 
     Parameters
     ----------
-    expression_file: str
-        path to file containing gene IDs in the first column and gene expression values in a later column
-    column_idx: int
-        column indexes containing gene expression values to be transformed. If -1, all columns will be transformed
-    percentage: float
-        percentage of genes to be used for determining high/low gene expression
+    expression: pandas.DataFrame
+        dataframe with gene IDs in the index and gene expression values in a later column
+    column_idx: list
+        column indexes containing gene expression values to be transformed. If empty, all columns will be transformed
+    proportion: float
+        proportion of genes to be used for determining high/low gene expression
     method: str
         one of "max", "mean" or "keep". chooses how to deal with genes containing multiple conflicting expression values
     save: bool
@@ -40,33 +42,30 @@ def expression2qualitative(expression_file, column_idx=-1, percentage=25, method
 
     Returns
     -------
-
+    gene_weights: a pandas DataFrame containing qualitative gene weights
+    (-1 for low expression, 1 for high expression, 0 for in-between)
     """
 
-    df = pd.read_csv(expression_file, index_col=0)
+    if not column_list:
+        column_list = list(genes.columns)
 
-    if column_idx == -1:
-        column_idx = list(range(len(df.columns)))
-    elif type(column_idx) == int:
-        column_idx = list(range(column_idx))
-
-    cutoff = 1/(percentage/100)
-    colnames = df.columns[column_idx]
+    cutoff = 1/proportion
+    colnames = genes[column_list]
     for col in colnames:
         if method == "max":
-            for x in set(df.index):
-                df[col][x] = df[col][x].max()
+            for x in set(genes.index):
+                genes[col][x] = genes[col][x].max()
         elif method == "mean":
-            for x in set(df.index):
-                df[col][x] = df[col][x].mean()
+            for x in set(genes.index):
+                genes[col][x] = genes[col][x].mean()
 
-        df.sort_values(col, inplace=True)
-        df[col].iloc[:int(len(df)//cutoff)+1] = -1.
-        df[col].iloc[int(len(df)//cutoff)+1:int(len(df)*(cutoff-1)//cutoff)] = 0.
-        df[col].iloc[int(len(df) * (cutoff-1) // cutoff):] = 1.
+        genes.sort_values(col, inplace=True)
+        genes[col].iloc[:int(len(genes)//cutoff)] = -1.
+        genes[col].iloc[int(len(genes)//cutoff):int(len(genes)*(cutoff-1)//cutoff)] = 0.
+        genes[col].iloc[int(len(genes) * (cutoff-1) // cutoff):] = 1.
     if save:
-        df.to_csv(outpath+".csv")
-    return df
+        genes.to_csv(outpath+".csv")
+    return genes
 
 
 def prepare_expr_split_gen_list(rxn, modelname):
@@ -104,6 +103,9 @@ def prepare_expr_split_gen_list(rxn, modelname):
         expr_split = rxn.gene_reaction_rule.replace("(", "( ").replace(")", " )").split()
         expr_split = [re.sub(':|\.|-', '_', s) for s in expr_split]
         gen_list = set([re.sub(':|\.|-', '_', g.id) for g in rxn.genes])
+    elif modelname == "test":
+        expr_split = [rxn.gene_reaction_rule]
+        gen_list = set([g.id for g in rxn.genes])
     else:
         print("Modelname not found")
         expr_split = None
@@ -135,7 +137,7 @@ def apply_gpr(model, gene_weights, modelname, save=True, filename="reaction_weig
     for rxn in model.reactions:
         if len(rxn.genes) > 0:
             expr_split, gen_list = prepare_expr_split_gen_list(rxn, modelname)
-            new_weights = {g: gene_weights.get(g, 0) for g in gen_list}
+            new_weights = {g: float(gene_weights.get(g, 0)) for g in gen_list}
             negweights = []
             for g, v in new_weights.items():
                 if v < 0:
@@ -174,11 +176,11 @@ if __name__ == "__main__":
     model = read_model(args.model)
     model_list = ["human1", "recon1", "recon2", "iMM1865", "zebrafish1"]
 
-    genes = pd.read_csv(args.gene_file)
+    genes = pd.read_csv(args.gene_file).set_index(args.gene_ID)
     if args.convert:
-        genes = expression2qualitative(args.gene_file, percentage=args.threshold*100,
+        genes = expression2qualitative(genes, column_list=[args.gene_score], proportion=args.threshold,
                                        outpath=args.output+"_qual_geneweights")
-    gene_weights = pd.Series(genes[args.gene_score].values, index=genes[args.gene_ID])
+    gene_weights = pd.Series(genes[args.gene_score].values, index=genes.index)
 
     # current behavior: all genes with several different weights are removed
     for x in set(gene_weights.index):

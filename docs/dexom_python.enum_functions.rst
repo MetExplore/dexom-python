@@ -1,10 +1,10 @@
-dexom\_python.enum\_functions package
-=====================================
+dexom\_python.enum\_functions subpackage
+========================================
 
 Submodules
 ----------
 
-dexom\_python.enum\_functions.diversity\_enum module
+enum\_functions.diversity\_enum module
 ----------------------------------------------------
 
 .. automodule:: dexom_python.enum_functions.diversity_enum
@@ -12,7 +12,7 @@ dexom\_python.enum\_functions.diversity\_enum module
    :undoc-members:
    :show-inheritance:
 
-dexom\_python.enum\_functions.enumeration module
+enum\_functions.enumeration module
 ------------------------------------------------
 
 .. automodule:: dexom_python.enum_functions.enumeration
@@ -20,7 +20,7 @@ dexom\_python.enum\_functions.enumeration module
    :undoc-members:
    :show-inheritance:
 
-dexom\_python.enum\_functions.icut module
+enum\_functions.icut module
 -----------------------------------------
 
 .. automodule:: dexom_python.enum_functions.icut
@@ -28,7 +28,7 @@ dexom\_python.enum\_functions.icut module
    :undoc-members:
    :show-inheritance:
 
-dexom\_python.enum\_functions.maxdist module
+enum\_functions.maxdist module
 --------------------------------------------
 
 .. automodule:: dexom_python.enum_functions.maxdist
@@ -36,7 +36,7 @@ dexom\_python.enum\_functions.maxdist module
    :undoc-members:
    :show-inheritance:
 
-dexom\_python.enum\_functions.rxn\_enum module
+enum\_functions.rxn\_enum module
 ----------------------------------------------
 
 .. automodule:: dexom_python.enum_functions.rxn_enum

@@ -1,9 +1,9 @@
 import pandas as pd
 from dexom_python.model_functions import read_model, load_reaction_weights, check_model_options
 from dexom_python.result_functions import write_solution
-from dexom_python.imat import imat
-from dexom_python.enum_functions.rxn_enum import rxn_enum
-from dexom_python.enum_functions.diversity_enum import diversity_enum
+from dexom_python.imat_functions import imat
+from dexom_python.enum_functions.rxn_enum_functions import rxn_enum
+from dexom_python.enum_functions.diversity_enum_functions import diversity_enum
 
 
 if __name__ == '__main__':
