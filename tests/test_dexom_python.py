@@ -93,6 +93,19 @@ def test_apply_gpr(model, gene_weights, reaction_weights):
     assert test_wei == reaction_weights
 
 
+# Testing apply_gpr
+
+
+def test_expression2qualitative(gene_weights):
+    assert False not in (gene_weights.value_counts().sort_values().values == (5, 5, 10))
+
+
+def test_apply_gpr(model, gene_weights, reaction_weights):
+    weights = pd.Series(gene_weights["expr"].values, index=gene_weights.index).to_dict()
+    test_wei = gr.apply_gpr(model, weights, "test", save=False)
+    assert test_wei==reaction_weights
+
+
 # Testing imat
 
 
