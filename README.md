@@ -18,7 +18,8 @@ API documentation is available here: https://dexom-python.readthedocs.io/en/late
  - after logging in, you can access the download for "ILOG CPLEX Optimization Studio"
  - download version 12.10 or higher of the appropriate installer for your operating system
  - install the solver
- - update the PYTHONPATH environment variable by adding the directory containing the `setup.py` file appropriate for you OS and python version
+ - update the PYTHONPATH environment variable by adding the directory containing the `setup.py` file appropriate for your OS and python version  
+alternatively, run `python "C:\Program Files\IBM\ILOG\CPLEX_Studio1210\python\setup.py" install`
 
 ## Functions
 

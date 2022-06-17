@@ -4,15 +4,15 @@ import six
 import time
 import numpy as np
 import pandas as pd
-from dexom_python.imat import imat, create_partial_variables, create_full_variables, create_new_partial_variables
+from dexom_python.imat_functions import imat
 from dexom_python.result_functions import read_solution, write_solution
 from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options
-from dexom_python.enum_functions.enumeration import EnumSolution, get_recent_solution_and_iteration
-from dexom_python.enum_functions.icut import create_icut_constraint
-from dexom_python.enum_functions.maxdist import create_maxdist_constraint, create_maxdist_objective
+from dexom_python.enum_functions.enumeration import EnumSolution, get_recent_solution_and_iteration, create_enum_variables
+from dexom_python.enum_functions.icut_functions import create_icut_constraint
+from dexom_python.enum_functions.maxdist_functions import create_maxdist_constraint, create_maxdist_objective
 
 
-def diversity_enum(model, reaction_weights, prev_sol, eps=1e-3, thr=1e-5, obj_tol=1e-3, maxiter=10, dist_anneal=0.995,
+def diversity_enum(model, reaction_weights, prev_sol=None, eps=1e-3, thr=1e-5, obj_tol=1e-3, maxiter=10, dist_anneal=0.995,
                    out_path="enum_dexom", icut=True, full=False, save=False):
     """
     diversity-based enumeration
@@ -33,7 +33,7 @@ def diversity_enum(model, reaction_weights, prev_sol, eps=1e-3, thr=1e-5, obj_to
     dist_anneal: float
         parameter which influences the probability of selecting reactions
     out_path: str
-        path to which the results are saved
+        path to which the solutions are saved if save==True
     icut: bool
         if True, icut constraints are applied
     full: bool
@@ -45,6 +45,10 @@ def diversity_enum(model, reaction_weights, prev_sol, eps=1e-3, thr=1e-5, obj_to
     -------
     solution: an EnumSolution object
     """
+    if not prev_sol:
+        prev_sol = imat(model, reaction_weights, epsilon=eps, threshold=thr, full=full)
+    else:
+        model = create_enum_variables(model=model, reaction_weights=reaction_weights, eps=eps, thr=thr, full=full)
     tol = model.solver.configuration.tolerances.feasibility
     times = []
     selected_recs = []
@@ -52,17 +56,6 @@ def diversity_enum(model, reaction_weights, prev_sol, eps=1e-3, thr=1e-5, obj_to
     all_solutions = [prev_sol]
     all_binary = [prev_sol_bin]
     icut_constraints = []
-
-    for rid in reaction_weights.keys():
-        if reaction_weights[rid] == 0:
-            pass
-        elif full and "x_"+rid not in model.solver.variables:
-            model = create_full_variables(model=model, reaction_weights=reaction_weights, epsilon=eps, threshold=thr)
-            break
-        elif not full and "rh_"+rid+"_pos" not in model.solver.variables and "rl_"+rid not in model.solver.variables:
-            model = create_new_partial_variables(model=model, reaction_weights=reaction_weights, epsilon=eps,
-                                                 threshold=thr)  # uses new variable implementation
-            break
 
     # preserve the optimality of the solution
     opt_const = create_maxdist_constraint(model, reaction_weights, prev_sol, obj_tol, "dexom_optimality", full=full)
@@ -118,11 +111,8 @@ def diversity_enum(model, reaction_weights, prev_sol, eps=1e-3, thr=1e-5, obj_to
     if save:
         df.to_csv(out_path+time.strftime("%Y%m%d-%H%M%S")+"_results.csv")
         sol.to_csv(out_path+time.strftime("%Y%m%d-%H%M%S")+"_solutions.csv")
-    else:
-        df.to_csv(out_path+"_results.csv")
-        sol.to_csv(out_path+"_solutions.csv")
 
-    return solution
+    return solution, df
 
 
 if __name__ == "__main__":
@@ -159,11 +149,11 @@ if __name__ == "__main__":
     a = args.dist_anneal
     if "." in args.prev_sol:
         prev_sol, prev_bin = read_solution(args.prev_sol, model, reaction_weights)
-        model = create_new_partial_variables(model, reaction_weights, epsilon=args.epsilon, threshold=args.threshold)
+        model = create_enum_variables(model, reaction_weights, eps=args.epsilon, thr=args.threshold, full=args.full)
     elif args.prev_sol:
         prev_sol, i = get_recent_solution_and_iteration(args.prev_sol, args.startsol_num)
         a = a ** i
-        model = create_new_partial_variables(model, reaction_weights, epsilon=args.epsilon, threshold=args.threshold)
+        model = create_enum_variables(model, reaction_weights, eps=args.epsilon, thr=args.threshold, full=args.full)
     else:
         prev_sol = imat(model, reaction_weights, epsilon=args.epsilon, threshold=args.threshold)
 
@@ -171,6 +161,9 @@ if __name__ == "__main__":
     save = True if args.save else False
     full = True if args.full else False
 
-    dexom_sol = diversity_enum(model=model, reaction_weights=reaction_weights, prev_sol=prev_sol, thr=args.threshold,
-                               maxiter=args.maxiter, obj_tol=args.obj_tol, dist_anneal=a, icut=icut,
-                               out_path=args.output, full=args.full, save=save)
+    dex_sol, dex_res = diversity_enum(model=model, reaction_weights=reaction_weights, prev_sol=prev_sol,
+                                      thr=args.threshold, maxiter=args.maxiter, obj_tol=args.obj_tol, dist_anneal=a,
+                                      icut=icut, full=args.full, save=save)
+
+    dex_res.to_csv(args.output + "_results.csv")
+    dex_sol.to_csv(args.output + "_solutions.csv")

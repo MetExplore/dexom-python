@@ -2,9 +2,10 @@
 import argparse
 import pandas as pd
 import numpy as np
-from dexom_python.imat import imat, create_new_partial_variables, create_full_variables
+from dexom_python.imat_functions import imat
 from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options
 from dexom_python.result_functions import read_solution, write_solution
+from dexom_python.enum_functions.enumeration import create_enum_variables
 
 
 class RxnEnumSolution(object):
@@ -18,7 +19,7 @@ class RxnEnumSolution(object):
         self.unique_reactions = unique_reactions
 
 
-def rxn_enum(model, reaction_weights, rxn_list, prev_sol, eps=1., thr=1e-1, obj_tol=1e-2):
+def rxn_enum(model, reaction_weights, prev_sol, rxn_list=[], eps=1., thr=1e-1, obj_tol=1e-2):
     """
     Reaction enumeration method
 
@@ -57,7 +58,8 @@ def rxn_enum(model, reaction_weights, rxn_list, prev_sol, eps=1., thr=1e-1, obj_
     if not rxn_list:
         rxns = list(model.reactions)
         rxn_list = [r.id for r in rxns]
-    for idx, rid in enumerate(rxn_list):
+    for rid in rxn_list:
+        idx = np.where(prev_sol.fluxes.index == rid)[0][0]
         with model as model_temp:
             if rid in model.reactions:
                 rxn = model_temp.reactions.get_by_id(rid)
@@ -76,7 +78,7 @@ def rxn_enum(model, reaction_weights, rxn_list, prev_sol, eps=1., thr=1e-1, obj_
                             if temp_sol.objective_value >= optimal_objective_value:
                                 all_solutions.append(temp_sol)
                                 all_solutions_binary.append(temp_sol_bin)
-                                if temp_sol_bin not in unique_solutions_binary:
+                                if not np.any(np.all(temp_sol_bin == unique_solutions_binary, axis=1)):
                                     unique_solutions.append(temp_sol)
                                     unique_solutions_binary.append(temp_sol_bin)
                                     unique_reactions.append(rid+"_backwards")
@@ -98,7 +100,7 @@ def rxn_enum(model, reaction_weights, rxn_list, prev_sol, eps=1., thr=1e-1, obj_
                         all_solutions.append(temp_sol)
                         all_solutions_binary.append(temp_sol_bin)
                         all_reactions.append(rid)
-                        if temp_sol_bin not in unique_solutions_binary:
+                        if not np.any(np.all(temp_sol_bin == unique_solutions_binary, axis=1)):
                             unique_solutions.append(temp_sol)
                             unique_solutions_binary.append(temp_sol_bin)
                             unique_reactions.append(rid)
@@ -188,7 +190,7 @@ if __name__ == "__main__":
 
     if args.prev_sol:
         initial_solution, initial_binary = read_solution(args.prev_sol, model, reaction_weights)
-        model = create_new_partial_variables(model, reaction_weights, args.epsilon, args.threshold)
+        model = create_enum_variables(model, reaction_weights, eps=args.epsilon, thr=args.threshold, full=False)
     else:
         initial_solution = imat(model, reaction_weights, epsilon=args.epsilon, threshold=args.threshold)
 

@@ -133,7 +133,7 @@ def combine_solutions(sol_path):
 #     return problems
 
 
-def plot_pca(solution_path, rxn_enum_solutions=None, save_name=""):
+def plot_pca(solution_path, rxn_enum_solutions=None, save=True, save_name=""):
     """
     Plots a 2-dimensional PCA of enumeration solutions
 
@@ -143,11 +143,14 @@ def plot_pca(solution_path, rxn_enum_solutions=None, save_name=""):
         csv file of enumeration solutions
     rxn_enum_solutions: str
         csv file of enumeration solutions. If specified, will plot these solutions in a different color
+    save: bool
+        if True, the pca-plot will be saved
     save_name: str
         name of the file to save
 
-    Returns:
-        sklearn.decomposition.PCA
+    Returns
+    -------
+    pca: sklearn.decomposition.PCA
     """
     X = pd.read_csv(solution_path, index_col=0)
 
@@ -181,7 +184,8 @@ def plot_pca(solution_path, rxn_enum_solutions=None, save_name=""):
     plt.scatter(x, y, color="b", label="div-enum solutions")
     plt.scatter(x[0], y[0], color="r", label="iMAT solution")
     plt.legend(fontsize="large")
-    fig.savefig(save_name+"pca.png")
+    if save:
+        fig.savefig(save_name+"pca.png")
 
     return pca
 

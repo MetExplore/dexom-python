@@ -1,18 +1,10 @@
 dexom\_python package
 =====================
 
-Subpackages
------------
-
-.. toctree::
-   :maxdepth: 4
-
-   dexom_python.enum_functions
-
 Submodules
 ----------
 
-dexom\_python.dexom\_cluster\_results module
+dexom\_cluster\_results module
 --------------------------------------------
 
 .. automodule:: dexom_python.dexom_cluster_results
@@ -20,7 +12,7 @@ dexom\_python.dexom\_cluster\_results module
    :undoc-members:
    :show-inheritance:
 
-dexom\_python.gpr\_rules module
+gpr\_rules module
 -------------------------------
 
 .. automodule:: dexom_python.gpr_rules
@@ -28,7 +20,7 @@ dexom\_python.gpr\_rules module
    :undoc-members:
    :show-inheritance:
 
-dexom\_python.imat module
+imat module
 -------------------------
 
 .. automodule:: dexom_python.imat
@@ -36,7 +28,7 @@ dexom\_python.imat module
    :undoc-members:
    :show-inheritance:
 
-dexom\_python.main module
+main module
 -------------------------
 
 .. automodule:: dexom_python.main
@@ -44,7 +36,7 @@ dexom\_python.main module
    :undoc-members:
    :show-inheritance:
 
-dexom\_python.model\_functions module
+model\_functions module
 -------------------------------------
 
 .. automodule:: dexom_python.model_functions
@@ -52,7 +44,7 @@ dexom\_python.model\_functions module
    :undoc-members:
    :show-inheritance:
 
-dexom\_python.pathway\_enrichment module
+pathway\_enrichment module
 ----------------------------------------
 
 .. automodule:: dexom_python.pathway_enrichment
