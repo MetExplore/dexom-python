@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 from cobra.io import load_json_model, read_sbml_model, load_matlab_model
+import optlang
 
 
 def read_model(modelfile, solver='cplex'):
@@ -32,7 +33,7 @@ def check_model_options(model, timelimit=None, feasibility=1e-6, mipgaptol=1e-3,
     model.tolerance = feasibility
     model.solver.configuration.verbosity = verbosity
     model.solver.configuration.presolve = True
-    if model.solver == 'cplex':
+    if type(model.solver) == optlang.cplex_interface.Model:
         model.solver.problem.parameters.mip.tolerances.mipgap.set(mipgaptol)
     else:
         print('setting the MIP gap tolerance is only available with the cplex solver')
@@ -45,7 +46,6 @@ def get_all_reactions_from_model(model, save=True, shuffle=True, out_path=""):
     Parameters
     ----------
     model: cobra.Model
-
     save: bool
         by default, exports the reactions in a csv format
     shuffle: bool
@@ -73,8 +73,8 @@ def get_subsystems_from_model(model, save=True, out_path=""):
     Parameters
     ----------
     model: cobra.Model
-
     save: bool
+    out_path: str
 
     Returns
     -------
@@ -112,7 +112,7 @@ def save_reaction_weights(reaction_weights, filename):
 
     Returns
     -------
-    reaction_weights: as a pandas.DataFrame
+    reaction_weights: pandas.DataFrame
     """
     df = pd.DataFrame(reaction_weights.items(), columns=["reactions", "weights"])
     df.to_csv(filename)

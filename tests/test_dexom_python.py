@@ -57,7 +57,7 @@ def test_get_all_reactions_from_model(model):
 
 def test_get_subsystems_from_model(model):
     rxn_sub, sublist = mf.get_subsystems_from_model(model, save=False)
-    assert len(rxn_sub)==13 and len(sublist)==0
+    assert len(rxn_sub) == 13 and len(sublist) == 0
 
 
 def test_save_reaction_weights(model):
@@ -77,7 +77,7 @@ def test_save_reaction_weights(model):
 
 
 def test_load_reaction_weights(model, reaction_weights):
-    assert sum([r.id in reaction_weights.keys() for r in model.reactions])==13
+    assert sum([r.id in reaction_weights.keys() for r in model.reactions]) == 13
 
 
 # Testing apply_gpr
@@ -90,7 +90,7 @@ def test_expression2qualitative(gene_weights):
 def test_apply_gpr(model, gene_weights, reaction_weights):
     weights = pd.Series(gene_weights["expr"].values, index=gene_weights.index).to_dict()
     test_wei = gr.apply_gpr(model, weights, "test", save=False)
-    assert test_wei==reaction_weights
+    assert test_wei == reaction_weights
 
 
 # Testing imat
@@ -184,3 +184,9 @@ def test_diversity_enum_full(model, reaction_weights, imatsol):
     div_enum_sol, div_enum_res = enum.diversity_enum(model=model, reaction_weights=reaction_weights, prev_sol=imatsol,
                                                      maxiter=4, full=True)
     assert np.isclose(div_enum_sol.objective_value, 4.) and len(div_enum_sol.solutions) == 3
+
+
+def test_plot_pca():
+    file = str(pathlib.Path(__file__).parent.joinpath("model", "example_r13m10_rxnenum_solutions.csv"))
+    pca = rf.plot_pca(file, save=False)
+    assert np.shape(pca.components_) == (2, 13)

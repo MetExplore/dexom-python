@@ -149,6 +149,10 @@ def imat(model, reaction_weights={}, epsilon=1e-2, threshold=1e-5, full=False):
         MIP Gap tolerance of the solver
     full: bool
         if True, apply constraints on all reactions. if False, only on reactions with non-zero weights
+
+    Returns
+    -------
+    solution: cobra.Solution
     """
     y_variables = list()
     x_variables = list()
