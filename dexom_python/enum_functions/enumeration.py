@@ -5,11 +5,10 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from cobra.io import load_json_model, load_matlab_model, read_sbml_model
 from dexom_python.result_functions import read_solution
 from dexom_python.imat_functions import create_new_partial_variables, create_full_variables
 from scipy.spatial.distance import pdist, squareform
-from dexom_python.model_functions import get_all_reactions_from_model
+from dexom_python.model_functions import read_model, get_all_reactions_from_model
 
 
 class EnumSolution(object):
@@ -65,39 +64,47 @@ def get_recent_solution_and_iteration(dirpath, startsol_num):
     return solution, iteration
 
 
-def write_rxn_enum_script(directory, modelfile, weightfile, reactionlist, imatsol, username, eps=1e-4, thr=1e-5,
+def write_rxn_enum_script(directory, modelfile, weightfile, imatsol=None, reactionlist=None, eps=1e-4, thr=1e-5,
                           tol=1e-8, iters=100, maxiters=1e10):
-    with open(reactionlist, "r") as file:
-        rxns = file.read().split("\n")
-    n_max = len(rxns) if len(rxns) < maxiters else maxiters
-    rxn_num = (n_max // iters) + 1
+    if reactionlist:
+        with open(reactionlist, "r") as file:
+            rxns = file.read().split("\n")
+        n_max = len(rxns) if len(rxns) < maxiters else maxiters
+        rxn_num = (n_max // iters) + 1
+        rstring = "-l "+ reactionlist
+    else:
+        rstring = ""
+    if imatsol:
+        istring = "-p "+imatsol
+    else:
+        istring = ""
     for i in range(rxn_num):
         with open(directory+"/rxn_file_" + str(i) + ".sh", "w+") as f:
             f.write('#!/bin/bash\n#SBATCH -p workq\n#SBATCH --mail-type=ALL\n#SBATCH --mem=64G\n#SBATCH -c 24\n'
-                    '#SBATCH -t 05:00:00\n#SBATCH -J rxn_%i\n#SBATCH -o rxnout_%i.out\n#SBATCH -e rxnerr_%i.out\n'
+                    '#SBATCH -t 10:00:00\n#SBATCH -J rxn_%i\n#SBATCH -o rxnout_%i.out\n#SBATCH -e rxnerr_%i.out\n'
                     % (i, i, i))
-            f.write('cd /home/%s/work/dexom_py\nmodule purge\nmodule load system/Python-3.7.4\nsource env/bin/'
+            f.write('cd $SLURM_SUBMIT_DIR\ncd ..\nmodule purge\nmodule load system/Python-3.7.4\nsource env/bin/'
                     'activate\nexport PYTHONPATH=${PYTHONPATH}:"/home/%s/work/CPLEX_Studio1210/cplex/python/3.7'
-                    '/x86-64_linux"\n' % (username, username))
-            f.write('python dexom_python/enum_functions/rxn_enum_functions.py -o %s/rxn_enum_%i --range %i_%i -m %s -r %s -l %s '
-                    '-p %s -t 6000 --save -e %s --threshold %s --tol %s\n' % (directory, i, i*iters, i*iters+iters,
-                    modelfile, weightfile, reactionlist, imatsol, eps, thr, tol))
+                    '/x86-64_linux"\n')
+            f.write('python dexom_python/enum_functions/rxn_enum_functions.py -o %s/rxn_enum_%i --range %i_%i -m %s -r %s %s '
+                    '%s -t 6000 --save -e %s --threshold %s --tol %s\n' % (directory, i, i*iters, i*iters+iters,
+                    modelfile, weightfile, rstring, istring, eps, thr, tol))
     with open(directory+"/rxn_runfiles.sh", "w+") as f:
         f.write('#!/bin/bash\n#SBATCH --mail-type=ALL\n#SBATCH -J runfiles\n#SBATCH -o runout.out\n#SBATCH '
                 '-e runerr.out\ncd $SLURM_SUBMIT_DIR\nfor i in {0..%i}\ndo\n    dos2unix file_"$i".sh\n    sbatch'
                 ' file_"$i".sh\ndone' % (rxn_num-1))
 
 
-def write_batch_script_divenum(directory, username, modelfile, weightfile, rxnsols, objtol, eps=1e-4, thr=1e-5,
+def write_batch_script_divenum(directory, modelfile, weightfile, rxnsols, objtol, eps=1e-4, thr=1e-5,
                                tol=1e-8, filenums=100, iters=100, t=6000):
     for i in range(filenums):
         with open(directory+"file_"+str(i)+".sh", "w+") as f:
             f.write('#!/bin/bash\n#SBATCH -p workq\n#SBATCH --mail-type=ALL\n#SBATCH --mem=64G\n#SBATCH -c 24\n'
                     '#SBATCH -t 05:00:00\n#SBATCH -J dexom1_%i\n#SBATCH -o dex1out%i.out\n#SBATCH -e dex1err%i.out\n'
                     % (i, i, i))
-            f.write('cd /home/%s/work/dexom-python\nmodule purge\nmodule load system/Python-3.7.4\nsource env/bin/'
+            f.write('cd $SLURM_SUBMIT_DIR\ncd ..\nmodule purge\nmodule load system/Python-3.7.4\nsource env/bin/'
                     'activate\nexport PYTHONPATH=${PYTHONPATH}:"/home/%s/save/CPLEX_Studio1210/cplex/python/3.7'
-                    '/x86-64_linux"\n' % (username, username))
+                    '/x86-64_linux"\n')
             a = (1-1/(filenums*2*(iters/10)))**i
             f.write('python dexom_python/enum_functions/diversity_enum_functions.py -o %sdiv_enum_%i -m %s -r %s -p '
                     '%s%s_solution_%i.csv -a %.5f -i %i --obj_tol %.4f -e %s --threshold %s --tol %s -t %i'
@@ -109,20 +116,28 @@ def write_batch_script_divenum(directory, username, modelfile, weightfile, rxnso
     return True
 
 
-def write_batch_script1(directory, username, modelfile, weightfile, reactionlist, imatsol, objtol, filenums=100, iters=100):
+def write_batch_script1(directory, modelfile, weightfile, cplexpath, reactionlist=None, imatsol=None, objtol=1e-2, filenums=100, iters=100):
+    if reactionlist:
+        rstring = "-l "+ reactionlist
+    else:
+        rstring = ""
+    if imatsol:
+        istring = "-p "+imatsol
+    else:
+        istring = ""
     for i in range(filenums):
         with open(directory+"file_"+str(i)+".sh", "w+") as f:
             f.write('#!/bin/bash\n#SBATCH -p workq\n#SBATCH --mail-type=ALL\n#SBATCH --mem=64G\n#SBATCH -c 24\n'
                     '#SBATCH -t 12:00:00\n#SBATCH -J dexom1_%i\n#SBATCH -o dex1out%i.out\n#SBATCH -e dex1err%i.out\n'
                     % (i, i, i))
-            f.write('cd /home/%s/work/dexom-python\nmodule purge\nmodule load system/Python-3.7.4\nsource env/bin/'
-                    'activate\nexport PYTHONPATH=${PYTHONPATH}:"/home/%s/save/CPLEX_Studio1210/cplex/python/3.7'
-                    '/x86-64_linux"\n' % (username, username))
-            f.write('python dexom_python/enum_functions/rxn_enum_functions.py -o %srxn_enum_%i --range %i_%i -m %s -r %s -l %s -p %s '
-                    '-t 600 --save\n' % (directory, i, i*5, i*5+5, modelfile, weightfile, reactionlist, imatsol))
+            f.write('cd $SLURM_SUBMIT_DIR\ncd ..\nmodule purge\nmodule load system/Python-3.7.4\nsource env/bin/'
+                    'activate\nexport PYTHONPATH=${PYTHONPATH}:"%s'
+                    '/x86-64_linux"\n' % cplexpath)
+            f.write('python dexom_python/enum_functions/rxn_enum_functions.py -o %srxn_enum_%i --range %i_%i -m %s -r %s %s %s '
+                    '-t 600 --save\n' % (directory, i, i*5, i*5+5, modelfile, weightfile, rstring, istring))
             a = (1-1/(filenums*2*(iters/10)))**i
             f.write('python dexom_python/enum_functions/diversity_enum_functions.py -o %sdiv_enum_%i -m %s -r %s -p '
-                    '%srxn_enum_%i_solution_0.csv -a %.5f -i %i --obj_tol %.4f'
+                    '%srxn_enum_%i_solution_1.csv -a %.5f -i %i --obj_tol %.4f'
                     % (directory, i, modelfile, weightfile, directory, i, a, iters, objtol))
     with open(directory+"runfiles.sh", "w+") as f:
         f.write('#!/bin/bash\n#SBATCH --mail-type=ALL\n#SBATCH -J runfiles\n#SBATCH -o runout.out\n#SBATCH '
@@ -133,7 +148,7 @@ def write_batch_script1(directory, username, modelfile, weightfile, reactionlist
 
 def write_batch_script2(filenums):
     """
-    Warning: this function has not been updated with recent changes to DEXOM
+    Warning: this function has not been updated with most recent changes to DEXOM
     """
     paths = sorted(list(Path("parallel_approach2/").glob("*solution_*.csv")), key=os.path.getctime)
     paths.reverse()
@@ -229,13 +244,15 @@ if __name__ == "__main__":
     description = "Writes batch scripts for launching DEXOM on a slurm cluster. Note that default parameters are used."
 
     parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument("-o", "--out_path", default="", help="Path to which the files are written")
-    parser.add_argument("-u", "--username", help="username on the slurm cluster")
+    parser.add_argument("-o", "--out_path", default="cluster/", help="Path to which the files are written. "
+                                                                     "Has to be a folder in this directory")
     parser.add_argument("-m", "--model", default=None, help="Metabolic model in sbml, json, or matlab format")
     parser.add_argument("-r", "--reaction_weights", default=None,
                         help="Reaction weights in csv format (first row: reaction names, second row: weights)")
-    parser.add_argument("-l", "--reaction_list", default=None, help="shuffled list of reactions in the model")
-    parser.add_argument("-p", "--prev_sol", help="starting solution [not optional here]")
+    parser.add_argument("-l", "--reaction_list", default=None, help="list of reactions in the model")
+    parser.add_argument("-p", "--prev_sol", default=None, help="starting solution")
+    parser.add_argument("-c", "--cplex_path", default="/home/mstingl/save/CPLEX_Studio1210/cplex/python/3.7/x86-64_linux",
+                        help="path to the cplex solver")
     parser.add_argument("--obj_tol", type=float, default=1e-2,
                         help="objective value tolerance, as a fraction of the original value")
     parser.add_argument("-n", "--filenums", type=int, default=100, help="number of parallel threads")
@@ -243,18 +260,12 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    if args.reaction_list:
-        reactionlist = args.reaction_list
+    if args.reactionlist:
+        rxnlist = args.reactionlist
     else:
-        fileformat = Path(args.model).suffix
-        if fileformat == ".sbml" or fileformat == ".xml":
-            model = read_sbml_model(args.model)
-        elif fileformat == '.json':
-            model = load_json_model(args.model)
-        elif fileformat == ".mat":
-            model = load_matlab_model(args.model)
-        else:
-            print("Only SBML, JSON, and Matlab formats are supported for the models")
-            model = None
+        model = read_model(args.model)
         get_all_reactions_from_model(model, save=True, shuffle=True, out_path=args.out_path)
-        reactionlist = args.out_path+model.id+"_reactions_shuffled.csv"
+        reactionlist = args.out_path + model.id + "_reactions_shuffled.csv"
+
+    write_batch_script1(args.out_path, args.model, args.reaction_weights, args.cplex_path, reactionlist,
+                        args.prev_sol, args.obj_tol, args.filenums, args.iterations)
