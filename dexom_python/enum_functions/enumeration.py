@@ -5,6 +5,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from cobra.io import load_json_model, load_matlab_model, read_sbml_model
 from dexom_python.result_functions import read_solution
 from dexom_python.imat_functions import create_new_partial_variables, create_full_variables
 from scipy.spatial.distance import pdist, squareform
