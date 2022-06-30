@@ -33,7 +33,7 @@ def check_model_options(model, timelimit=None, feasibility=1e-6, mipgaptol=1e-3,
     model.tolerance = feasibility
     model.solver.configuration.verbosity = verbosity
     model.solver.configuration.presolve = True
-    if type(model.solver) == optlang.cplex_interface.Model:
+    if hasattr(optlang, "cplex_interface"):
         model.solver.problem.parameters.mip.tolerances.mipgap.set(mipgaptol)
     else:
         print('setting the MIP gap tolerance is only available with the cplex solver')
@@ -46,6 +46,7 @@ def get_all_reactions_from_model(model, save=True, shuffle=True, out_path=""):
     Parameters
     ----------
     model: cobra.Model
+
     save: bool
         by default, exports the reactions in a csv format
     shuffle: bool

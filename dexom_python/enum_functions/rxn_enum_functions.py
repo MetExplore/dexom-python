@@ -176,17 +176,20 @@ if __name__ == "__main__":
     if args.reaction_list:
         df = pd.read_csv(args.reaction_list, header=None)
         reactions = [x for x in df.unstack().values]
-        rxn_range = args.range.split("_")
-        if rxn_range[0] == '':
-            start = 0
-        else:
-            start = int(rxn_range[0])
-        if rxn_range[1] == '':
-            rxn_list = reactions[start:]
-        elif int(rxn_range[1]) > len(reactions):
-            rxn_list = reactions[start:]
-        else:
-            rxn_list = reactions[start:int(rxn_range[1])]
+    else:
+        reactions = [r.id for r in model.reactions]
+
+    rxn_range = args.range.split("_")
+    if rxn_range[0] == '':
+        start = 0
+    else:
+        start = int(rxn_range[0])
+    if rxn_range[1] == '':
+        rxn_list = reactions[start:]
+    elif int(rxn_range[1]) > len(reactions):
+        rxn_list = reactions[start:]
+    else:
+        rxn_list = reactions[start:int(rxn_range[1])]
 
     if args.prev_sol:
         initial_solution, initial_binary = read_solution(args.prev_sol, model, reaction_weights)
@@ -201,5 +204,5 @@ if __name__ == "__main__":
     uniques.to_csv(args.output+"_solutions.csv")
 
     if args.save:
-        for i in range(len(solution.unique_solutions)):
+        for i in range(1, len(solution.unique_solutions)):
             write_solution(model, solution.unique_solutions[i], args.threshold, args.output+"_solution_"+str(i)+".csv")

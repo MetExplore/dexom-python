@@ -27,7 +27,7 @@ if __name__ == '__main__':
     write_solution(solution=imat_solution, threshold=thr, filename="toy_models/small4M_imatsol.csv")
 
     rxn_sol = rxn_enum(model=model, rxn_list=[], prev_sol=imat_solution, reaction_weights=reaction_weights, eps=eps,
-             thr=thr, obj_tol=obj_tol)
+                       thr=thr, obj_tol=obj_tol)
     pd.DataFrame(rxn_sol.unique_binary).to_csv("toy_models/small4M_rxnenum_solutions.csv")
 
     div_sol = diversity_enum(model=model, prev_sol=imat_solution, reaction_weights=reaction_weights, eps=eps, thr=thr,
