@@ -99,7 +99,7 @@ The toy_models folder contains some ready-to-use models and reaction weight file
 The `main.py` script contains a simple example of the DEXOM workflow using one of the toy models.
 
 ### Recon 2.2
-The recon2v2 folder contains the model and the differential gene expression data which was used to test this new implementation.  
+The example_data folder contains the model and the differential gene expression data which was used to test this new implementation.  
 In order to produce reaction weights, you can call the `gpr_rules` script from the command line.  
 This will create a file named "pval_0-01_reactionweights.csv" in the recon2v2 folder:  
 ```
@@ -120,7 +120,7 @@ python dexom_python/enum_functions/enumeration -m recon2v2/recon2v2_corrected.js
 Then, submit the job to the slurm cluster.  
 Note that if you created the files on a Windows pc, you must use the command `dos2unix runfiles.sh` before `sbatch runfiles.sh`:  
 ```
-cd recon2v2/
+cd example_data/
 sbatch runfiles.sh
 cd ..
 ```

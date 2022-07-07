@@ -48,32 +48,27 @@ def create_icut_constraint(model, reaction_weights, threshold, prev_sol, name, f
     return constraint
 
 
-def icut(model, prev_sol=None, reaction_weights=None, eps=1e-2, thr=1e-5, obj_tol=1e-3, maxiter=10, full=False):
+def icut(model, reaction_weights, prev_sol=None, eps=1e-2, thr=1e-5, obj_tol=1e-3, maxiter=10, full=False):
     """
     integer-cut method
 
     Parameters
     ----------
     model: cobrapy Model
-    prev_sol: imat Solution object
-        an imat solution used as a starting point
     reaction_weights: dict
         keys = reactions and values = weights
+    prev_sol: imat Solution object
+        an imat solution used as a starting point
     eps: float
         activation threshold in imat
     thr: float
         detection threshold of activated reactions
-    tlim: int
-        time limit for imat
-    tol: float
-        tolerance for imat
     obj_tol: float
         variance allowed in the objective_values of the solutions
     maxiter: foat
         maximum number of solutions to check for
     full: bool
         if True, carries out integer-cut on all reactions; if False, only on reactions with non-zero weights
-
     Returns
     -------
     solution: EnumSolution object

@@ -24,7 +24,9 @@ def diversity_enum(model, reaction_weights, prev_sol=None, eps=1e-3, thr=1e-5, o
         keys = reactions and values = weights
     prev_sol: Solution instance
         a previous imat solution
-    threshold: float
+    eps: float
+        activation threshold for highly expressed reactions
+    thr: float
         detection threshold of activated reactions
     obj_tol: float
         variance allowed in the objective_values of the solutions
@@ -40,7 +42,6 @@ def diversity_enum(model, reaction_weights, prev_sol=None, eps=1e-3, thr=1e-5, o
         if True, the full-DEXOM implementation is used
     save: bool
         if True, every individual solution is saved in the iMAT solution format
-
     Returns
     -------
     solution: an EnumSolution object

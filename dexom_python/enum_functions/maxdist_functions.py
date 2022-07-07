@@ -95,18 +95,14 @@ def maxdist(model, reaction_weights, prev_sol=None, eps=1e-3, thr=1e-5, obj_tol=
     Parameters
     ----------
     model: cobrapy Model
-    prev_sol: imat Solution object
-        an imat solution used as a starting point
     reaction_weights: dict
         keys = reactions and values = weights
+    prev_sol: imat Solution object
+        an imat solution used as a starting point
     eps: float
         activation threshold in imat
     thr: float
         detection threshold of activated reactions
-    tlim: int
-        time limit for imat
-    tol: float
-        tolerance for imat
     obj_tol: float
         variance allowed in the objective_values of the solutions
     maxiter: foat
@@ -120,7 +116,7 @@ def maxdist(model, reaction_weights, prev_sol=None, eps=1e-3, thr=1e-5, obj_tol=
 
     Returns
     -------
-
+    solution: EnumSolution object
     """
     if not prev_sol:
         prev_sol = imat(model, reaction_weights, epsilon=eps, threshold=thr, full=full)

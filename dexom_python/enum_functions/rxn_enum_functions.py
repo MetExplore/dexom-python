@@ -28,6 +28,8 @@ def rxn_enum(model, reaction_weights, prev_sol, rxn_list=[], eps=1., thr=1e-1, o
     model: cobrapy Model
     reaction_weights: dict
         keys = reactions and values = weights
+    prev_sol: imat Solution object
+        an imat solution used as a starting point
     eps: float
         activation threshold in imat
     thr: float
@@ -38,8 +40,6 @@ def rxn_enum(model, reaction_weights, prev_sol, rxn_list=[], eps=1., thr=1e-1, o
         tolerance for imat
     obj_tol: float
         variance allowed in the objective_values of the solutions
-    out_name: str
-        name of output files without format
     Returns
     -------
     solution: RxnEnumSolution object
@@ -186,7 +186,7 @@ if __name__ == "__main__":
         start = int(rxn_range[0])
     if rxn_range[1] == '':
         rxn_list = reactions[start:]
-    elif int(rxn_range[1]) > len(reactions):
+    elif int(rxn_range[1]) >= len(reactions):
         rxn_list = reactions[start:]
     else:
         rxn_list = reactions[start:int(rxn_range[1])]
