@@ -9,22 +9,20 @@ import optlang
 def read_model(modelfile, solver='cplex'):
     fileformat = Path(modelfile).suffix
     model = None
-    if fileformat == ".sbml" or fileformat == ".xml":
+    if fileformat == '.sbml' or fileformat == '.xml':
         model = read_sbml_model(modelfile)
     elif fileformat == '.json':
         model = load_json_model(modelfile)
-    elif fileformat == ".mat":
+    elif fileformat == '.mat':
         model = load_matlab_model(modelfile)
-    elif fileformat == "":
-        print("Wrong model path")
+    elif fileformat == '':
+        print('Wrong model path')
     else:
-        print("Only SBML, JSON, and Matlab formats are supported for the models")
-
+        print('Only SBML, JSON, and Matlab formats are supported for the models')
     try:
         model.solver = solver
     except:
-        print("The solver: %s is not available or not properly installed" % solver)
-
+        print('The solver: %s is not available or not properly installed' % solver)
     return model
 
 
@@ -33,14 +31,14 @@ def check_model_options(model, timelimit=None, feasibility=1e-6, mipgaptol=1e-3,
     model.tolerance = feasibility
     model.solver.configuration.verbosity = verbosity
     model.solver.configuration.presolve = True
-    if hasattr(optlang, "cplex_interface"):
+    if hasattr(optlang, 'cplex_interface'):
         model.solver.problem.parameters.mip.tolerances.mipgap.set(mipgaptol)
     else:
         print('setting the MIP gap tolerance is only available with the cplex solver')
     return model
 
 
-def get_all_reactions_from_model(model, save=True, shuffle=True, out_path=""):
+def get_all_reactions_from_model(model, save=True, shuffle=True, out_path=''):
     """
 
     Parameters
@@ -59,15 +57,15 @@ def get_all_reactions_from_model(model, save=True, shuffle=True, out_path=""):
     """
     rxn_list = [r.id for r in model.reactions]
     if save:
-        pd.Series(rxn_list).to_csv(out_path + model.id + "_reactions.csv", header=False, index=False)
+        pd.Series(rxn_list).to_csv(out_path + model.id + '_reactions.csv', header=False, index=False)
     if shuffle:
         np.random.shuffle(rxn_list)
         if save:
-            pd.Series(rxn_list).to_csv(out_path + model.id + "_reactions_shuffled.csv", header=False, index=False)
+            pd.Series(rxn_list).to_csv(out_path + model.id + '_reactions_shuffled.csv', header=False, index=False)
     return rxn_list
 
 
-def get_subsystems_from_model(model, save=True, out_path=""):
+def get_subsystems_from_model(model, save=True, out_path=''):
     """
     Creates a list of all subsystems of a model and their associated reactions
 
@@ -93,13 +91,13 @@ def get_subsystems_from_model(model, save=True, out_path=""):
         i += 1
         if rxn.subsystem not in sub_list:
             sub_list.append(rxn.subsystem)
-    if sub_list[-1] == "":
+    if sub_list[-1] == '':
         sub_list.pop()
-    rxn_sub = pd.DataFrame.from_dict(rxn_sub, orient="index", columns=["ID", "subsystem"])
+    rxn_sub = pd.DataFrame.from_dict(rxn_sub, orient='index', columns=['ID', 'subsystem'])
     if save:
-        rxn_sub.to_csv(out_path+model.id+"_reactions_subsystems.csv")
-        with open(out_path+model.id+"_subsystems_list.txt", "w+") as file:
-            file.write(";".join(sub_list))
+        rxn_sub.to_csv(out_path+model.id+'_reactions_subsystems.csv')
+        with open(out_path+model.id+'_subsystems_list.txt', 'w+') as file:
+            file.write(';'.join(sub_list))
     return rxn_sub, sub_list
 
 
@@ -115,13 +113,13 @@ def save_reaction_weights(reaction_weights, filename):
     -------
     reaction_weights: pandas.DataFrame
     """
-    df = pd.DataFrame(reaction_weights.items(), columns=["reactions", "weights"])
+    df = pd.DataFrame(reaction_weights.items(), columns=['reactions', 'weights'])
     df.to_csv(filename)
-    df.index = df["reactions"]
-    return df["weights"]
+    df.index = df['reactions']
+    return df['weights']
 
 
-def load_reaction_weights(filename, rxn_names="reactions", weight_names="weights"):
+def load_reaction_weights(filename, rxn_names='reactions', weight_names='weights'):
     """
     loads reaction weights from a .csv file
 

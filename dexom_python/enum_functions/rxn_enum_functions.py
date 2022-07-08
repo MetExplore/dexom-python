@@ -1,4 +1,3 @@
-
 import argparse
 import pandas as pd
 import numpy as np
@@ -81,10 +80,10 @@ def rxn_enum(model, reaction_weights, prev_sol, rxn_list=[], eps=1., thr=1e-1, o
                                 if not np.any(np.all(temp_sol_bin == unique_solutions_binary, axis=1)):
                                     unique_solutions.append(temp_sol)
                                     unique_solutions_binary.append(temp_sol_bin)
-                                    unique_reactions.append(rid+"_backwards")
+                                    unique_reactions.append(rid+'_backwards')
                         except:
-                            print("An error occurred with reaction %s_reverse. "
-                                  "Check feasibility of the model when this reaction is irreversible." % rid)
+                            print('An error occurred with reaction %s_reverse. '
+                                  'Check feasibility of the model when this reaction is irreversible.' % rid)
                         finally:
                             rxn.upper_bound = upper_bound_temp
                     # for all inactive fluxes, check activation in forwards direction
@@ -106,80 +105,56 @@ def rxn_enum(model, reaction_weights, prev_sol, rxn_list=[], eps=1., thr=1e-1, o
                             unique_reactions.append(rid)
                 except:
                     if prev_sol_bin[idx] == 1:
-                        print("An error occurred with reaction %s. "
-                              "Check feasibility of the model when this reaction is blocked" % rid)
+                        print('An error occurred with reaction %s. '
+                              'Check feasibility of the model when this reaction is blocked' % rid)
                     else:
-                        print("An error occurred with reaction %s. "
-                              "Check feasibility of the model when this reaction is irreversible" % rid)
+                        print('An error occurred with reaction %s. '
+                              'Check feasibility of the model when this reaction is irreversible' % rid)
 
     solution = RxnEnumSolution(all_solutions, unique_solutions, all_solutions_binary, unique_solutions_binary,
                                all_reactions, unique_reactions)
     return solution
 
 
-def rxn_enum_single_loop(model, reaction_weights, rec_id, new_rec_state, out_name, eps=1e-2, thr=1e-5):
-    with model as model_temp:
-        if rec_id not in model.reactions:
-            print("reaction not found in model")
-            return 0
-        rxn = model_temp.reactions.get_by_id(rec_id)
-        if int(new_rec_state) == 0:
-            rxn.bounds = (0., 0.)
-        elif int(new_rec_state) == 1:
-            rxn.lower_bound = thr
-        elif int(new_rec_state) == 2:
-            rxn.upper_bound = -thr
-        else:
-            print("new_rec_state has an incorrect value: %s" % str(new_rec_state))
-            return 0
-        try:
-            sol = imat(model_temp, reaction_weights, epsilon=eps, threshold=thr)
-        except:
-            print("This constraint renders the problem unfeasible")
-            return 0
-    write_solution(model, sol, thr, out_name)
-    return 1
-
-
-if __name__ == "__main__":
-    description = "Performs the reaction enumeration algorithm on a specified list of reactions"
+if __name__ == '__main__':
+    description = 'Performs the reaction enumeration algorithm on a specified list of reactions'
 
     parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument("-m", "--model", help="Metabolic model in sbml, matlab, or json format")
-    parser.add_argument("-l", "--reaction_list", default=None, help="csv list of reactions to enumerate - if empty, "
-                                                                    "will use all reactions in the model")
-    parser.add_argument("--range", default="_",
-                        help="range of reactions to use from the list, in the format 'int_int'")
-    parser.add_argument("-r", "--reaction_weights", default=None,
-                        help="Reaction weights in csv format (first row: reaction names, second row: weights)")
-    parser.add_argument("-p", "--prev_sol", default=None, help="initial imat solution in .txt format")
-    parser.add_argument("-e", "--epsilon", type=float, default=1e-2,
-                        help="Activation threshold for highly expressed reactions")
-    parser.add_argument("--threshold", type=float, default=1e-5, help="Activation threshold for all reactions")
-    parser.add_argument("-t", "--timelimit", type=int, default=None, help="Solver time limit")
-    parser.add_argument("--tol", type=float, default=1e-6, help="Solver feasibility tolerance")
-    parser.add_argument("--mipgap", type=float, default=1e-3, help="Solver MIP gap tolerance")
-    parser.add_argument("--obj_tol", type=float, default=1e-3,
-                        help="objective value tolerance, as a fraction of the original value")
-    parser.add_argument("-o", "--output", default="rxn_enum", help="Path of output files, without format")
-    parser.add_argument("--save", action="store_true", help="Use this flag to save each solution individually")
+    parser.add_argument('-m', '--model', help='Metabolic model in sbml, matlab, or json format')
+    parser.add_argument('-l', '--reaction_list', default=None, help='csv list of reactions to enumerate - if empty, '
+                                                                    'will use all reactions in the model')
+    parser.add_argument('--range', default='_',
+                        help='range of reactions to use from the list, in the format "integer_integer", 0-indexed')
+    parser.add_argument('-r', '--reaction_weights', default=None,
+                        help='Reaction weights in csv format (first row: reaction names, second row: weights)')
+    parser.add_argument('-p', '--prev_sol', default=None, help='initial imat solution in .txt format')
+    parser.add_argument('-e', '--epsilon', type=float, default=1e-2,
+                        help='Activation threshold for highly expressed reactions')
+    parser.add_argument('--threshold', type=float, default=1e-5, help='Activation threshold for all reactions')
+    parser.add_argument('-t', '--timelimit', type=int, default=None, help='Solver time limit')
+    parser.add_argument('--tol', type=float, default=1e-6, help='Solver feasibility tolerance')
+    parser.add_argument('--mipgap', type=float, default=1e-3, help='Solver MIP gap tolerance')
+    parser.add_argument('--obj_tol', type=float, default=1e-3,
+                        help='objective value tolerance, as a fraction of the original value')
+    parser.add_argument('-o', '--output', default='rxn_enum', help='Path of output files, without format')
+    parser.add_argument('--save', action='store_true', help='Use this flag to save each solution individually')
     args = parser.parse_args()
 
     model = read_model(args.model)
     check_model_options(model, timelimit=args.timelimit, feasibility=args.tol, mipgaptol=args.mipgap)
 
     reaction_weights = {}
-    if args.reaction_weights:
+    if args.reaction_weights is not None:
         reaction_weights = load_reaction_weights(args.reaction_weights)
 
     rxn_list = []
-    if args.reaction_list:
+    if args.reaction_list is not None:
         df = pd.read_csv(args.reaction_list, header=None)
         reactions = [x for x in df.unstack().values]
     else:
         reactions = [r.id for r in model.reactions]
 
-    rxn_range = args.range.split("_")
+    rxn_range = args.range.split('_')
     if rxn_range[0] == '':
         start = 0
     else:
@@ -191,7 +166,7 @@ if __name__ == "__main__":
     else:
         rxn_list = reactions[start:int(rxn_range[1])]
 
-    if args.prev_sol:
+    if args.prev_sol is not None:
         initial_solution, initial_binary = read_solution(args.prev_sol, model, reaction_weights)
         model = create_enum_variables(model, reaction_weights, eps=args.epsilon, thr=args.threshold, full=False)
     else:
@@ -201,8 +176,8 @@ if __name__ == "__main__":
                         eps=args.epsilon, thr=args.threshold, obj_tol=args.obj_tol)
 
     uniques = pd.DataFrame(solution.unique_binary)
-    uniques.to_csv(args.output+"_solutions.csv")
+    uniques.to_csv(args.output+'_solutions.csv')
 
     if args.save:
         for i in range(1, len(solution.unique_solutions)):
-            write_solution(model, solution.unique_solutions[i], args.threshold, args.output+"_solution_"+str(i)+".csv")
+            write_solution(model, solution.unique_solutions[i], args.threshold, args.output+'_solution_'+str(i)+'.csv')
