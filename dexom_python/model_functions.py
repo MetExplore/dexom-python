@@ -1,9 +1,10 @@
-
+import optlang
 import pandas as pd
 import numpy as np
 from pathlib import Path
 from cobra.io import load_json_model, read_sbml_model, load_matlab_model
-import optlang
+from cobra.flux_analysis import find_blocked_reactions
+from warnings import warn
 
 
 def read_model(modelfile, solver='cplex'):
@@ -40,6 +41,8 @@ def check_model_options(model, timelimit=None, feasibility=1e-6, mipgaptol=1e-3,
 
 def get_all_reactions_from_model(model, save=True, shuffle=True, out_path=''):
     """
+    Outputs a list of all reactions in the model. If possible, all blocked reactions are removed.
+    Optionally, the reaction-list can be shuffled.
 
     Parameters
     ----------
@@ -56,6 +59,15 @@ def get_all_reactions_from_model(model, save=True, shuffle=True, out_path=''):
     rxn_list: A list of all reactions in the model
     """
     rxn_list = [r.id for r in model.reactions]
+    try:
+        if hasattr(model, "_sbml"):
+            model._sbml['created'] = None
+            # In level 3 SMBL models, the model._sbml['created'] attribute is a SwigPyObject
+            # which causes an exception in cobra.flux_analysis.find_blocked_reactions
+        blocked = find_blocked_reactions(model)
+        rxn_list = list(set(rxn_list) - set(blocked))
+    except:
+        warn("Could not find blocked reactions. Output list contains all reactions of the model.")
     if save:
         pd.Series(rxn_list).to_csv(out_path + model.id + '_reactions.csv', header=False, index=False)
     if shuffle:
