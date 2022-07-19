@@ -1,4 +1,3 @@
-
 import argparse
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -9,7 +8,7 @@ from statsmodels.stats.multitest import fdrcorrection
 from dexom_python.model_functions import read_model, get_subsystems_from_model
 
 
-def Fischer_groups(model, solpath, outpath="test"):
+def Fischer_groups(model, solpath, outpath='test'):
     """
     !!! This only works if the pathway name is stored in the model.groups property !!!
     For models where the pathways are stored in the model.reactions.subsystem property, use the Fischer_pathways function
@@ -31,7 +30,6 @@ def Fischer_groups(model, solpath, outpath="test"):
     df.columns = [r.id for r in model.reactions]
     pvalsu = {}
     pvalso = {}
-
     for path in model.groups:
         tempu = []
         tempo = []
@@ -47,19 +45,16 @@ def Fischer_groups(model, solpath, outpath="test"):
         pvalso[path.name] = tempo
     over = pd.DataFrame(pvalso)
     under = pd.DataFrame(pvalsu)
-
     t, fdr = fdrcorrection(over.values.flatten())
     over = pd.DataFrame(-np.log10(fdr).reshape(over.shape), columns=over.columns)
-
     t, fdr = fdrcorrection(under.values.flatten())
     under = pd.DataFrame(-np.log10(fdr).reshape(under.shape), columns=under.columns)
-
-    over.to_csv(outpath+"pathways_pvalues_over.csv")
-    under.to_csv(outpath+"pathways_pvalues_under.csv")
+    over.to_csv(outpath+'pathways_pvalues_over.csv')
+    under.to_csv(outpath+'pathways_pvalues_under.csv')
     return over, under
 
 
-def Fisher_pathways(solpath, subframe, sublist, outpath=""):
+def Fisher_pathways(solpath, subframe, sublist, outpath=''):
     """
     !!! This only works if the pathway name is stored in the model.reaction.subsystem property !!!
     For models where the pathways are stored in the model.groups property, use the new Fischer_groups function
@@ -82,14 +77,12 @@ def Fisher_pathways(solpath, subframe, sublist, outpath=""):
     rxn_list = []
     rxnnumber = {}
     for sub in sublist:
-        rxns = subframe.index[subframe["subsystem"] == sub].to_list()
+        rxns = subframe.index[subframe['subsystem'] == sub].to_list()
         rxn_list.append(rxns)
         rxnnumber[sub] = len(rxns)
-
     sol_pathways = []
     for x in df.iterrows():
         sol_pathways.append([sum(x[1][r]) for r in rxn_list]+[sum(x[1])])
-
     pvalsu = {}
     pvalso = {}
     for i, sub in enumerate(sublist):
@@ -106,19 +99,16 @@ def Fisher_pathways(solpath, subframe, sublist, outpath=""):
         pvalso[sub] = tempo
     over = pd.DataFrame(pvalso)
     under = pd.DataFrame(pvalsu)
-
     t, fdr = fdrcorrection(over.values.flatten())
     over = pd.DataFrame(-np.log10(fdr).reshape(over.shape), columns=over.columns)
-
     t, fdr = fdrcorrection(under.values.flatten())
     under = pd.DataFrame(-np.log10(fdr).reshape(under.shape), columns=under.columns)
-
-    over.to_csv(outpath+"pathways_pvalues_over.csv")
-    under.to_csv(outpath+"pathways_pvalues_under.csv")
+    over.to_csv(outpath+'pathways_pvalues_over.csv')
+    under.to_csv(outpath+'pathways_pvalues_under.csv')
     return over, under
 
 
-def plot_Fisher_pathways(filename_over, filename_under, sublist, outpath="pathway_enrichment"):
+def plot_Fisher_pathways(filename_over, filename_under, sublist, outpath='pathway_enrichment'):
     plt.ioff()
     over = pd.read_csv(filename_over, index_col=0)
     under = pd.read_csv(filename_under, index_col=0)
@@ -131,13 +121,12 @@ def plot_Fisher_pathways(filename_over, filename_under, sublist, outpath="pathwa
     rcParams['ytick.labelsize'] = 13
     over.boxplot(vert=False, widths=0.7)
     plt.plot(list(over.values)[0], ax.get_yticks(), 'ro')
-
     plt.tight_layout()
     plt.subplots_adjust(top=0.95, bottom=0.05)
-    plt.title("Overrepresentation analysis of active reactions per pathway", fontsize=15, loc='right', pad='20')
+    plt.title('Overrepresentation analysis of active reactions per pathway', fontsize=15, loc='right', pad='20')
     plt.xlabel('-log10 adj. p-value', fontsize=15)
-    plt.axvline(2.301, color="b")
-    fig.savefig(outpath+"pathways_overrepresentation.png")
+    plt.axvline(2.301, color='b')
+    fig.savefig(outpath+'pathways_overrepresentation.png')
 
     plt.clf()
     fig, ax = plt.subplots(figsize=(11, 20))
@@ -146,29 +135,28 @@ def plot_Fisher_pathways(filename_over, filename_under, sublist, outpath="pathwa
     plt.plot(list(under.values)[0], ax.get_yticks(), 'ro')
     plt.tight_layout()
     plt.subplots_adjust(top=0.95, bottom=0.05)
-    plt.title("Underrepresentation analysis of active reactions per pathway", fontsize=15, loc='right', pad='20')
+    plt.title('Underrepresentation analysis of active reactions per pathway', fontsize=15, loc='right', pad='20')
     plt.xlabel('-log10 adj. p-value', fontsize=15)
-    plt.axvline(2.301, color="b")
-    fig.savefig(outpath+"pathways_underrepresentation.png")
-
+    plt.axvline(2.301, color='b')
+    fig.savefig(outpath+'pathways_underrepresentation.png')
     return over, under
 
 
-if __name__ == "__main__":
-    description = "Performs pathway enrichment analysis using a hypergeometric test (Fischer exact test)"
+if __name__ == '__main__':
+    description = 'Performs pathway enrichment analysis using a hypergeometric test (Fischer exact test)'
 
     parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument("-s", "--solutions", help="csv file containing enumeration solutions")
-    parser.add_argument("-m", "--model", default=None, help="Metabolic model in sbml, json, or matlab format, "
-                                                            "required if subframe & sublist are absent")
-    parser.add_argument("--sublist", default=None, help="List of all pathways/subsystems in the model")
-    parser.add_argument("--subframe", default=None, help="csv file assigning reactions to pathways/subsystemts")
-    parser.add_argument("-o", "--out_path", default="", help="Path to which the output file is written")
+    parser.add_argument('-s', '--solutions', help='csv file containing enumeration solutions')
+    parser.add_argument('-m', '--model', default=None, help='Metabolic model in sbml, json, or matlab format, '
+                                                            'required if subframe & sublist are absent')
+    parser.add_argument('--sublist', default=None, help='List of all pathways/subsystems in the model')
+    parser.add_argument('--subframe', default=None, help='csv file assigning reactions to pathways/subsystemts')
+    parser.add_argument('-o', '--out_path', default='', help='Path to which the output file is written')
 
     args = parser.parse_args()
 
     groups = False
-    if args.model:
+    if args.model is not None:
         model = read_model(args.model)
         if len(model.groups) > 0:
             groups = True
@@ -177,11 +165,11 @@ if __name__ == "__main__":
             subframe, sublist = get_subsystems_from_model(model, save=True, out_path=args.out_path)
     else:
         subframe = pd.read_csv(args.subframe, index_col=0)
-        sublist = pd.read_csv(args.sublist, sep=";").columns.to_list()
+        sublist = pd.read_csv(args.sublist, sep=';').columns.to_list()
 
     if groups:
         Fischer_groups(model=model, solpath=args.solution, outpath=args.out_path)
     else:
         Fisher_pathways(solpath=args.solutions, subframe=subframe, sublist=sublist, outpath=args.out_path)
-    plot_Fisher_pathways(filename_over=args.out_path+"pathways_pvalues_over.csv", sublist=sublist,
-                         filename_under=args.out_path+"pathways_pvalues_under.csv", outpath=args.out_path)
+    plot_Fisher_pathways(filename_over=args.out_path+'pathways_pvalues_over.csv', sublist=sublist,
+                         filename_under=args.out_path+'pathways_pvalues_under.csv', outpath=args.out_path)
