@@ -125,6 +125,8 @@ if __name__ == '__main__':
                         help='objective value tolerance, as a fraction of the original value')
     parser.add_argument('-o', '--output', default='div_enum', help='Base name of output files, without format')
     parser.add_argument('-a', '--dist_anneal', type=float, default=0.995, help='annealing distance')
+    parser.add_argument('-s', '--startsol_num', type=int, default=1, help='number of starting solutions'
+                                                                          '(if prev_sol is a directory)')
     parser.add_argument('--noicut', action='store_true', help='Use this flag to remove the icut constraint')
     parser.add_argument('--full', action='store_true', help='Use this flag to assign non-zero weights to all reactions')
     parser.add_argument('--save', action='store_true', help='Use this flag to save each individual solution')
