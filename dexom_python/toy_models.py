@@ -37,7 +37,6 @@ def small4M(export=False, solver='cplex'):
     metabolite_names = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'T', 'X', 'Y', 'Z']
     metabolites = [Metabolite(m) for m in metabolite_names]
     model.add_metabolites(metabolites)
-
     reaction_names = ['EX_A', 'EX_D', 'EX_X', 'EX_C', 'EX_Z', 'EX_G', 'EX_Y', 'EX_T', 'RAB', 'RBC', 'RFG', 'RCF',
                       'RDE', 'REF1', 'REF2', 'REF3', 'RBE']
     reaction_formulas = [
@@ -62,27 +61,22 @@ def small4M(export=False, solver='cplex'):
 
     for idx, react_name in enumerate(reaction_names):
         create_reaction(model, react_name, reaction_formulas[idx])
-
     reversible_reactions = ['RCF', 'RBE']  # deciding which reactions should be reversible
     # making RBC reversible allows to obtain unique optimal solution with adequacy of 4
     for react_name in reversible_reactions:
         model.reactions.get_by_id(react_name).lower_bound = -1000.
-
     # create reaction weights
     reaction_weights = {}
     rh_reactions = ['RFG']
     rl_reactions = ['RAB', 'RDE', 'RCF']
-
     for rname in reaction_names:
         if rname in rh_reactions:
             reaction_weights[rname] = 1.
         elif rname in rl_reactions:
             reaction_weights[rname] = -1.
-
     if export:
         save_json_model(model, "small4M.json")
         save_reaction_weights(reaction_weights, "small4M_weights.csv")
-
     return model, reaction_weights
 
 
@@ -102,14 +96,11 @@ def small4S(export=False, solver='cplex'):
     model: cobra.Model
     reaction_weights: dict
     """
-
     model = Model('small4S_python')
     model.solver = solver
-
     metabolite_names = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
     metabolites = [Metabolite(m) for m in metabolite_names]
     model.add_metabolites(metabolites)
-
     reaction_names = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9', 'R10', 'R11']
     reaction_formulas = [
         {"A": -1., "B": 1.},
@@ -124,31 +115,27 @@ def small4S(export=False, solver='cplex'):
         {"A": 2.},
         {"H": -1.},
     ]
-
     for idx, react_name in enumerate(reaction_names):
         create_reaction(model, react_name, reaction_formulas[idx])
-
     # create reaction weights
     reaction_weights = {}
     rh_reactions = ['R2', 'R6', 'R9']
     rl_reactions = ['R3', 'R7']
-
     for rname in reaction_names:
         if rname in rh_reactions:
             reaction_weights[rname] = 1.
         elif rname in rl_reactions:
             reaction_weights[rname] = -1.
-
     if export:
         save_json_model(model, "small4S.json")
         save_reaction_weights(reaction_weights, "small4S_weights.csv")
-
     return model, reaction_weights
 
 
 def dagNet(num_layers, num_metabolites_per_layer, export=False, solver='cplex'):
     """
     Creates a dagNet model where the metabolites of successive layers are all interconnected
+
     Parameters
     ----------
     num_layers: int
@@ -165,23 +152,19 @@ def dagNet(num_layers, num_metabolites_per_layer, export=False, solver='cplex'):
     model: cobra.Model
     reaction_weights: dict
     """
-
     model = Model("dagNet_python")
     model.solver = solver
     nl = num_layers + 2
-
     for i in range(nl):
         if i == 0:
             model.add_metabolites([Metabolite('Met00')])
             model.add_metabolites([Metabolite('MetSINK')])
             create_reaction(model, 'R_in', {'Met00': 1.}, lower_bound=1.)
-
         elif i == nl-1:
             for j, prev_met in enumerate(layer_mets):
                 react_name = 'R_'+prev_met+'_SINK'
                 formula = {prev_met: -1., 'MetSINK': 1.}
                 create_reaction(model, react_name, formula)
-
         else:
             layer_mets = []
             for j in range(num_metabolites_per_layer):
@@ -194,15 +177,12 @@ def dagNet(num_layers, num_metabolites_per_layer, export=False, solver='cplex'):
                     react_name = 'R_'+prev_met+'_'+met_name
                     formula = {prev_met: -1., met_name: 1.}
                     create_reaction(model, react_name, formula)
-
     create_reaction(model, 'R_out', {'MetSINK': -1.}, lower_bound=1.)
-
     # create reaction weights
     # for this simple example, all reactions are lowly expressed
     reaction_weights = {}
     for rec in model.reactions:
         reaction_weights[rec.name] = -1.
-
     if export:
         save_json_model(model, "dagNet"+str(num_layers)+str(num_metabolites_per_layer)+".json")
         save_reaction_weights(reaction_weights, 'dagNet'+str(num_layers)+str(num_metabolites_per_layer)+'_weights.csv')
@@ -211,12 +191,25 @@ def dagNet(num_layers, num_metabolites_per_layer, export=False, solver='cplex'):
 
 
 def r13m10(export=False, solver='cplex'):
+    """
+    This is the model that is used for the unit tests in the tests folder
+    Parameters
+    ----------
+    export: bool
+        if True, exports the model as .json and the reaction weights as .csv
+    solver: str
+        a valid cobrapy solver
+
+    Returns
+    -------
+    model: cobra.Model
+    reaction_weights: dict
+    """
     model = Model(id_or_model="r13m10", name="r13m10_cobra")
     model.solver = solver
     metabolite_names = ['a', 'b', 'e', 'g', 'h', 'i', 'j', 'f', 'c', 'd']
     metabolites = [Metabolite(m) for m in metabolite_names]
     model.add_metabolites(metabolites)
-
     reaction_names = ['EX_a', 'EX_b', 'EX_e', 'EX_g', 'EX_h', 'EX_i', 'EX_j', 'R_a_f', 'R_ab_cd', 'R_ef_gh', 'R_f_i',
                       'R_cj_i', 'R_d_j']
     reaction_formulas = [
@@ -233,7 +226,6 @@ def r13m10(export=False, solver='cplex'):
          {'f': -1., 'i': 1.},
          {'c': -2., 'j': -1., 'i': 3.},
          {'d': -1., 'j': 1.}]
-
     reaction_bounds = [
         (-10., 50.),
         (-10., 50.),
@@ -255,12 +247,10 @@ def r13m10(export=False, solver='cplex'):
     for idx, react_name in enumerate(reaction_names):
         create_reaction(model, react_name, reaction_formulas[idx], gene_rule=gene_rules[idx],
                         lower_bound=reaction_bounds[idx][0], upper_bound=reaction_bounds[idx][1])
-
     # create reaction weights
     reaction_weights = {}
     rh_reactions = ['EX_a', 'R_a_f']
     rl_reactions = ['EX_b', 'EX_e', 'EX_i']
-
     for rname in reaction_names:
         if rname in rh_reactions:
             reaction_weights[rname] = 1.
@@ -268,7 +258,6 @@ def r13m10(export=False, solver='cplex'):
             reaction_weights[rname] = -1.
         else:
             reaction_weights[rname] = 0.
-
     if export:
         save_json_model(model, "tests/model/example_r13m10.json")
         save_reaction_weights(reaction_weights, "tests/model/example_r13m10_weights.csv")
