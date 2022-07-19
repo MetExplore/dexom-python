@@ -49,7 +49,7 @@ def create_enum_variables(model, reaction_weights, eps=1e-2, thr=1e-5, full=Fals
             break
         elif not full and 'rh_'+rid+'_pos' not in model.solver.variables and 'rl_'+rid not in model.solver.variables:
             model = create_new_partial_variables(model=model, reaction_weights=reaction_weights, epsilon=eps,
-                                                 threshold=thr)  # uses new variable implementation
+                                                 threshold=thr)
             break
     return model
 

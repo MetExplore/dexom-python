@@ -40,7 +40,7 @@ def create_maxdist_constraint(model, reaction_weights, prev_sol, obj_tol, name='
                 y_variables.append([y_neg, y_pos])
                 y_weights.append(weight)
             elif weight < 0:
-                x_variables.append(sympify('1') - model.solver.variables['rl_' + rid])  # uses new variable implementation
+                x_variables.append(sympify('1') - model.solver.variables['rl_' + rid])
                 x_weights.append(abs(weight))
 
     lower_opt = prev_sol.objective_value - prev_sol.objective_value * obj_tol
@@ -77,7 +77,7 @@ def create_maxdist_objective(model, reaction_weights, prev_sol, prev_sol_bin, on
                 elif not only_ones:
                     expr += 1 - (y_neg + y_pos)
             elif weight < 0:
-                x_rl = sympify('1') - model.solver.variables['rl_' + rid]  # uses new variable implementation
+                x_rl = sympify('1') - model.solver.variables['rl_' + rid]
                 if prev_sol_bin[rid_loc] == 1:
                     expr += 1 - x_rl
                 elif not only_ones:

@@ -40,41 +40,9 @@ def create_full_variables(model, reaction_weights, epsilon, threshold):
     return model
 
 
-def create_partial_variables(model, reaction_weights, epsilon): # for the driven-based imat implementation
-    for rid, weight in six.iteritems(reaction_weights):
-        if weight > 0:  # the rh_rid variables represent the highly expressed reactions
-            if 'rh_' + rid + '_pos' not in model.solver.variables:
-                reaction = model.reactions.get_by_id(rid)
-                y_pos = model.solver.interface.Variable('rh_%s_pos' % rid, type='binary')
-                y_neg = model.solver.interface.Variable('rh_%s_neg' % rid, type='binary')
-                pos_constraint = model.solver.interface.Constraint(
-                    reaction.flux_expression + y_pos * (reaction.lower_bound - epsilon),
-                    lb=reaction.lower_bound, name='rh_%s_lower' % rid)
-                neg_constraint = model.solver.interface.Constraint(
-                    reaction.flux_expression + y_neg * (reaction.upper_bound + epsilon),
-                    ub=reaction.upper_bound, name='rh_%s_upper' % rid)
-                model.solver.add(y_pos)
-                model.solver.add(y_neg)
-                model.solver.add(pos_constraint)
-                model.solver.add(neg_constraint)
-        elif weight < 0:  # the rl_rid variables represent the lowly expressed reactions
-            if 'rl_' + rid not in model.solver.variables:
-                reaction = model.reactions.get_by_id(rid)
-                x = model.solver.interface.Variable('rl_%s' % rid, type='binary')
-                pos_constraint = model.solver.interface.Constraint(
-                    (1 - x) * reaction.upper_bound - reaction.flux_expression,
-                    lb=0, name='rl_%s_upper' % rid)
-                neg_constraint = model.solver.interface.Constraint(
-                    (1 - x) * reaction.lower_bound - reaction.flux_expression,
-                    ub=0, name='rl_%s_lower' % rid)
-                model.solver.add(x)
-                model.solver.add(pos_constraint)
-                model.solver.add(neg_constraint)
-
-    return model
-
-
-def create_new_partial_variables(model, reaction_weights, epsilon, threshold): # these variables allow for better performance in enumeration
+def create_new_partial_variables(model, reaction_weights, epsilon, threshold):
+    # the variable definition is more precise than in the original iMAT implementation
+    # this is done in order to avoid problems with enumeration methods, and doesn't affect the results of iMAT
     for rid, weight in six.iteritems(reaction_weights):
         if weight > 0:
             if 'rh_' + rid + '_pos' not in model.solver.variables:
@@ -166,7 +134,7 @@ def imat(model, reaction_weights=None, epsilon=1e-2, threshold=1e-5, full=False)
                     x_variables.append(x)
                     x_weights.append(abs(weight))
         else:
-            model = create_new_partial_variables(model, reaction_weights, epsilon, threshold)  # uses new variable implementation
+            model = create_new_partial_variables(model, reaction_weights, epsilon, threshold)
             for rid, weight in six.iteritems(reaction_weights):
                 if weight > 0:
                     y_neg = model.solver.variables['rh_' + rid + '_neg']
@@ -174,7 +142,7 @@ def imat(model, reaction_weights=None, epsilon=1e-2, threshold=1e-5, full=False)
                     y_variables.append([y_neg, y_pos])
                     y_weights.append(weight)
                 elif weight < 0:
-                    x = sympify('1') - model.solver.variables['rl_' + rid]  # uses new variable implementation
+                    x = sympify('1') - model.solver.variables['rl_' + rid]
                     x_variables.append(x)
                     x_weights.append(abs(weight))
         rh_objective = [(y[0] + y[1]) * y_weights[idx] for idx, y in enumerate(y_variables)]

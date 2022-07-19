@@ -33,7 +33,7 @@ def create_icut_constraint(model, reaction_weights, threshold, prev_sol, name, f
                 elif np.abs(prev_sol.fluxes[rid]) < threshold-tol:  # else
                     var_vals.append(-y - x)
             elif weight < 0:
-                x = sympify('1') - model.solver.variables['rl_' + rid]  # uses new variable implementation
+                x = sympify('1') - model.solver.variables['rl_' + rid]
                 if np.abs(prev_sol.fluxes[rid]) < (threshold-tol):
                     var_vals.append(x)
                     newbound += 1
