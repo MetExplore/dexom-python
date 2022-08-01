@@ -20,8 +20,8 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setup(
-    name='dexom_python_maxstingl',
-    version='1.0',
+    name='dexom_python',
+    version='0.4.2',
     packages=find_packages('.'),
     install_requires=requirements,
     include_package_data=True,
@@ -29,8 +29,8 @@ setup(
     author_email='maximilian.h.a.stingl@gmail.com',
     description='Python implementation of DEXOM using cobrapy',
     long_description=long_description,
-    long_description_content_type="text/markdown",
-    url="https://github.com/MaximilianSti/dexom_python",
+    long_description_content_type='text/markdown',
+    url='https://github.com/Metexplore/dexom-python',
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Education',

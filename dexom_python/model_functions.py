@@ -5,6 +5,7 @@ from pathlib import Path
 from cobra.io import load_json_model, read_sbml_model, load_matlab_model
 from cobra.flux_analysis import find_blocked_reactions
 from warnings import warn
+from cobra.exceptions import SolverNotFound
 
 
 def read_model(modelfile, solver='cplex'):
@@ -17,13 +18,13 @@ def read_model(modelfile, solver='cplex'):
     elif fileformat == '.mat':
         model = load_matlab_model(modelfile)
     elif fileformat == '':
-        print('Wrong model path')
+        warn('Wrong model path')
     else:
-        print('Only SBML, JSON, and Matlab formats are supported for the models')
+        warn('Only SBML, JSON, and Matlab formats are supported for the models')
     try:
         model.solver = solver
-    except:
-        print('The solver: %s is not available or not properly installed' % solver)
+    except SolverNotFound:
+        warn('The solver: %s is not available or not properly installed' % solver)
     return model
 
 
@@ -35,7 +36,7 @@ def check_model_options(model, timelimit=None, feasibility=1e-6, mipgaptol=1e-3,
     if hasattr(optlang, 'cplex_interface'):
         model.solver.problem.parameters.mip.tolerances.mipgap.set(mipgaptol)
     else:
-        print('setting the MIP gap tolerance is only available with the cplex solver')
+        warn('setting the MIP gap tolerance is only available with the cplex solver')
     return model
 
 
@@ -151,4 +152,4 @@ def load_reaction_weights(filename, rxn_names='reactions', weight_names='weights
     df = pd.read_csv(filename)
     df.index = df[rxn_names]
     reaction_weights = df[weight_names].to_dict()
-    return {k: float(v) for k, v in reaction_weights.items() if float(v) == float(v)}
+    return {str(k): float(v) for k, v in reaction_weights.items() if float(v) == float(v)}

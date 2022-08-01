@@ -61,8 +61,8 @@ def analyze_dexom_cluster_results(in_folder, out_folder, approach=1, filenums=10
                     filename = str(list(filename)[0])
                 rxn = pd.read_csv(filename, index_col=0)
                 all_rxn.append(rxn)
-            except:
-                pass
+            except FileNotFoundError:
+                pass  # if a file is absent, ignore it
         rxn = pd.concat(all_rxn, ignore_index=True)
     if approach == 1 or approach == 3:
         unique = len(rxn.drop_duplicates())
@@ -76,8 +76,8 @@ def analyze_dexom_cluster_results(in_folder, out_folder, approach=1, filenums=10
                 try:
                     fulltime += float(line[0])
                     counter += 1
-                except:
-                    pass
+                except (ValueError, IndexError):
+                    pass  # ignore lines that are empty or don't begin with a number
         if counter != 0:
             output_file.append('Total computation time: %i s' % int(fulltime))
             print(output_file[-1])
@@ -91,7 +91,7 @@ def analyze_dexom_cluster_results(in_folder, out_folder, approach=1, filenums=10
                 filename = str(list(filename)[0])
                 res = pd.read_csv(filename, index_col=0)
                 all_res.append(res)
-            except:
+            except FileNotFoundError:
                 pass
         rxn_res = pd.concat(all_res, ignore_index=True)
         rxn_res.to_csv(out_folder + 'all_rxn_enum_res.csv')
@@ -110,7 +110,7 @@ def analyze_dexom_cluster_results(in_folder, out_folder, approach=1, filenums=10
                 res = pd.read_csv(resname, index_col=0)
                 all_sol.append(sol)
                 all_res.append(res)
-            except:
+            except FileNotFoundError:
                 pass
     elif approach == 2:
         solname = Path(in_folder).glob('div_enum2021*_solutions.csv')

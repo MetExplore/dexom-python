@@ -10,7 +10,7 @@ DEXOM in python
   https://github.com/opencobra/driven
 
 API documentation is available here:
-https://dexom-python.readthedocs.io/en/latest/
+https://dexom-python.readthedocs.io/en/stable/
 
 Requirements
 ------------

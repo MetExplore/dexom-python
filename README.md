@@ -7,7 +7,7 @@ This is a python implementation of DEXOM (Diversity-based enumeration of optimal
 The original project, which was developped in MATLAB, can be found here: https://github.com/MetExplore/dexom  
 Parts of the imat code were taken from the driven package for data-driven constraint-based analysis: https://github.com/opencobra/driven
 
-API documentation is available here: https://dexom-python.readthedocs.io/en/latest/
+API documentation is available here: https://dexom-python.readthedocs.io/en/stable/
 
 ## Requirements
 - Python 3.7+
