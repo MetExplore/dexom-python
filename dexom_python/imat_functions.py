@@ -36,7 +36,6 @@ def create_full_variables(model, reaction_weights, epsilon, threshold):
             model.solver.add(xr_upper)
             model.solver.add(xf_lower)
             model.solver.add(xr_lower)
-
     return model
 
 
@@ -44,7 +43,7 @@ def create_new_partial_variables(model, reaction_weights, epsilon, threshold):
     # the variable definition is more precise than in the original iMAT implementation
     # this is done in order to avoid problems with enumeration methods, and doesn't affect the results of iMAT
     for rid, weight in six.iteritems(reaction_weights):
-        if weight > 0:
+        if weight > 0 and rid in model.reactions:
             if 'rh_' + rid + '_pos' not in model.solver.variables:
                 rxn = model.reactions.get_by_id(rid)
                 xtot = model.solver.interface.Variable('x_%s' % rid, type='binary')
@@ -67,7 +66,7 @@ def create_new_partial_variables(model, reaction_weights, epsilon, threshold):
                 model.solver.add(xr_upper)
                 model.solver.add(xf_lower)
                 model.solver.add(xr_lower)
-        elif weight < 0:  # the rl_rid variables represent the lowly expressed reactions
+        elif weight < 0 and rid in model.reactions:  # the rl_rid variables represent the lowly expressed reactions
             if 'rl_' + rid not in model.solver.variables:
                 rxn = model.reactions.get_by_id(rid)
                 xtot = model.solver.interface.Variable('rl_%s' % rid, type='binary')
@@ -124,24 +123,24 @@ def imat(model, reaction_weights=None, epsilon=1e-2, threshold=1e-5, full=False)
         if full:  # for the full_imat implementation
             model = create_full_variables(model, reaction_weights, epsilon, threshold)
             for rid, weight in six.iteritems(reaction_weights):
-                if weight > 0:
+                if weight > 0 and rid in model.reactions:
                     y_pos = model.solver.variables['xf_' + rid]
                     y_neg = model.solver.variables['xr_' + rid]
                     y_variables.append([y_neg, y_pos])
                     y_weights.append(weight)
-                elif weight < 0:
+                elif weight < 0 and rid in model.reactions:
                     x = sympify('1') - model.solver.variables['x_' + rid]
                     x_variables.append(x)
                     x_weights.append(abs(weight))
         else:
             model = create_new_partial_variables(model, reaction_weights, epsilon, threshold)
             for rid, weight in six.iteritems(reaction_weights):
-                if weight > 0:
+                if weight > 0 and rid in model.reactions:
                     y_neg = model.solver.variables['rh_' + rid + '_neg']
                     y_pos = model.solver.variables['rh_' + rid + '_pos']
                     y_variables.append([y_neg, y_pos])
                     y_weights.append(weight)
-                elif weight < 0:
+                elif weight < 0 and rid in model.reactions:
                     x = sympify('1') - model.solver.variables['rl_' + rid]
                     x_variables.append(x)
                     x_weights.append(abs(weight))

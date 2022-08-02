@@ -10,8 +10,8 @@ Parts of the imat code were taken from the driven package for data-driven constr
 API documentation is available here: https://dexom-python.readthedocs.io/en/stable/
 
 ## Requirements
-- Python 3.7+
-- CPLEX 12.10+
+- Python 3.7 - 3.9
+- CPLEX 12.10 - 22.10
 
 ### Installing CPLEX
 
@@ -31,45 +31,47 @@ These are the different functions which are available for context-specific metab
 ### apply_gpr
 The `gpr_rules.py` script can be used to transform gene expression data into reaction weights, for a limited selection of models.  
 It uses the gene identifiers and gene-protein-reaction rules present in the model to connect the genes and reactions.  
-By default, continuous gene expression values/weights will be transformed into continuous reaction weights. 
+By default, continuous gene expression values/weights will be transformed into continuous reaction weights.  
 Using the `--convert` flag will instead create semi-quantitative reaction weights with values in {-1, 0, 1}. By default, the proportion of these three weights will be {25%, 50%, 25%}.
 
 ### iMAT
 `imat.py` contains a modified version of the iMAT algorithm as defined by [(Shlomi et al. 2008)](https://pubmed.ncbi.nlm.nih.gov/18711341/).  
 The main inputs of this algorithm are a model file, which must be supplied in a cobrapy-compatible format (SBML, JSON or MAT), and a reaction_weight file in which each reaction is attributed a score.  
-These reaction weights must be determined prior to launching imat, using the GPR rules present in the metabolic model.  
+These reaction weights must be determined prior to launching imat, for example with GPR rules present in the metabolic model.  
 
 The remaining inputs of imat are:
 - `epsilon`: the activation threshold of reactions with weight > 0
 - `threshold`: the activation threshold for unweighted reactions
-- `timelimit`: the solver time limit
-- `feasibility`: the solver feasbility tolerance
-- `mipgaptol`: the solver MIP gap tolerance
 - `full`: a bool parameter for switching between the partial & full-DEXOM implementation
 
-note: the feasibility determines the solver's capacity to return correct results. In particular, the relation `epsilon` > `threshold` > `ub*feasibility` is required (where `ub` is the maximal upper bound for reaction flux in the model)
+In addition, the following solver parameters have been made available through the solver API:
+- `timelimit`: the maximum amount of time allowed for solver optimization (in seconds)
+- `feasibility`: the solver feasbility tolerance
+- `mipgaptol`: the solver MIP gap tolerance
+note: the feasibility determines the solver's capacity to return correct results. 
+In particular, it is necessary that `epsilon` > `threshold` > `ub*feasibility` (where `ub` is the maximal upper bound for reaction flux in the model)
 
-By default, uses the create_new_partial_variables function. In this version, binary flux indicator variables are created for each reaction with a non-zero weight.  
-In the full-DEXOM implementation, binary flux indicator variables are created for every reaction in the model. This does not change the result of the imat function, but can be used for some of the enumeration methods below.
+By default, imat uses the `create_new_partial_variables` function. In this version, binary flux indicator variables are created for each reaction with a non-zero weight.  
+In the full-DEXOM implementation, binary flux indicator variables are created for every reaction in the model. This does not change the result of the imat function, but can be used for the enumeration methods below.
 
 ### enum_functions
 
 Four methods for enumerating context-specific networks are available:
-- `rxn-enum.py` contains reaction-enumeration
-- `icut.py` contains integer-cut
-- `maxdist.py` contains distance-maximization
-- `div-enum.py` contains diversity-enumeration
+- `rxn_enum_functions.py` contains reaction-enumeration (function name: `rxn_enum`)
+- `icut_functions.py` contains integer-cut (function name: `icut`)
+- `maxdist_functions.py` contains distance-maximization (function name: `maxdistm`)
+- `diversity_enum_functions.py` contains diversity-enumeration  (function name: `diversity_enum`)
 
 An explanation of these methods can be found in [(Rodriguez-Mier et al. 2021)](https://doi.org/10.1371/journal.pcbi.1008730).  
 Each of these methods can be used on its own. The same model and reaction_weights inputs must be provided as for the imat function.
 
 Additional parameters for all 4 methods are:
-- `prev_sol`: a starting imat solution (if none is provided, a new one will be computed)  
-- `obj_tol`: a relative tolerance on the imat objective value for the optimality of the solutions  
-icut, maxiter, and div-enum also have two additional parameters:
+- `prev_sol`: an imat solution used as a starting point (if none is provided, a new one will be computed)  
+- `obj_tol`: the relative tolerance on the imat objective value for the optimality of the solutions  
+icut, maxdist, and diversity-enum also have two additional parameters:
 - `maxiter`: the maximum number of iterations to run
 - `full`: set to True to use the full-DEXOM implementation  
-As previously explained, the full-DEXOM implementation defines binary indicator variables for all reactions in the model. Although only the reactions with non-zero weights have an impact on the imat objective function, the distance maximization function which is used in maxdist and div-enum can utilize the binary indicators for all reactions. This increases the distance between the solutions, but requires significantly more computation time.  
+As previously explained, the full-DEXOM implementation defines binary indicator variables for all reactions in the model. Although only the reactions with non-zero weights have an impact on the imat objective function, the distance maximization function which is used in maxdist and diversity-enum can utilize the binary indicators for all reactions. This increases the distance between the solutions and their diversity, but requires significantly more computation time.  
 maxdist and div-enum also have one additional parameter:  
 - `icut`: if True, an icut constraint will be applied to prevent duplicate solutions
 

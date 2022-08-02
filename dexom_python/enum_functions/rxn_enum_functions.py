@@ -5,6 +5,7 @@ from dexom_python.imat_functions import imat
 from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options
 from dexom_python.result_functions import read_solution, write_solution
 from dexom_python.enum_functions.enumeration import create_enum_variables
+from warnings import warn
 
 
 class RxnEnumSolution(object):
@@ -58,59 +59,61 @@ def rxn_enum(model, reaction_weights, prev_sol, rxn_list=[], eps=1., thr=1e-1, o
         rxns = list(model.reactions)
         rxn_list = [r.id for r in rxns]
     for rid in rxn_list:
-        idx = np.where(prev_sol.fluxes.index == rid)[0][0]
-        with model as model_temp:
-            if rid in model.reactions:
-                rxn = model_temp.reactions.get_by_id(rid)
-                # for active fluxes, check inactivation
-                if prev_sol_bin[idx] == 1:
-                    rxn.bounds = (0., 0.)
-                # for inactive fluxes, check activation
-                else:
-                    upper_bound_temp = rxn.upper_bound
-                    # for inactive reversible fluxes, check activation in backwards direction
-                    if rxn.lower_bound < 0.:
-                        try:
-                            rxn.upper_bound = -thr
-                            temp_sol = imat(model_temp, reaction_weights, epsilon=eps, threshold=thr)
-                            temp_sol_bin = (np.abs(temp_sol.fluxes) >= thr-tol).values.astype(int)
-                            if temp_sol.objective_value >= optimal_objective_value:
-                                all_solutions.append(temp_sol)
-                                all_solutions_binary.append(temp_sol_bin)
-                                if not np.any(np.all(temp_sol_bin == unique_solutions_binary, axis=1)):
-                                    unique_solutions.append(temp_sol)
-                                    unique_solutions_binary.append(temp_sol_bin)
-                                    unique_reactions.append(rid+'_backwards')
-                        except:
-                            print('An error occurred with reaction %s_reverse. '
-                                  'Check feasibility of the model when this reaction is irreversible.' % rid)
-                        finally:
-                            rxn.upper_bound = upper_bound_temp
-                    # for all inactive fluxes, check activation in forwards direction
-                    if rxn.upper_bound >= thr:
-                        rxn.lower_bound = thr
-                    else:
-                        rxn.lower_bound = rxn.upper_bound
-                # for all fluxes: compute solution with new bounds
-                try:
-                    temp_sol = imat(model_temp, reaction_weights, epsilon=eps, threshold=thr)
-                    temp_sol_bin = (np.abs(temp_sol.fluxes) >= thr-tol).values.astype(int)
-                    if temp_sol.objective_value >= optimal_objective_value:
-                        all_solutions.append(temp_sol)
-                        all_solutions_binary.append(temp_sol_bin)
-                        all_reactions.append(rid)
-                        if not np.any(np.all(temp_sol_bin == unique_solutions_binary, axis=1)):
-                            unique_solutions.append(temp_sol)
-                            unique_solutions_binary.append(temp_sol_bin)
-                            unique_reactions.append(rid)
-                except:
+        if rid not in model.reactions:
+            warn('The following reaction ID was not found in the model: %s' % rid)
+        else:
+            idx = np.where(prev_sol.fluxes.index == rid)[0][0]
+            with model as model_temp:
+                if rid in model.reactions:
+                    rxn = model_temp.reactions.get_by_id(rid)
+                    # for active fluxes, check inactivation
                     if prev_sol_bin[idx] == 1:
-                        print('An error occurred with reaction %s. '
-                              'Check feasibility of the model when this reaction is blocked' % rid)
+                        rxn.bounds = (0., 0.)
+                    # for inactive fluxes, check activation
                     else:
-                        print('An error occurred with reaction %s. '
-                              'Check feasibility of the model when this reaction is irreversible' % rid)
-
+                        upper_bound_temp = rxn.upper_bound
+                        # for inactive reversible fluxes, check activation in backwards direction
+                        if rxn.lower_bound < 0.:
+                            try:
+                                rxn.upper_bound = -thr
+                                temp_sol = imat(model_temp, reaction_weights, epsilon=eps, threshold=thr)
+                                temp_sol_bin = (np.abs(temp_sol.fluxes) >= thr-tol).values.astype(int)
+                                if temp_sol.objective_value >= optimal_objective_value:
+                                    all_solutions.append(temp_sol)
+                                    all_solutions_binary.append(temp_sol_bin)
+                                    if not np.any(np.all(temp_sol_bin == unique_solutions_binary, axis=1)):
+                                        unique_solutions.append(temp_sol)
+                                        unique_solutions_binary.append(temp_sol_bin)
+                                        unique_reactions.append(rid+'_backwards')
+                            except:
+                                print('An error occurred with reaction %s_reverse. '
+                                      'Check feasibility of the model when this reaction is irreversible.' % rid)
+                            finally:
+                                rxn.upper_bound = upper_bound_temp
+                        # for all inactive fluxes, check activation in forwards direction
+                        if rxn.upper_bound >= thr:
+                            rxn.lower_bound = thr
+                        else:
+                            rxn.lower_bound = rxn.upper_bound
+                    # for all fluxes: compute solution with new bounds
+                    try:
+                        temp_sol = imat(model_temp, reaction_weights, epsilon=eps, threshold=thr)
+                        temp_sol_bin = (np.abs(temp_sol.fluxes) >= thr-tol).values.astype(int)
+                        if temp_sol.objective_value >= optimal_objective_value:
+                            all_solutions.append(temp_sol)
+                            all_solutions_binary.append(temp_sol_bin)
+                            all_reactions.append(rid)
+                            if not np.any(np.all(temp_sol_bin == unique_solutions_binary, axis=1)):
+                                unique_solutions.append(temp_sol)
+                                unique_solutions_binary.append(temp_sol_bin)
+                                unique_reactions.append(rid)
+                    except:
+                        if prev_sol_bin[idx] == 1:
+                            print('An error occurred with reaction %s. '
+                                  'Check feasibility of the model when this reaction is blocked' % rid)
+                        else:
+                            print('An error occurred with reaction %s. '
+                                  'Check feasibility of the model when this reaction is irreversible' % rid)
     solution = RxnEnumSolution(all_solutions, unique_solutions, all_solutions_binary, unique_solutions_binary,
                                all_reactions, unique_reactions)
     return solution
