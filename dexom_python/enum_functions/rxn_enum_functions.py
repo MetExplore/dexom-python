@@ -170,7 +170,7 @@ if __name__ == '__main__':
         rxn_list = reactions[start:int(rxn_range[1])]
 
     if args.prev_sol is not None:
-        initial_solution, initial_binary = read_solution(args.prev_sol, model, reaction_weights)
+        initial_solution, initial_binary = read_solution(args.prev_sol, model)
         model = create_enum_variables(model, reaction_weights, eps=args.epsilon, thr=args.threshold, full=False)
     else:
         initial_solution = imat(model, reaction_weights, epsilon=args.epsilon, threshold=args.threshold)

@@ -139,7 +139,7 @@ if __name__ == '__main__':
         reaction_weights = load_reaction_weights(args.reaction_weights)
     a = args.dist_anneal
     if '.' in args.prev_sol:
-        prev_sol, prev_bin = read_solution(args.prev_sol, model, reaction_weights)
+        prev_sol, prev_bin = read_solution(args.prev_sol, model)
         model = create_enum_variables(model, reaction_weights, eps=args.epsilon, thr=args.threshold, full=args.full)
     elif args.prev_sol is not None:
         prev_sol, i = get_recent_solution_and_iteration(args.prev_sol, args.startsol_num)

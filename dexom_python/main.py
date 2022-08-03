@@ -18,13 +18,13 @@ if __name__ == '__main__':
     tlim = 600  # time limit (in seconds) for the imat model.optimisation() call
     tol = 1e-6  # feasibility tolerance for the solver
     mipgap = 1e-3  # mip gap tolerance for the solver
-    maxiter = 10  # maximum number of iterations
+    maxiter = 5  # maximum number of iterations
     dist_anneal = 0.9  # diversity-enumeration parameter
 
     check_model_options(model, timelimit=tlim, feasibility=tol, mipgaptol=mipgap)
 
     imat_solution = imat(model=model, reaction_weights=reaction_weights, epsilon=eps, threshold=thr)
-    write_solution(solution=imat_solution, threshold=thr, filename='toy_models/small4M_imatsol.csv')
+    write_solution(model=model, solution=imat_solution, threshold=thr, filename='toy_models/small4M_imatsol.csv')
 
     rxn_sol = rxn_enum(model=model, rxn_list=[], prev_sol=imat_solution, reaction_weights=reaction_weights, eps=eps,
                        thr=thr, obj_tol=obj_tol)
