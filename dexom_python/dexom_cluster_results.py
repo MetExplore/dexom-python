@@ -9,10 +9,14 @@ def analyze_dexom_cluster_results(in_folder, out_folder, approach=1, filenums=10
 
     Parameters
     ----------
-    in_folder: folder containing dexom results
-    out_folder: folder in which output files will be saved
-    approach: which parallelization approach was used (1, 2, or 3, see enum_functions/enumeration for details)
-    filenums: number of parallel dexom threads that were run
+    in_folder: str
+        folder containing dexom results
+    out_folder: str
+        folder in which output files will be saved
+    approach: int
+        which parallelization approach was used (1, 2, or 3, see enum_functions/enumeration for details)
+    filenums: int
+        number of parallel dexom threads that were run
 
     Returns
     -------

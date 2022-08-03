@@ -94,20 +94,20 @@ def create_new_partial_variables(model, reaction_weights, epsilon, threshold):
 
 def imat(model, reaction_weights=None, epsilon=1e-2, threshold=1e-5, full=False):
     """
-    Integrative Metabolic Analysis Tool
+    Modified version of the integrative Metabolic Analysis Tool with reaction weights
 
     Parameters
     ----------
     model: cobra.Model
         a cobrapy model
     reaction_weights: dict
-        keys are reaction ids, values are int weights
+        keys are reaction IDs, values are weights
     epsilon: float
         activation threshold for highly expressed reactions
     threshold: float
         activation threshold for all reactions
     full: bool
-        if True, apply constraints on all reactions. if False, only on reactions with non-zero weights
+        if True, create variables for all reactions. if False, only for reactions with non-zero weights
     Returns
     -------
     solution: cobra.Solution

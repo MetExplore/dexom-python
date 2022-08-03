@@ -40,6 +40,6 @@ setup(
         'Topic :: Utilities',
         'Programming Language :: Python :: 3.7'
     ],
-    python_requires=">=3.7",
+    python_requires=">=3.7,<3.10",
 )
 sys.path.append('dexom_python')

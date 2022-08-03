@@ -1,10 +1,11 @@
+import argparse
 import numpy as np
 import pandas as pd
-from pathlib import Path
-from cobra import Solution
 import matplotlib.pyplot as plt
+from pathlib import Path
+from warnings import warn
+from cobra import Solution
 from sklearn.decomposition import PCA
-import argparse
 
 
 def write_solution(model, solution, threshold, filename='imat_sol.csv'):
@@ -18,7 +19,6 @@ def write_solution(model, solution, threshold, filename='imat_sol.csv'):
     """
     tol = model.solver.configuration.tolerances.feasibility
     solution_binary = (np.abs(solution.fluxes) >= threshold-tol).values.astype(int)
-
     with open(filename, 'w+') as file:
         file.write('reaction,fluxes,binary\n')
         for i, v in enumerate(solution.fluxes):
@@ -39,9 +39,13 @@ def read_solution(filename, model=None):
             objective_value = float(reader[-2].split()[-1])
             status = reader[-1].split()[-1]
     if binary:
-        fluxes = pd.read_csv(filename, index_col=0).rename(index={0: 'fluxes'}).T
-        fluxes.index = [rxn.id for rxn in model.reactions]
-        sol_bin = list(fluxes['fluxes'])
+        fluxes = pd.read_csv(filename, index_col=0).iloc[0]
+        if model is not None:
+            fluxes.index = [rxn.id for rxn in model.reactions]
+        else:
+            warn('A model is necessary for setting the reaction IDs in a binary solution.'
+                 'Disregard this warning if the columns of the binary solution are already reaction IDs')
+        sol_bin = np.array(fluxes.values)
         objective_value = 0.
         status = 'binary'
     else:
@@ -117,7 +121,6 @@ def plot_pca(solution_path, rxn_enum_solutions=None, save=True, save_name=''):
     plt.legend(fontsize='large')
     if save:
         fig.savefig(save_name+'pca.png')
-
     return pca
 
 

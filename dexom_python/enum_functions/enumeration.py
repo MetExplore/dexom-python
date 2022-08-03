@@ -44,7 +44,24 @@ def create_enum_variables(model, reaction_weights, eps=1e-2, thr=1e-5, full=Fals
 
 
 def get_recent_solution_and_iteration(dirpath, startsol_num):
-    paths = sorted(list(Path(dirpath).glob('*solution_*.csv')), key=os.path.getctime)
+    """
+    This functions fetches a solution from a given directory. The solutions are ordered by creation time, and one
+    solution is picked using an exponential distribution (meaning that the most recent solution has the highest
+    probability of being chosen)
+
+    Parameters
+    ----------
+    dirpath: str
+        a directory containing imat or enumeration solutions
+    startsol_num: int
+        the number of starting solutions present in the directory
+
+    Returns
+    -------
+    solution: a Solution object
+    iteration: an int which
+    """
+    paths = sorted(list(Path(dirpath).glob('*solution*.csv')), key=os.path.getctime)
     paths.reverse()
     solpath = paths[int(np.random.exponential(5))]
     solution, binary = read_solution(solpath)
@@ -54,6 +71,9 @@ def get_recent_solution_and_iteration(dirpath, startsol_num):
 
 def write_rxn_enum_script(directory, modelfile, weightfile, imatsol=None, reactionlist=None, eps=1e-4, thr=1e-5,
                           tol=1e-8, iters=100, maxiters=1e10):
+    os.makedirs(directory, exist_ok=True)
+    if directory[-1] not in ['/', '\\']:
+        directory += '/'
     if reactionlist is not None:
         with open(reactionlist, 'r') as file:
             rxns = file.read().split('\n')
@@ -87,6 +107,9 @@ def write_rxn_enum_script(directory, modelfile, weightfile, imatsol=None, reacti
 
 def write_batch_script_divenum(directory, modelfile, weightfile, rxnsols, objtol, eps=1e-4, thr=1e-5,
                                tol=1e-8, filenums=100, iters=100, t=6000):
+    os.makedirs(directory, exist_ok=True)
+    if directory[-1] not in ['/', '\\']:
+        directory += '/'
     for i in range(filenums):
         with open(directory+'file_'+str(i)+'.sh', 'w+') as f:
             f.write('#!/bin/bash\n#SBATCH -p workq\n#SBATCH --mail-type=ALL\n#SBATCH --mem=64G\n#SBATCH -c 24\n'
@@ -116,7 +139,7 @@ def write_batch_script1(directory, modelfile, weightfile, cplexpath, reactionlis
     Parameters
     ----------
     directory: str
-        directory in which the files will be generated. MUST have a '/' and be a valid directory
+        directory in which the files will be generated. If it does not exist, it will be created
     modelfile: str
         path to the model
     weightfile:
@@ -134,6 +157,9 @@ def write_batch_script1(directory, modelfile, weightfile, cplexpath, reactionlis
     iters: int
         number of diversity-enumeration iterations per batch
     """
+    os.makedirs(directory, exist_ok=True)
+    if directory[-1] not in ['/', '\\']:
+        directory += '/'
     if reactionlist is not None:
         rstring = '-l ' + reactionlist
     else:
@@ -183,6 +209,9 @@ def write_batch_script2(directory, modelfile, weightfile, cplexpath, objtol=1e-2
     filenums: int
         number of parallel batches
     """
+    os.makedirs(directory, exist_ok=True)
+    if directory[-1] not in ['/', '\\']:
+        directory += '/'
     paths = sorted(list(Path(directory).glob('*solution_*.csv')), key=os.path.getctime)
     paths.reverse()
     for i in range(filenums):
