@@ -114,7 +114,7 @@ def get_subsystems_from_model(model, save=True, out_path=''):
     return rxn_sub, sub_list
 
 
-def save_reaction_weights(reaction_weights, filename):
+def save_reaction_weights(reaction_weights, filename='reaction_weights.csv'):
     """
     Parameters
     ----------

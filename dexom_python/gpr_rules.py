@@ -2,12 +2,19 @@ import re
 import argparse
 import numpy as np
 import pandas as pd
-from symengine import sympify, Add, Mul, Max, Min
+from symengine import sympify, Add, Mul, Max, Min, Pow, Symbol
 from dexom_python.model_functions import read_model, save_reaction_weights
 pd.options.mode.chained_assignment = None
 
 
 def replace_MulMax_AddMin(expression):
+    """
+    Function used for parsing gpr expressions
+    Parameters
+    ----------
+    expression: symengine expression
+        a symengine/sympy expression of a gpr rule
+    """
     if expression.is_Atom:
         return expression
     else:
@@ -16,8 +23,11 @@ def replace_MulMax_AddMin(expression):
             return Max(*replaced_args)
         elif expression.__class__ == Add:
             return Min(*replaced_args)
+        elif expression.__class__ == Pow:
+            return replace_MulMax_AddMin(expression.args[0])
         else:
-            return expression.func(*replaced_args)
+            raise TypeError(f"Unsupported operation: {repr(expression)}")
+            # return expression.func(*replaced_args)
 
 
 def expression2qualitative(genes, column_list=None, proportion=0.25, method='keep', save=True,
@@ -72,7 +82,7 @@ def expression2qualitative(genes, column_list=None, proportion=0.25, method='kee
     return genes
 
 
-def apply_gpr(model, gene_weights, save=True, filename='reaction_weights', duplicates='remove'):
+def apply_gpr(model, gene_weights, save=True, filename='reaction_weights', duplicates='remove', null=0.):
     """
     Applies the GPR rules from a given metabolic model for creating reaction weights
 
@@ -88,6 +98,8 @@ def apply_gpr(model, gene_weights, save=True, filename='reaction_weights', dupli
         path where the file will be saved
     duplicates: str, any of "remove", "max", "min", "mean", "median"
         determines how to deal with genes presenting several expression values
+    null: float
+        value to return for reactions/genes with no information
     Returns
     -------
     reaction_weights: dict where keys = reaction IDs and values = weights
@@ -116,19 +128,12 @@ def apply_gpr(model, gene_weights, save=True, filename='reaction_weights', dupli
             gen_list = [g.id for g in rxn.genes]
             expr_split = rxn.gene_reaction_rule.replace('(', '( ').replace(')', ' )').split()
             expr_split = ['g_' + re.sub(':|\.|-', '_', s) if s in gen_list else s for s in expr_split]
-            new_weights = {'g_' + re.sub(':|\.|-', '_', g): gene_weight_dict.get(g, 0.) for g in gen_list}
-            negweights = []
-            for g, v in new_weights.items():
-                if v < 0:
-                    new_weights[g] = -v - 1e-15
-                    negweights.append(-v)
+            new_weights = {'g_' + re.sub(':|\.|-', '_', g): gene_weight_dict.get(g, null) for g in gen_list}
             expression = ' '.join(expr_split).replace(' or ', ' * ').replace(' and ', ' + ')
             weight = replace_MulMax_AddMin(sympify(expression)).subs(new_weights)
-            if weight + 1e-15 in negweights:
-                weight = -weight - 1e-15
             reaction_weights[rxn.id] = weight
         else:
-            reaction_weights[rxn.id] = 0.
+            reaction_weights[rxn.id] = null
     reaction_weights = {str(k): float(v) for k, v in reaction_weights.items()}
     if save:
         save_reaction_weights(reaction_weights, filename+'.csv')
@@ -150,6 +155,8 @@ if __name__ == '__main__':
     parser.add_argument('--convert', action='store_true', help='converts gene expression to qualitative weights')
     parser.add_argument('-t', '--threshold', type=float, default=.25,
                         help='proportion of genes that are highly/lowly expressed (only used if --convert is selected)')
+    parser.add_argument('-n', '--null', type=float, default=0.,
+                        help='value assigned to reactions/genes with no associated information')
     args = parser.parse_args()
 
     model = read_model(args.model)
@@ -161,4 +168,4 @@ if __name__ == '__main__':
     gene_weights = pd.Series(genes[args.gene_score].values, index=genes.index)
 
     reaction_weights = apply_gpr(model=model, gene_weights=gene_weights, save=True, filename=args.output,
-                                 duplicates=args.duplicates)
+                                 duplicates=args.duplicates, null=args.null)
