@@ -19,7 +19,8 @@ class RxnEnumSolution(object):
         self.unique_reactions = unique_reactions
 
 
-def rxn_enum(model, reaction_weights, prev_sol, rxn_list=[], eps=1., thr=1e-1, obj_tol=1e-2):
+def rxn_enum(model, reaction_weights, prev_sol=None, rxn_list=[], eps=1., thr=1e-1, obj_tol=1e-2, out_path='enum_rxn',
+             save=False):
     """
     Reaction enumeration method
 
@@ -40,10 +41,18 @@ def rxn_enum(model, reaction_weights, prev_sol, rxn_list=[], eps=1., thr=1e-1, o
         tolerance for imat
     obj_tol: float
         variance allowed in the objective_values of the solutions
+    out_path: str
+        path to which the solutions are saved if save==True
+    save: bool
+        if True, every individual solution is saved in the iMAT solution format
     Returns
     -------
     solution: RxnEnumSolution object
     """
+    if prev_sol is None:
+        prev_sol = imat(model, reaction_weights, epsilon=eps, threshold=thr, full=False)
+    else:
+        model = create_enum_variables(model=model, reaction_weights=reaction_weights, eps=eps, thr=thr, full=False)
     tol = model.solver.configuration.tolerances.feasibility
     prev_sol_bin = (np.abs(prev_sol.fluxes) >= thr-tol).values.astype(int)
     optimal_objective_value = prev_sol.objective_value - prev_sol.objective_value * obj_tol
@@ -85,6 +94,9 @@ def rxn_enum(model, reaction_weights, prev_sol, rxn_list=[], eps=1., thr=1e-1, o
                                         unique_solutions.append(temp_sol)
                                         unique_solutions_binary.append(temp_sol_bin)
                                         unique_reactions.append(rid+'_backwards')
+                                        if save:
+                                            filename = out_path+'_solution_'+str(len(unique_solutions))+'.csv'
+                                            write_solution(model, temp_sol, thr, filename)
                             except:
                                 print('An error occurred with reaction %s_reverse. '
                                       'Check feasibility of the model when this reaction is irreversible.' % rid)
@@ -107,6 +119,9 @@ def rxn_enum(model, reaction_weights, prev_sol, rxn_list=[], eps=1., thr=1e-1, o
                                 unique_solutions.append(temp_sol)
                                 unique_solutions_binary.append(temp_sol_bin)
                                 unique_reactions.append(rid)
+                                if save:
+                                    filename = out_path+'_solution_'+str(len(unique_solutions))+'.csv'
+                                    write_solution(model, temp_sol, thr, filename)
                     except:
                         if prev_sol_bin[idx] == 1:
                             print('An error occurred with reaction %s. '
@@ -176,11 +191,11 @@ if __name__ == '__main__':
         initial_solution = imat(model, reaction_weights, epsilon=args.epsilon, threshold=args.threshold)
 
     solution = rxn_enum(model=model, rxn_list=rxn_list, prev_sol=initial_solution, reaction_weights=reaction_weights,
-                        eps=args.epsilon, thr=args.threshold, obj_tol=args.obj_tol)
+                        eps=args.epsilon, thr=args.threshold, obj_tol=args.obj_tol, out_path=args.output, save=args.save)
 
     uniques = pd.DataFrame(solution.unique_binary)
     uniques.to_csv(args.output+'_solutions.csv')
-
-    if args.save:
-        for i in range(1, len(solution.unique_solutions)):
-            write_solution(model, solution.unique_solutions[i], args.threshold, args.output+'_solution_'+str(i)+'.csv')
+    #
+    # if args.save:
+    #     for i in range(1, len(solution.unique_solutions)):
+    #         write_solution(model, solution.unique_solutions[i], args.threshold, args.output+'_solution_'+str(i)+'.csv')
