@@ -95,7 +95,7 @@ def rxn_enum(model, reaction_weights, prev_sol=None, rxn_list=[], eps=1., thr=1e
                                         unique_solutions_binary.append(temp_sol_bin)
                                         unique_reactions.append(rid+'_backwards')
                                         if save:
-                                            filename = out_path+'_solution_'+str(len(unique_solutions))+'.csv'
+                                            filename = out_path+'_solution_'+str(len(unique_solutions)-1)+'.csv'
                                             write_solution(model, temp_sol, thr, filename)
                             except:
                                 print('An error occurred with reaction %s_reverse. '
@@ -120,7 +120,7 @@ def rxn_enum(model, reaction_weights, prev_sol=None, rxn_list=[], eps=1., thr=1e
                                 unique_solutions_binary.append(temp_sol_bin)
                                 unique_reactions.append(rid)
                                 if save:
-                                    filename = out_path+'_solution_'+str(len(unique_solutions))+'.csv'
+                                    filename = out_path+'_solution_'+str(len(unique_solutions)-1)+'.csv'
                                     write_solution(model, temp_sol, thr, filename)
                     except:
                         if prev_sol_bin[idx] == 1:

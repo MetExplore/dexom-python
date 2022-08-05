@@ -56,7 +56,7 @@ def read_solution(filename, model=None):
     return solution, sol_bin
 
 
-def combine_solutions(sol_path):
+def combine_binary_solutions(sol_path):
     solutions = Path(sol_path).glob('*solutions.csv')
     sollist = []
     for sol in solutions:
@@ -64,8 +64,56 @@ def combine_solutions(sol_path):
     fullsol = pd.concat(sollist, ignore_index=True)
     uniquesol = fullsol.drop_duplicates()
     print('There are %i unique solutions and %i duplicates.' % (len(uniquesol), len(fullsol) - len(uniquesol)))
-    uniquesol.to_csv(sol_path+'/combined_solutions.csv')
+    uniquesol.to_csv(sol_path+'combined_solutions.csv')
     return uniquesol
+
+
+def compile_solutions(solutions, out_path='compiled_solutions', model=None, threshold=None):
+    """
+    Compiles individual solution files into one binary solution DataFrame
+    Parameters
+    ----------
+    solutions: list or str
+        if list: either a list of solution files in .csv format
+                 or a list of Solution objects
+                 or a list of binary solution arrays
+        if str: a folder in which all .csv files are solutions
+    out_path: str
+        path to which the combined solutions will be saved
+    model: cobrapy Model
+        necessary if the solutions parameter is a list of Solution objects
+    threshold: float
+        required if the solutions parameter is a list of Solution objects
+    Returns
+    -------
+    sol_frame: pandas DataFrame containg binary solutions
+    """
+    if model is not None:
+        tol = model.solver.configuration.tolerances.feasibility
+    if isinstance(solutions, str):
+        sol_paths = [str(x) for x in Path(solutions).glob('*.csv')]
+    else:
+        sol_paths = solutions
+    sols = []
+    for s in sol_paths:
+        binsol = None
+        if isinstance(s, str):
+            fullsol, binsol = read_solution(s, model=model)
+        elif isinstance(s, Solution):
+            try:
+                binsol = (np.abs(s.fluxes) >= threshold - tol).values.astype(int)
+            except TypeError:
+                warn('If you pass a list of Solution objects, you must also provide the model and threshold parameters.'
+                     'The current model parameter is %s and the current threshold parameter is %s' % (model, threshold))
+        elif isinstance(s, list) or isinstance(s, np.ndarray):
+            binsol = np.array(s)
+        else:
+            warn('Unrecognized type %s for solution %s' % (type(s), s))
+        if binsol is not None:
+            sols.append(binsol)
+    sol_frame = pd.DataFrame(sols)
+    sol_frame.to_csv(out_path+'.csv')
+    return sol_frame
 
 
 def plot_pca(solution_path, rxn_enum_solutions=None, save=True, save_name=''):
