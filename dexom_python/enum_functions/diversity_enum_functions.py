@@ -1,6 +1,7 @@
 import argparse
 import six
 import time
+import os
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -61,6 +62,8 @@ def diversity_enum(model, reaction_weights, prev_sol=None, eps=1e-3, thr=1e-5, o
     # preserve the optimality of the original solution
     opt_const = create_maxdist_constraint(model, reaction_weights, prev_sol, obj_tol, 'dexom_optimality', full=full)
     model.solver.add(opt_const)
+    if save:  # when saving each individual solution, ensure that the out_path is a directory
+        os.makedirs(out_path, exist_ok=True)
     for idx in range(1, maxiter+1):
         t0 = time.perf_counter()
         if icut:

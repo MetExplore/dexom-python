@@ -96,11 +96,6 @@ def test_apply_gpr(model, gene_weights, reaction_weights):
 # Testing imat
 
 
-def test_create_partial_variables(model, reaction_weights):
-    im.create_partial_variables(model, reaction_weights, 1)
-    assert len(model.variables) == 33 and len(model.constraints) == 20
-
-
 def test_create_new_partial_variables(model, reaction_weights):
     im.create_new_partial_variables(model, reaction_weights, 1, 1e-5)
     assert len(model.variables) == 41 and len(model.constraints) == 35
@@ -151,7 +146,7 @@ def test_write_solution(model, imatsol):
 
 def test_rxn_enum(model, reaction_weights, imatsol):
     rxn_sol = enum.rxn_enum(model=model, reaction_weights=reaction_weights, prev_sol=imatsol)
-    assert len(rxn_sol.all_solutions) == 9 and len(rxn_sol.all_binary) == 9
+    assert np.isclose(rxn_sol.objective_value, 4.) and len(rxn_sol.unique_solutions) == 4
 
 
 def test_icut_partial(model, reaction_weights, imatsol):

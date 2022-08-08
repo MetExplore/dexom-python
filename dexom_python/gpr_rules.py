@@ -52,7 +52,7 @@ def expression2qualitative(genes, column_list=None, proportion=0.25, method='kee
     Returns
     -------
     gene_weights: a pandas DataFrame containing qualitative gene weights
-    (-1 for low expression, 1 for high expression, 0 for in-between or no information)
+        (-1 for low expression, 1 for high expression, 0 for in-between or no information)
     """
     genes = genes[genes.index == genes.index]  # eliminates NaN values
     if column_list is None:

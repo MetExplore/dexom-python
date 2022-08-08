@@ -111,7 +111,7 @@ def compile_solutions(solutions, out_path='compiled_solutions', model=None, thre
             warn('Unrecognized type %s for solution %s' % (type(s), s))
         if binsol is not None:
             sols.append(binsol)
-    sol_frame = pd.DataFrame(sols)
+    sol_frame = pd.DataFrame(sols).drop_duplicates(ignore_index=True)
     sol_frame.to_csv(out_path+'.csv')
     return sol_frame
 

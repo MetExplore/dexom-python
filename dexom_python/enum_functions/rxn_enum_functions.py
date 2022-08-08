@@ -1,4 +1,5 @@
 import argparse
+import os
 import pandas as pd
 import numpy as np
 from dexom_python.imat_functions import imat
@@ -9,14 +10,15 @@ from warnings import warn
 
 
 class RxnEnumSolution(object):
-    def __init__(self,
-                 all_solutions, unique_solutions, all_binary, unique_binary, all_reactions=None, unique_reactions=None):
+    def __init__(self, all_solutions, unique_solutions, all_binary, unique_binary,
+                 all_reactions=None, unique_reactions=None, objective_value=-1.):
         self.all_solutions = all_solutions
         self.unique_solutions = unique_solutions
         self.all_binary = all_binary
         self.unique_binary = unique_binary
         self.all_reactions = all_reactions
         self.unique_reactions = unique_reactions
+        self.objective_value = objective_value
 
 
 def rxn_enum(model, reaction_weights, prev_sol=None, rxn_list=[], eps=1., thr=1e-1, obj_tol=1e-2, out_path='enum_rxn',
@@ -63,7 +65,8 @@ def rxn_enum(model, reaction_weights, prev_sol=None, rxn_list=[], eps=1., thr=1e
     unique_solutions_binary = [prev_sol_bin]
     all_reactions = []  # for each solution, save which reaction was activated/inactived by the algorithm
     unique_reactions = []
-
+    if save:  # when saving each individual solution, ensure that the out_path is a directory
+        os.makedirs(out_path, exist_ok=True)
     if not rxn_list:
         rxns = list(model.reactions)
         rxn_list = [r.id for r in rxns]
@@ -130,7 +133,7 @@ def rxn_enum(model, reaction_weights, prev_sol=None, rxn_list=[], eps=1., thr=1e
                             print('An error occurred with reaction %s. '
                                   'Check feasibility of the model when this reaction is irreversible' % rid)
     solution = RxnEnumSolution(all_solutions, unique_solutions, all_solutions_binary, unique_solutions_binary,
-                               all_reactions, unique_reactions)
+                               all_reactions, unique_reactions, prev_sol.objective_value)
     return solution
 
 
@@ -195,7 +198,3 @@ if __name__ == '__main__':
 
     uniques = pd.DataFrame(solution.unique_binary)
     uniques.to_csv(args.output+'_solutions.csv')
-    #
-    # if args.save:
-    #     for i in range(1, len(solution.unique_solutions)):
-    #         write_solution(model, solution.unique_solutions[i], args.threshold, args.output+'_solution_'+str(i)+'.csv')

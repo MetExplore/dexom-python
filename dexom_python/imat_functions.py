@@ -108,6 +108,7 @@ def imat(model, reaction_weights=None, epsilon=1e-2, threshold=1e-5, full=False)
         activation threshold for all reactions
     full: bool
         if True, create variables for all reactions. if False, only for reactions with non-zero weights
+
     Returns
     -------
     solution: cobra.Solution
