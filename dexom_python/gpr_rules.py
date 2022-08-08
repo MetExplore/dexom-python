@@ -10,6 +10,7 @@ pd.options.mode.chained_assignment = None
 def replace_MulMax_AddMin(expression):
     """
     Function used for parsing gpr expressions
+
     Parameters
     ----------
     expression: symengine expression
@@ -33,6 +34,7 @@ def replace_MulMax_AddMin(expression):
 def expression2qualitative(genes, column_list=None, proportion=0.25, method='keep', save=True,
                            outpath='geneweights'):
     """
+    Transforms gene expression values/ gene scores into qualitative gene weights
 
     Parameters
     ----------

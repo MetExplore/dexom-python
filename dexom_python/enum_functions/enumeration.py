@@ -151,7 +151,8 @@ def get_recent_solution_and_iteration(dirpath, startsol_num):
     Returns
     -------
     solution: a Solution object
-    iteration: an int which
+    iteration: int
+        calculates the current iteration, based on how many solutions are already present in the folder
     """
     paths = sorted(list(Path(dirpath).glob('*solution*.csv')), key=os.path.getctime)
     paths.reverse()

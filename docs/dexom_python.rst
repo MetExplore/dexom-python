@@ -1,13 +1,13 @@
-dexom\_python package
-=====================
+dexom\_python package top-level modules
+=======================================
 
 Submodules
 ----------
 
-dexom\_cluster\_results module
---------------------------------------------
+model\_functions module
+-------------------------------------
 
-.. automodule:: dexom_python.dexom_cluster_results
+.. automodule:: dexom_python.model_functions
    :members:
    :undoc-members:
    :show-inheritance:
@@ -20,26 +20,26 @@ gpr\_rules module
    :undoc-members:
    :show-inheritance:
 
-imat module
+imat_functions module
 -------------------------
 
-.. automodule:: dexom_python.imat
+.. automodule:: dexom_python.imat_functions
    :members:
    :undoc-members:
    :show-inheritance:
 
-main module
--------------------------
+result\_functions module
+--------------------------------------
 
-.. automodule:: dexom_python.main
+.. automodule:: dexom_python.result_functions
    :members:
    :undoc-members:
    :show-inheritance:
 
-model\_functions module
--------------------------------------
+toy\_models module
+--------------------------------
 
-.. automodule:: dexom_python.model_functions
+.. automodule:: dexom_python.toy_models
    :members:
    :undoc-members:
    :show-inheritance:
@@ -52,18 +52,10 @@ pathway\_enrichment module
    :undoc-members:
    :show-inheritance:
 
-dexom\_python.result\_functions module
---------------------------------------
+dexom\_cluster\_results module
+--------------------------------------------
 
-.. automodule:: dexom_python.result_functions
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-dexom\_python.toy\_models module
---------------------------------
-
-.. automodule:: dexom_python.toy_models
+.. automodule:: dexom_python.dexom_cluster_results
    :members:
    :undoc-members:
    :show-inheritance:

@@ -71,19 +71,19 @@ def combine_binary_solutions(sol_path):
 def compile_solutions(solutions, out_path='compiled_solutions', model=None, threshold=None):
     """
     Compiles individual solution files into one binary solution DataFrame
+
     Parameters
     ----------
     solutions: list or str
-        if list: either a list of solution files in .csv format
-                 or a list of Solution objects
-                 or a list of binary solution arrays
-        if str: a folder in which all .csv files are solutions
+        If list, must contain either solution files in .csv format, or Solution objects, or binary solution arrays. -
+        If str, must be a folder in which all .csv files are solutions
     out_path: str
         path to which the combined solutions will be saved
     model: cobrapy Model
         necessary if the solutions parameter is a list of Solution objects
     threshold: float
         required if the solutions parameter is a list of Solution objects
+
     Returns
     -------
     sol_frame: pandas DataFrame containg binary solutions
