@@ -29,6 +29,22 @@ def write_solution(model, solution, threshold, filename='imat_sol.csv'):
 
 
 def read_solution(filename, model=None):
+    """
+    Reads a solution from a .csv file. If the provided file is a binary solutions file
+    (as output by enumeration methods), the first solution will be read
+
+    Parameters
+    ----------
+    filename: str
+        name of the file containing the solution
+    model: cobra.Model
+        required if the filename points to a binary solution file
+
+    Returns
+    -------
+    solution: cobra.Solution
+    sol_bin: numpy.array
+    """
     binary = True
     with open(filename, 'r') as f:
         reader = f.read().split('\n')
@@ -56,19 +72,35 @@ def read_solution(filename, model=None):
     return solution, sol_bin
 
 
-def combine_binary_solutions(sol_path):
-    solutions = Path(sol_path).glob('*solutions.csv')
+def combine_binary_solutions(sol_path, solution_pattern='*solutions*.csv', out_path=''):
+    """
+    Combines several binary solution files into one
+
+    Parameters
+    ----------
+    sol_path: str
+        folder in which binary solutions are saved
+    solution_pattern: str
+        pattern which is used to find binary solution files
+    out_path: str
+        path to which the combined solutions are saved
+
+    Returns
+    -------
+    uniquesol: pandas.DataFrame
+    """
+    solutions = Path(sol_path).glob(solution_pattern)
     sollist = []
     for sol in solutions:
         sollist.append(pd.read_csv(sol, index_col=0))
     fullsol = pd.concat(sollist, ignore_index=True)
     uniquesol = fullsol.drop_duplicates()
     print('There are %i unique solutions and %i duplicates.' % (len(uniquesol), len(fullsol) - len(uniquesol)))
-    uniquesol.to_csv(sol_path+'combined_solutions.csv')
+    uniquesol.to_csv(out_path+'combined_solutions.csv')
     return uniquesol
 
 
-def compile_solutions(solutions, out_path='compiled_solutions', model=None, threshold=None):
+def compile_solutions(solutions, out_path='compiled_solutions', solution_pattern='*.csv', model=None, threshold=None):
     """
     Compiles individual solution files into one binary solution DataFrame
 
@@ -79,8 +111,10 @@ def compile_solutions(solutions, out_path='compiled_solutions', model=None, thre
         If str, must be a folder in which all .csv files are solutions
     out_path: str
         path to which the combined solutions will be saved
+    solution_pattern: str
+        If reading solutions from a folder, this is the pattern which will be used to recognize solution files
     model: cobrapy Model
-        necessary if the solutions parameter is a list of Solution objects
+        required  if the solutions parameter is a list of Solution objects
     threshold: float
         required if the solutions parameter is a list of Solution objects
 
@@ -90,8 +124,10 @@ def compile_solutions(solutions, out_path='compiled_solutions', model=None, thre
     """
     if model is not None:
         tol = model.solver.configuration.tolerances.feasibility
+    else:
+        tol = None
     if isinstance(solutions, str):
-        sol_paths = [str(x) for x in Path(solutions).glob('*.csv')]
+        sol_paths = [str(x) for x in Path(solutions).glob(solution_pattern)]
     else:
         sol_paths = solutions
     sols = []

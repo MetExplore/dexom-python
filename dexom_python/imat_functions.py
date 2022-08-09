@@ -7,88 +7,108 @@ from dexom_python.model_functions import read_model, check_model_options, load_r
 from dexom_python.result_functions import write_solution
 
 
-def create_full_variables(model, reaction_weights, epsilon, threshold):
+def create_full_variable_single(model, rid, reaction_weights, epsilon, threshold):
     # the x_rid variables represent a binary condition of flux activation
+    if 'x_' + rid not in model.solver.variables:
+        rxn = model.reactions.get_by_id(rid)
+        xtot = model.solver.interface.Variable('x_%s' % rid, type='binary')
+        xf = model.solver.interface.Variable('xf_%s' % rid, type='binary')
+        xr = model.solver.interface.Variable('xr_%s' % rid, type='binary')
+        model.solver.add(xtot)
+        model.solver.add(xf)
+        model.solver.add(xr)
+        xtot_def = model.solver.interface.Constraint(xtot - xf - xr, lb=0., ub=0., name='x_%s_def' % rid)
+        xf_upper = model.solver.interface.Constraint(
+            rxn.forward_variable - rxn.upper_bound * xf, ub=0., name='xr_%s_upper' % rid)
+        xr_upper = model.solver.interface.Constraint(
+            rxn.reverse_variable + rxn.lower_bound * xr, ub=0., name='xf_%s_upper' % rid)
+        temp = threshold
+        if rid in reaction_weights:
+            if reaction_weights[rid] > 0.:
+                temp = epsilon
+        xf_lower = model.solver.interface.Constraint(
+            rxn.forward_variable - temp * xf, lb=0., name='xf_%s_lower' % rid)
+        xr_lower = model.solver.interface.Constraint(
+            rxn.reverse_variable - temp * xr, lb=0., name='xr_%s_lower' % rid)
+        model.solver.add(xtot_def)
+        model.solver.add(xf_upper)
+        model.solver.add(xr_upper)
+        model.solver.add(xf_lower)
+        model.solver.add(xr_lower)
+    return model
+
+
+def create_new_partial_variable_single(model, rid, epsilon, threshold, pos):
+    # the variable definition is more precise than in the original iMAT implementation
+    # this is done in order to avoid problems with enumeration methods, and doesn't affect the results of iMAT
+    if pos and 'rh_' + rid + '_pos' not in model.solver.variables:
+        rxn = model.reactions.get_by_id(rid)
+        xtot = model.solver.interface.Variable('x_%s' % rid, type='binary')
+        xf = model.solver.interface.Variable('rh_%s_pos' % rid, type='binary')
+        xr = model.solver.interface.Variable('rh_%s_neg' % rid, type='binary')
+        model.solver.add(xtot)
+        model.solver.add(xf)
+        model.solver.add(xr)
+        xtot_def = model.solver.interface.Constraint(xtot - xf - xr, lb=0., ub=0., name='x_%s_def' % rid)
+        xf_upper = model.solver.interface.Constraint(
+            rxn.forward_variable - rxn.upper_bound * xf, ub=0., name='xr_%s_upper' % rid)
+        xr_upper = model.solver.interface.Constraint(
+            rxn.reverse_variable + rxn.lower_bound * xr, ub=0., name='xf_%s_upper' % rid)
+        xf_lower = model.solver.interface.Constraint(
+            rxn.forward_variable - epsilon * xf, lb=0., name='xf_%s_lower' % rid)
+        xr_lower = model.solver.interface.Constraint(
+            rxn.reverse_variable - epsilon * xr, lb=0., name='xr_%s_lower' % rid)
+        model.solver.add(xtot_def)
+        model.solver.add(xf_upper)
+        model.solver.add(xr_upper)
+        model.solver.add(xf_lower)
+        model.solver.add(xr_lower)
+    if not pos and 'rl_' + rid not in model.solver.variables:
+        rxn = model.reactions.get_by_id(rid)
+        xtot = model.solver.interface.Variable('rl_%s' % rid, type='binary')
+        xf = model.solver.interface.Variable('xf_%s' % rid, type='binary')
+        xr = model.solver.interface.Variable('xr_%s' % rid, type='binary')
+        model.solver.add(xtot)
+        model.solver.add(xf)
+        model.solver.add(xr)
+        xtot_def = model.solver.interface.Constraint(xtot - xf - xr, lb=0., ub=0., name='x_%s_def' % rid)
+        xf_upper = model.solver.interface.Constraint(
+            rxn.forward_variable - rxn.upper_bound * xf, ub=0., name='xr_%s_upper' % rid)
+        xr_upper = model.solver.interface.Constraint(
+            rxn.reverse_variable + rxn.lower_bound * xr, ub=0., name='xf_%s_upper' % rid)
+        xf_lower = model.solver.interface.Constraint(
+            rxn.forward_variable - threshold * xf, lb=0., name='xf_%s_lower' % rid)
+        xr_lower = model.solver.interface.Constraint(
+            rxn.reverse_variable - threshold * xr, lb=0., name='xr_%s_lower' % rid)
+        model.solver.add(xtot_def)
+        model.solver.add(xf_upper)
+        model.solver.add(xr_upper)
+        model.solver.add(xf_lower)
+        model.solver.add(xr_lower)
+    return model
+
+
+def create_full_variables(model, reaction_weights, epsilon, threshold):
+    """
+    Creates binary indicator variables in the model for every reaction.
+    """
     for rxn in model.reactions:
-        if 'x_' + rxn.id not in model.solver.variables:
-            rid = rxn.id
-            xtot = model.solver.interface.Variable('x_%s' % rid, type='binary')
-            xf = model.solver.interface.Variable('xf_%s' % rid, type='binary')
-            xr = model.solver.interface.Variable('xr_%s' % rid, type='binary')
-            model.solver.add(xtot)
-            model.solver.add(xf)
-            model.solver.add(xr)
-            xtot_def = model.solver.interface.Constraint(xtot - xf - xr, lb=0., ub=0., name='x_%s_def' % rid)
-            xf_upper = model.solver.interface.Constraint(
-                rxn.forward_variable - rxn.upper_bound * xf, ub=0., name='xr_%s_upper' % rid)
-            xr_upper = model.solver.interface.Constraint(
-                rxn.reverse_variable + rxn.lower_bound * xr, ub=0., name='xf_%s_upper' % rid)
-            temp = threshold
-            if rid in reaction_weights:
-                if reaction_weights[rid] > 0.:
-                    temp = epsilon
-            xf_lower = model.solver.interface.Constraint(
-                rxn.forward_variable - temp * xf, lb=0., name='xf_%s_lower' % rid)
-            xr_lower = model.solver.interface.Constraint(
-                rxn.reverse_variable - temp * xr, lb=0., name='xr_%s_lower' % rid)
-            model.solver.add(xtot_def)
-            model.solver.add(xf_upper)
-            model.solver.add(xr_upper)
-            model.solver.add(xf_lower)
-            model.solver.add(xr_lower)
+        model = create_full_variable_single(model=model, rid=rxn.id, reaction_weights=reaction_weights,
+                                            epsilon=epsilon, threshold=threshold)
     return model
 
 
 def create_new_partial_variables(model, reaction_weights, epsilon, threshold):
-    # the variable definition is more precise than in the original iMAT implementation
-    # this is done in order to avoid problems with enumeration methods, and doesn't affect the results of iMAT
+    """
+    Creates binary indicator variables in the model for reactions with nonzero weight.
+    """
     for rid, weight in six.iteritems(reaction_weights):
         if weight > 0 and rid in model.reactions:
-            if 'rh_' + rid + '_pos' not in model.solver.variables:
-                rxn = model.reactions.get_by_id(rid)
-                xtot = model.solver.interface.Variable('x_%s' % rid, type='binary')
-                xf = model.solver.interface.Variable('rh_%s_pos' % rid, type='binary')
-                xr = model.solver.interface.Variable('rh_%s_neg' % rid, type='binary')
-                model.solver.add(xtot)
-                model.solver.add(xf)
-                model.solver.add(xr)
-                xtot_def = model.solver.interface.Constraint(xtot - xf - xr, lb=0., ub=0., name='x_%s_def' % rid)
-                xf_upper = model.solver.interface.Constraint(
-                    rxn.forward_variable - rxn.upper_bound * xf, ub=0., name='xr_%s_upper' % rid)
-                xr_upper = model.solver.interface.Constraint(
-                    rxn.reverse_variable + rxn.lower_bound * xr, ub=0., name='xf_%s_upper' % rid)
-                xf_lower = model.solver.interface.Constraint(
-                    rxn.forward_variable - epsilon * xf, lb=0., name='xf_%s_lower' % rid)
-                xr_lower = model.solver.interface.Constraint(
-                    rxn.reverse_variable - epsilon * xr, lb=0., name='xr_%s_lower' % rid)
-                model.solver.add(xtot_def)
-                model.solver.add(xf_upper)
-                model.solver.add(xr_upper)
-                model.solver.add(xf_lower)
-                model.solver.add(xr_lower)
+            model = create_new_partial_variable_single(model=model, rid=rid, epsilon=epsilon, threshold=threshold,
+                                                       pos=True)
         elif weight < 0 and rid in model.reactions:  # the rl_rid variables represent the lowly expressed reactions
-            if 'rl_' + rid not in model.solver.variables:
-                rxn = model.reactions.get_by_id(rid)
-                xtot = model.solver.interface.Variable('rl_%s' % rid, type='binary')
-                xf = model.solver.interface.Variable('xf_%s' % rid, type='binary')
-                xr = model.solver.interface.Variable('xr_%s' % rid, type='binary')
-                model.solver.add(xtot)
-                model.solver.add(xf)
-                model.solver.add(xr)
-                xtot_def = model.solver.interface.Constraint(xtot - xf - xr, lb=0., ub=0., name='x_%s_def' % rid)
-                xf_upper = model.solver.interface.Constraint(
-                    rxn.forward_variable - rxn.upper_bound * xf, ub=0., name='xr_%s_upper' % rid)
-                xr_upper = model.solver.interface.Constraint(
-                    rxn.reverse_variable + rxn.lower_bound * xr, ub=0., name='xf_%s_upper' % rid)
-                xf_lower = model.solver.interface.Constraint(
-                    rxn.forward_variable - threshold * xf, lb=0., name='xf_%s_lower' % rid)
-                xr_lower = model.solver.interface.Constraint(
-                    rxn.reverse_variable - threshold * xr, lb=0., name='xr_%s_lower' % rid)
-                model.solver.add(xtot_def)
-                model.solver.add(xf_upper)
-                model.solver.add(xr_upper)
-                model.solver.add(xf_lower)
-                model.solver.add(xr_lower)
+            model = create_new_partial_variable_single(model=model, rid=rid, epsilon=epsilon, threshold=threshold,
+                                                       pos=False)
     return model
 
 
