@@ -1,5 +1,7 @@
 import argparse
 import os
+import time
+
 import pandas as pd
 import numpy as np
 from dexom_python.imat_functions import imat
@@ -21,7 +23,7 @@ class RxnEnumSolution(object):
         self.objective_value = objective_value
 
 
-def rxn_enum(model, reaction_weights, prev_sol=None, rxn_list=[], eps=1., thr=1e-1, obj_tol=1e-2, out_path='enum_rxn',
+def rxn_enum(model, reaction_weights, prev_sol=None, rxn_list=[], eps=1e-4, thr=1e-4, obj_tol=1e-3, out_path='enum_rxn',
              save=False):
     """
     Reaction enumeration method
@@ -51,6 +53,14 @@ def rxn_enum(model, reaction_weights, prev_sol=None, rxn_list=[], eps=1., thr=1e
     -------
     solution: RxnEnumSolution object
     """
+
+
+
+
+    save_times = []
+
+
+
     if prev_sol is None:
         prev_sol = imat(model, reaction_weights, epsilon=eps, threshold=thr, full=False)
     else:
@@ -98,8 +108,13 @@ def rxn_enum(model, reaction_weights, prev_sol=None, rxn_list=[], eps=1., thr=1e
                                         unique_solutions_binary.append(temp_sol_bin)
                                         unique_reactions.append(rid+'_backwards')
                                         if save:
+                                            tsave1 = time.perf_counter()
+
                                             filename = out_path+'_solution_'+str(len(unique_solutions)-1)+'.csv'
                                             write_solution(model, temp_sol, thr, filename)
+
+                                            tsave2 = time.perf_counter()
+                                            save_times.append(str(tsave2-tsave1))
                             except:
                                 print('An error occurred with reaction %s_reverse. '
                                       'Check feasibility of the model when this reaction is irreversible.' % rid)
@@ -123,8 +138,13 @@ def rxn_enum(model, reaction_weights, prev_sol=None, rxn_list=[], eps=1., thr=1e
                                 unique_solutions_binary.append(temp_sol_bin)
                                 unique_reactions.append(rid)
                                 if save:
+                                    tsave1 = time.perf_counter()
+
                                     filename = out_path+'_solution_'+str(len(unique_solutions)-1)+'.csv'
                                     write_solution(model, temp_sol, thr, filename)
+
+                                    tsave2 = time.perf_counter()
+                                    save_times.append(str(tsave2 - tsave1))
                     except:
                         if prev_sol_bin[idx] == 1:
                             print('An error occurred with reaction %s. '
@@ -134,7 +154,7 @@ def rxn_enum(model, reaction_weights, prev_sol=None, rxn_list=[], eps=1., thr=1e
                                   'Check feasibility of the model when this reaction is irreversible' % rid)
     solution = RxnEnumSolution(all_solutions, unique_solutions, all_solutions_binary, unique_solutions_binary,
                                all_reactions, unique_reactions, prev_sol.objective_value)
-    return solution
+    return solution, save_times
 
 
 if __name__ == '__main__':
@@ -153,7 +173,7 @@ if __name__ == '__main__':
                         help='Activation threshold for highly expressed reactions')
     parser.add_argument('--threshold', type=float, default=1e-5, help='Activation threshold for all reactions')
     parser.add_argument('-t', '--timelimit', type=int, default=None, help='Solver time limit')
-    parser.add_argument('--tol', type=float, default=1e-6, help='Solver feasibility tolerance')
+    parser.add_argument('--tol', type=float, default=1e-7, help='Solver feasibility tolerance')
     parser.add_argument('--mipgap', type=float, default=1e-3, help='Solver MIP gap tolerance')
     parser.add_argument('--obj_tol', type=float, default=1e-3,
                         help='objective value tolerance, as a fraction of the original value')

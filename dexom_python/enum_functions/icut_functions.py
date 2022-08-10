@@ -47,7 +47,7 @@ def create_icut_constraint(model, reaction_weights, threshold, prev_sol, name, f
     return constraint
 
 
-def icut(model, reaction_weights, prev_sol=None, eps=1e-2, thr=1e-5, obj_tol=1e-3, maxiter=10, full=False):
+def icut(model, reaction_weights, prev_sol=None, eps=1e-4, thr=1e-4, obj_tol=1e-3, maxiter=10, full=False):
     """
     integer-cut method
 

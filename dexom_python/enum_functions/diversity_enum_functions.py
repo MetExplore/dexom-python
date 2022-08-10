@@ -14,8 +14,8 @@ from dexom_python.enum_functions.icut_functions import create_icut_constraint
 from dexom_python.enum_functions.maxdist_functions import create_maxdist_constraint, create_maxdist_objective
 
 
-def diversity_enum(model, reaction_weights, prev_sol=None, eps=1e-3, thr=1e-5, obj_tol=1e-3, maxiter=10, dist_anneal=0.995,
-                   out_path='enum_dexom', icut=True, full=False, save=False):
+def diversity_enum(model, reaction_weights, prev_sol=None, eps=1e-4, thr=1e-4, obj_tol=1e-3, maxiter=10,
+                   dist_anneal=0.995, out_path='enum_dexom', icut=True, full=False, save=False):
     """
     diversity-based enumeration
 
@@ -119,14 +119,14 @@ if __name__ == '__main__':
     parser.add_argument('-r', '--reaction_weights', default=None,
                         help='Reaction weights in csv format (first row: reaction names, second row: weights)')
     parser.add_argument('-p', '--prev_sol', default=[], help='starting solution or directory of recent solutions')
-    parser.add_argument('-e', '--epsilon', type=float, default=1e-3,
+    parser.add_argument('-e', '--epsilon', type=float, default=1e-4,
                         help='Activation threshold for highly expressed reactions')
-    parser.add_argument('--threshold', type=float, default=1e-5, help='Activation threshold for all reactions')
+    parser.add_argument('--threshold', type=float, default=1e-4, help='Activation threshold for all reactions')
     parser.add_argument('-t', '--timelimit', type=int, default=None, help='Solver time limit')
     parser.add_argument('-i', '--maxiter', type=int, default=10, help='Iteration limit')
-    parser.add_argument('--tol', type=float, default=1e-8, help='Solver feasibility tolerance')
-    parser.add_argument('--mipgap', type=float, default=1e-6, help='Solver MIP gap tolerance')
-    parser.add_argument('--obj_tol', type=float, default=1e-2,
+    parser.add_argument('--tol', type=float, default=1e-7, help='Solver feasibility tolerance')
+    parser.add_argument('--mipgap', type=float, default=1e-3, help='Solver MIP gap tolerance')
+    parser.add_argument('--obj_tol', type=float, default=1e-3,
                         help='objective value tolerance, as a fraction of the original value')
     parser.add_argument('-o', '--output', default='div_enum', help='Base name of output files, without format')
     parser.add_argument('-a', '--dist_anneal', type=float, default=0.995, help='annealing distance')

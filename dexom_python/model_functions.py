@@ -28,7 +28,7 @@ def read_model(modelfile, solver='cplex'):
     return model
 
 
-def check_model_options(model, timelimit=None, feasibility=1e-6, mipgaptol=1e-3, verbosity=1):
+def check_model_options(model, timelimit=None, feasibility=1e-7, mipgaptol=1e-3, verbosity=1):
     model.solver.configuration.timeout = timelimit
     model.tolerance = feasibility
     model.solver.configuration.verbosity = verbosity

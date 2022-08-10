@@ -112,7 +112,7 @@ def create_new_partial_variables(model, reaction_weights, epsilon, threshold):
     return model
 
 
-def imat(model, reaction_weights=None, epsilon=1e-2, threshold=1e-5, full=False):
+def imat(model, reaction_weights=None, epsilon=1e-4, threshold=1e-4, full=False):
     """
     Modified version of the integrative Metabolic Analysis Tool with reaction weights
 
@@ -188,10 +188,10 @@ if __name__ == '__main__':
                         help='Reaction weights in csv format with column names: (reactions, weights)')
     parser.add_argument('-e', '--epsilon', type=float, default=1e-4,
                         help='Activation threshold for highly expressed reactions')
-    parser.add_argument('--threshold', type=float, default=1e-8, help='Activation threshold for all reactions')
+    parser.add_argument('--threshold', type=float, default=1e-4, help='Activation threshold for all reactions')
     parser.add_argument('-t', '--timelimit', type=int, default=None, help='Solver time limit')
-    parser.add_argument('--tol', type=float, default=1e-8, help='Solver feasibility tolerance')
-    parser.add_argument('--mipgap', type=float, default=1e-6, help='Solver MIP gap tolerance')
+    parser.add_argument('--tol', type=float, default=1e-7, help='Solver feasibility tolerance')
+    parser.add_argument('--mipgap', type=float, default=1e-3, help='Solver MIP gap tolerance')
     parser.add_argument('-o', '--output', default='imat_solution', help='Path of the output file, without format')
     args = parser.parse_args()
 
