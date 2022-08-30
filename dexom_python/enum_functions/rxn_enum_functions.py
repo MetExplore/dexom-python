@@ -1,7 +1,5 @@
 import argparse
 import os
-import time
-
 import pandas as pd
 import numpy as np
 from dexom_python.imat_functions import imat
@@ -53,14 +51,6 @@ def rxn_enum(model, reaction_weights, prev_sol=None, rxn_list=[], eps=1e-4, thr=
     -------
     solution: RxnEnumSolution object
     """
-
-
-
-
-    save_times = []
-
-
-
     if prev_sol is None:
         prev_sol = imat(model, reaction_weights, epsilon=eps, threshold=thr, full=False)
     else:
@@ -108,13 +98,8 @@ def rxn_enum(model, reaction_weights, prev_sol=None, rxn_list=[], eps=1e-4, thr=
                                         unique_solutions_binary.append(temp_sol_bin)
                                         unique_reactions.append(rid+'_backwards')
                                         if save:
-                                            tsave1 = time.perf_counter()
-
                                             filename = out_path+'_solution_'+str(len(unique_solutions)-1)+'.csv'
                                             write_solution(model, temp_sol, thr, filename)
-
-                                            tsave2 = time.perf_counter()
-                                            save_times.append(str(tsave2-tsave1))
                             except:
                                 print('An error occurred with reaction %s_reverse. '
                                       'Check feasibility of the model when this reaction is irreversible.' % rid)
@@ -138,13 +123,8 @@ def rxn_enum(model, reaction_weights, prev_sol=None, rxn_list=[], eps=1e-4, thr=
                                 unique_solutions_binary.append(temp_sol_bin)
                                 unique_reactions.append(rid)
                                 if save:
-                                    tsave1 = time.perf_counter()
-
                                     filename = out_path+'_solution_'+str(len(unique_solutions)-1)+'.csv'
                                     write_solution(model, temp_sol, thr, filename)
-
-                                    tsave2 = time.perf_counter()
-                                    save_times.append(str(tsave2 - tsave1))
                     except:
                         if prev_sol_bin[idx] == 1:
                             print('An error occurred with reaction %s. '
@@ -154,7 +134,7 @@ def rxn_enum(model, reaction_weights, prev_sol=None, rxn_list=[], eps=1e-4, thr=
                                   'Check feasibility of the model when this reaction is irreversible' % rid)
     solution = RxnEnumSolution(all_solutions, unique_solutions, all_solutions_binary, unique_solutions_binary,
                                all_reactions, unique_reactions, prev_sol.objective_value)
-    return solution, save_times
+    return solution
 
 
 if __name__ == '__main__':

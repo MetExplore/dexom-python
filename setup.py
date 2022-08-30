@@ -21,7 +21,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name='dexom_python',
-    version='0.4.3',
+    version='0.4.4',
     packages=find_packages('.'),
     install_requires=requirements,
     include_package_data=True,

@@ -146,7 +146,7 @@ def test_write_solution(model, imatsol):
 
 def test_rxn_enum(model, reaction_weights, imatsol):
     rxn_sol = enum.rxn_enum(model=model, reaction_weights=reaction_weights, prev_sol=imatsol)
-    assert np.isclose(rxn_sol.objective_value, 4.) and len(rxn_sol.unique_solutions) == 4
+    assert np.isclose(rxn_sol.objective_value, 4.) and len(rxn_sol.solutions) == 3
 
 
 def test_icut_partial(model, reaction_weights, imatsol):
@@ -156,7 +156,7 @@ def test_icut_partial(model, reaction_weights, imatsol):
 
 def test_icut_full(model, reaction_weights, imatsol):
     icut_sol = enum.icut(model=model, reaction_weights=reaction_weights, prev_sol=imatsol, maxiter=10, full=True)
-    assert np.isclose(icut_sol.objective_value, 4.) and len(icut_sol.solutions) == 11
+    assert np.isclose(icut_sol.objective_value, 4.) and len(icut_sol.solutions) == 3
 
 
 def test_maxdist_partial(model, reaction_weights, imatsol):
