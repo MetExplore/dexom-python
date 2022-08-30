@@ -172,4 +172,4 @@ if __name__ == '__main__':
                                       thr=args.threshold, maxiter=args.maxiter, obj_tol=args.obj_tol, dist_anneal=a,
                                       icut=icut, full=args.full, save=save)
     dex_res.to_csv(args.output + '_results.csv')
-    dex_sol.to_csv(args.output + '_solutions.csv')
+    pd.DataFrame(dex_sol.binary).to_csv(args.output + '_solutions.csv')
