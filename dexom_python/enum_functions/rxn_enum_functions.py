@@ -105,15 +105,15 @@ def rxn_enum(model, reaction_weights, prev_sol=None, rxn_list=[], eps=DEFAULT_VA
                                         unique_solutions_binary.append(temp_sol_bin)
                                         unique_reactions.append(rid+'_backwards')
 
-                                        buildtimes.append(a)
-                                        runtimes.append(b)
+                                        buildtimes.append(str(a))
+                                        runtimes.append(str(b))
 
                                         if save:
                                             t0 = time.perf_counter()
                                             filename = out_path+'_solution_'+str(len(unique_solutions)-1)+'.csv'
                                             write_solution(model, temp_sol, thr, filename)
                                             t1 = time.perf_counter()
-                                            savetimes.append(t1-t0)
+                                            savetimes.append(str(t1-t0))
                             except:
                                 print('An error occurred with reaction %s_reverse. '
                                       'Check feasibility of the model when this reaction is irreversible.' % rid)
@@ -137,14 +137,15 @@ def rxn_enum(model, reaction_weights, prev_sol=None, rxn_list=[], eps=DEFAULT_VA
                                 unique_solutions_binary.append(temp_sol_bin)
                                 unique_reactions.append(rid)
 
-                                buildtimes.append(a)
-                                runtimes.append(b)
+                                buildtimes.append(str(a))
+                                runtimes.append(str(b))
 
                                 if save:
+                                    t0 = time.perf_counter()
                                     filename = out_path + '_solution_' + str(len(unique_solutions) - 1) + '.csv'
                                     write_solution(model, temp_sol, thr, filename)
                                     t1 = time.perf_counter()
-                                    savetimes.append(t1 - t0)
+                                    savetimes.append(str(t1 - t0))
                     except:
                         if prev_sol_bin[idx] == 1:
                             print('An error occurred with reaction %s. '
