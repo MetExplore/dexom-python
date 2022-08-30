@@ -176,7 +176,7 @@ def imat(model, reaction_weights=None, epsilon=DEFAULT_VALUES['epsilon'], thresh
             t2 = time.perf_counter()
             print('%.2fs before optimize call' % (t1-t0))
             print('%.2fs during optimize call' % (t2-t1))
-            return solution
+            return solution, t1-t0, t2-t1
     finally:
         pass
 
@@ -206,7 +206,7 @@ def main():
     reaction_weights = {}
     if args.reaction_weights:
         reaction_weights = load_reaction_weights(args.reaction_weights)
-    solution = imat(model, reaction_weights, epsilon=args.epsilon, threshold=args.threshold)
+    solution, a, b = imat(model, reaction_weights, epsilon=args.epsilon, threshold=args.threshold)
     write_solution(model, solution, args.threshold, args.output+'.csv')
     return True
 
