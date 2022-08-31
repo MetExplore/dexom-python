@@ -208,7 +208,12 @@ def plot_pca(solution_path, rxn_enum_solutions=None, save=True, save_name=''):
     return pca
 
 
-if __name__ == '__main__':
+def main():
+    """
+    This function is called when you run this script from the commandline.
+    It plots a 2-dimensional PCA of enumeration solutions and saves as png'
+    Use --help to see commandline parameters
+    """
     description = 'Plots a 2-dimensional PCA of enumeration solutions and saves as png'
     parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('-s', '--solutions', help='csv file containing diversity-enumeration solutions')
@@ -218,3 +223,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     pca = plot_pca(args.solutions, rxn_enum_solutions=args.rxn_solutions, save_name=args.out_path)
+    return True
+
+
+if __name__ == '__main__':
+    main()

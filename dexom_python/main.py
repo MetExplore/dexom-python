@@ -6,9 +6,11 @@ from dexom_python.enum_functions.rxn_enum_functions import rxn_enum
 from dexom_python.enum_functions.diversity_enum_functions import diversity_enum
 
 
-if __name__ == '__main__':
-    # for testing DEXOM on a toy example
-
+def main():
+    """
+    This function is called when you run this script from the commandline.
+    It performs iMAT, reaction-enumeration, and diversity-enumeration on a toy model
+    """
     model = read_model('toy_models/small4M.json')
     reaction_weights = load_reaction_weights('toy_models/small4M_weights.csv')
 
@@ -31,4 +33,10 @@ if __name__ == '__main__':
     pd.DataFrame(rxn_sol.unique_binary).to_csv('toy_models/small4M_rxnenum_solutions.csv')
 
     div_sol = diversity_enum(model=model, prev_sol=imat_solution, reaction_weights=reaction_weights, eps=eps, thr=thr,
-                             obj_tol=obj_tol, maxiter=maxiter, out_path='toy_models/small4M_divenum')
+                             obj_tol=obj_tol, maxiter=maxiter, dist_anneal=dist_anneal,
+                             out_path='toy_models/small4M_divenum')
+    return True
+
+
+if __name__ == '__main__':
+    main()

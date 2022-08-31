@@ -142,9 +142,13 @@ def plot_Fisher_pathways(filename_over, filename_under, sublist, outpath='pathwa
     return over, under
 
 
-if __name__ == '__main__':
+def main():
+    """
+    This function is called when you run this script from the commandline.
+    It performs pathway enrichment analysis using a hypergeometric test (Fischer exact test)
+    Use --help to see commandline parameters
+    """
     description = 'Performs pathway enrichment analysis using a hypergeometric test (Fischer exact test)'
-
     parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('-s', '--solutions', help='csv file containing enumeration solutions')
     parser.add_argument('-m', '--model', default=None, help='Metabolic model in sbml, json, or matlab format, '
@@ -152,7 +156,6 @@ if __name__ == '__main__':
     parser.add_argument('--sublist', default=None, help='List of all pathways/subsystems in the model')
     parser.add_argument('--subframe', default=None, help='csv file assigning reactions to pathways/subsystemts')
     parser.add_argument('-o', '--out_path', default='', help='Path to which the output file is written')
-
     args = parser.parse_args()
 
     groups = False
@@ -173,3 +176,8 @@ if __name__ == '__main__':
         Fisher_pathways(solpath=args.solutions, subframe=subframe, sublist=sublist, outpath=args.out_path)
     plot_Fisher_pathways(filename_over=args.out_path+'pathways_pvalues_over.csv', sublist=sublist,
                          filename_under=args.out_path+'pathways_pvalues_under.csv', outpath=args.out_path)
+    return True
+
+
+if __name__ == '__main__':
+    main()

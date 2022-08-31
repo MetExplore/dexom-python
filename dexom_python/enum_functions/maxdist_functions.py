@@ -155,9 +155,13 @@ def maxdist(model, reaction_weights, prev_sol=None, eps=1e-4, thr=1e-4, obj_tol=
     return solution
 
 
-if __name__ == '__main__':
+def main():
+    """
+    This function is called when you run this script from the commandline.
+    It performs the distance-maximization enumeration algorithm
+    Use --help to see commandline parameters
+    """
     description = 'Performs the distance-maximization enumeration algorithm'
-
     parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('-m', '--model', help='Metabolic model in sbml, matlab, or json format')
     parser.add_argument('-r', '--reaction_weights', default=None,
@@ -179,7 +183,6 @@ if __name__ == '__main__':
 
     model = read_model(args.model)
     check_model_options(model, timelimit=args.timelimit, feasibility=args.tol, mipgaptol=args.mipgap)
-
     reaction_weights = {}
     if args.reaction_weights is not None:
         reaction_weights = load_reaction_weights(args.reaction_weights)
@@ -196,11 +199,13 @@ if __name__ == '__main__':
         prev_sol = imat(model, reaction_weights, epsilon=args.epsilon, threshold=args.threshold)
 
     icut = False if args.noicut else True
-    save = True if args.save else False
-    full = True if args.full else False
-
     maxdist_sol = maxdist(model=model, reaction_weights=reaction_weights, prev_sol=prev_sol, eps=args.epsilon,
                           thr=args.threshold, obj_tol=args.obj_tol, maxiter=args.maxiter, icut=icut, full=args.full,
                           only_ones=False)
     sol = pd.DataFrame(maxdist_sol.binary)
     sol.to_csv(args.output+'_solutions.csv')
+    return True
+
+
+if __name__ == '__main__':
+    main()

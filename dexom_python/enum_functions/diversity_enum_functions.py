@@ -111,7 +111,12 @@ def diversity_enum(model, reaction_weights, prev_sol=None, eps=1e-4, thr=1e-4, o
     return solution, df
 
 
-if __name__ == '__main__':
+def main():
+    """
+    This function is called when you run this script from the commandline.
+    It performs the reaction-enumeration algorithm on a specified list of reactions
+    Use --help to see commandline parameters
+    """
     description = 'Performs the diversity-enumeration algorithm'
 
     parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
@@ -165,11 +170,14 @@ if __name__ == '__main__':
     if not prev_sol_success:
         prev_sol = imat(model, reaction_weights, epsilon=args.epsilon, threshold=args.threshold)
     icut = False if args.noicut else True
-    save = True if args.save else False
-    full = True if args.full else False
 
     dex_sol, dex_res = diversity_enum(model=model, reaction_weights=reaction_weights, prev_sol=prev_sol,
                                       thr=args.threshold, maxiter=args.maxiter, obj_tol=args.obj_tol, dist_anneal=a,
-                                      icut=icut, full=args.full, save=save)
+                                      icut=icut, full=args.full, save=args.save)
     dex_res.to_csv(args.output + '_results.csv')
     pd.DataFrame(dex_sol.binary).to_csv(args.output + '_solutions.csv')
+    return True
+
+
+if __name__ == '__main__':
+    main()

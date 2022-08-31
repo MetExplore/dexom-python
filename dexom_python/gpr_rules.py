@@ -142,10 +142,13 @@ def apply_gpr(model, gene_weights, save=True, filename='reaction_weights', dupli
     return reaction_weights
 
 
-if __name__ == '__main__':
-
+def main():
+    """
+    This function is called when you run this script from the commandline.
+    It applies GPR rules to transform gene weights into reaction weights
+    Use --help to see commandline parameters
+    """
     description = 'Applies GPR rules to transform gene weights into reaction weights'
-
     parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('-m', '--model', help='GEM in json, sbml or matlab format')
     parser.add_argument('-g', '--gene_file', help='csv file containing gene identifiers and scores')
@@ -162,7 +165,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     model = read_model(args.model)
-
     genes = pd.read_csv(args.gene_file).set_index(args.gene_ID)
     if args.convert:
         genes = expression2qualitative(genes, column_list=[args.gene_score], proportion=args.threshold,
@@ -171,3 +173,8 @@ if __name__ == '__main__':
 
     reaction_weights = apply_gpr(model=model, gene_weights=gene_weights, save=True, filename=args.output,
                                  duplicates=args.duplicates, null=args.null)
+    return True
+
+
+if __name__ == '__main__':
+    main()

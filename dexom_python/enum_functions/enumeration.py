@@ -295,7 +295,14 @@ def analyze_div_enum_results(result_path, solution_path, out_path):
     return sol.T
 
 
-if __name__ == '__main__':
+def main():
+    """
+    This function is called when you run this script from the commandline.
+    It writes batch scripts for launching DEXOM on a slurm cluster.
+    Note that default values are used for most parameters.
+    This also assumes that you have a virtual environment called env in your project directory
+    Use --help to see commandline parameters
+    """
     description = 'Writes batch scripts for launching DEXOM on a slurm cluster. Note that default values are used' \
                   'for most parameters. This also assumes that you have a virtual environment called env in your' \
                   'project directory'
@@ -326,3 +333,8 @@ if __name__ == '__main__':
 
     write_batch_script1(args.out_path, args.model, args.reaction_weights, args.cplex_path, reactionlist,
                         args.prev_sol, args.obj_tol, args.filenums, args.iterations)
+    return True
+
+
+if __name__ == '__main__':
+    main()

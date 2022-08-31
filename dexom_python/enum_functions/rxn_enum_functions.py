@@ -137,9 +137,13 @@ def rxn_enum(model, reaction_weights, prev_sol=None, rxn_list=[], eps=1e-4, thr=
     return solution
 
 
-if __name__ == '__main__':
-    description = 'Performs the reaction enumeration algorithm on a specified list of reactions'
-
+def main():
+    """
+    This function is called when you run this script from the commandline.
+    It performs the reaction-enumeration algorithm on a specified list of reactions
+    Use --help to see commandline parameters
+    """
+    description = 'Performs the reaction-enumeration algorithm on a specified list of reactions'
     parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('-m', '--model', help='Metabolic model in sbml, matlab, or json format')
     parser.add_argument('-l', '--reaction_list', default=None, help='csv list of reactions to enumerate - if empty, '
@@ -168,7 +172,6 @@ if __name__ == '__main__':
     if args.reaction_weights is not None:
         reaction_weights = load_reaction_weights(args.reaction_weights)
 
-    rxn_list = []
     if args.reaction_list is not None:
         df = pd.read_csv(args.reaction_list, header=None)
         reactions = [x for x in df.unstack().values]
@@ -194,7 +197,12 @@ if __name__ == '__main__':
         initial_solution = imat(model, reaction_weights, epsilon=args.epsilon, threshold=args.threshold)
 
     solution = rxn_enum(model=model, rxn_list=rxn_list, prev_sol=initial_solution, reaction_weights=reaction_weights,
-                        eps=args.epsilon, thr=args.threshold, obj_tol=args.obj_tol, out_path=args.output, save=args.save)
-
+                        eps=args.epsilon, thr=args.threshold, obj_tol=args.obj_tol, out_path=args.output,
+                        save=args.save)
     uniques = pd.DataFrame(solution.unique_binary)
-    uniques.to_csv(args.output+'_solutions.csv')
+    uniques.to_csv(args.output + '_solutions.csv')
+    return True
+
+
+if __name__ == '__main__':
+    main()

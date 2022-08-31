@@ -180,8 +180,13 @@ def imat(model, reaction_weights=None, epsilon=1e-4, threshold=1e-4, full=False)
         pass
 
 
-if __name__ == '__main__':
-    description = 'Performs the iMAT algorithm'
+def main():
+    """
+    This function is called when you run this script from the commandline.
+    It performs the modified iMAT algorithm with reaction weights.
+    Use --help to see commandline parameters
+    """
+    description = 'Performs the modified iMAT algorithm with reaction weights'
     parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('-m', '--model', help='Metabolic model in sbml, json, or matlab format')
     parser.add_argument('-r', '--reaction_weights', default={},
@@ -194,7 +199,6 @@ if __name__ == '__main__':
     parser.add_argument('--mipgap', type=float, default=1e-3, help='Solver MIP gap tolerance')
     parser.add_argument('-o', '--output', default='imat_solution', help='Path of the output file, without format')
     args = parser.parse_args()
-
     model = read_model(args.model)
     check_model_options(model, timelimit=args.timelimit, feasibility=args.tol, mipgaptol=args.mipgap)
     reaction_weights = {}
@@ -202,3 +206,8 @@ if __name__ == '__main__':
         reaction_weights = load_reaction_weights(args.reaction_weights)
     solution = imat(model, reaction_weights, epsilon=args.epsilon, threshold=args.threshold)
     write_solution(model, solution, args.threshold, args.output+'.csv')
+    return True
+
+
+if __name__ == '__main__':
+    main()
