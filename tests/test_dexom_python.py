@@ -8,25 +8,26 @@ import dexom_python.gpr_rules as gr
 import dexom_python.imat_functions as im
 import dexom_python.result_functions as rf
 import dexom_python.enum_functions as enum
+from dexom_python.model_functions import DEFAULT_VALUES as dv
 
 
 @pytest.fixture()
 def model():
     file = str(pathlib.Path(__file__).parent.joinpath("model", "example_r13m10.json"))
-    return mf.read_model(file)
+    return mf.read_model(modelfile=file)
 
 
 @pytest.fixture()
 def reaction_weights():
     file = str(pathlib.Path(__file__).parent.joinpath("model", "example_r13m10_weights.csv"))
-    return mf.load_reaction_weights(file)
+    return mf.load_reaction_weights(filename=file)
 
 
 @pytest.fixture()
 def gene_weights():
     genes = pd.read_csv(str(pathlib.Path(__file__).parent.joinpath("model", "example_r13m10_expression.csv")))
     genes.index = genes.pop("ID")
-    return gr.expression2qualitative(genes, save=False)
+    return gr.expression2qualitative(genes=genes, save=False)
 
 
 @pytest.fixture()
@@ -44,19 +45,19 @@ def test_read_model(model):
 
 
 def test_check_model_options(model):
-    model = mf.check_model_options(model, timelimit=100, feasibility=1e-8, mipgaptol=1e-2, verbosity=3)
+    model = mf.check_model_options(model=model, timelimit=100, feasibility=1e-8, mipgaptol=1e-2, verbosity=3)
     assert model.solver.configuration.timeout == 100 and model.tolerance == 1e-8 and \
            model.solver.problem.parameters.mip.tolerances.mipgap.get() == 1e-2 and \
            model.solver.configuration.verbosity == 3
 
 
 def test_get_all_reactions_from_model(model):
-    rxn_list = mf.get_all_reactions_from_model(model, save=False)
+    rxn_list = mf.get_all_reactions_from_model(model=model, save=False)
     assert len(rxn_list) == 13
 
 
 def test_get_subsystems_from_model(model):
-    rxn_sub, sublist = mf.get_subsystems_from_model(model, save=False)
+    rxn_sub, sublist = mf.get_subsystems_from_model(model=model, save=False)
     assert len(rxn_sub) == 13 and len(sublist) == 0
 
 
@@ -72,7 +73,7 @@ def test_save_reaction_weights(model):
         else:
             weights[r.id] = 0.
     file = str(pathlib.Path(__file__).parent.joinpath("model", "example_r13m10_weights.csv"))
-    reaction_weights = mf.save_reaction_weights(weights, filename=file)
+    reaction_weights = mf.save_reaction_weights(reaction_weights=weights, filename=file)
     assert np.isclose(reaction_weights.values, list(weights.values())).all()
 
 
@@ -89,7 +90,7 @@ def test_expression2qualitative(gene_weights):
 
 def test_apply_gpr(model, gene_weights, reaction_weights):
     weights = pd.Series(gene_weights["expr"].values, index=gene_weights.index).to_dict()
-    test_wei = gr.apply_gpr(model, weights, save=False)
+    test_wei = gr.apply_gpr(model=model, gene_weights=weights, save=False)
     assert test_wei == reaction_weights
 
 
@@ -97,34 +98,36 @@ def test_apply_gpr(model, gene_weights, reaction_weights):
 
 
 def test_create_new_partial_variables(model, reaction_weights):
-    im.create_new_partial_variables(model, reaction_weights, 1, 1e-5)
+    im.create_new_partial_variables(model=model, reaction_weights=reaction_weights, epsilon=dv['epsilon'],
+                                    threshold=dv['threshold'])
     assert len(model.variables) == 41 and len(model.constraints) == 35
 
 
 def test_create_full_variables(model, reaction_weights):
-    im.create_full_variables(model, reaction_weights, 1, 1e-5)
+    im.create_full_variables(model=model, reaction_weights=reaction_weights, epsilon=dv['epsilon'],
+                             threshold=dv['threshold'])
     assert len(model.variables) == 65 and len(model.constraints) == 75
 
 
 def test_imat(model, reaction_weights):
-    solution = im.imat(model, reaction_weights, epsilon=1, threshold=1e-3)
+    solution = im.imat(model=model, reaction_weights=reaction_weights, epsilon=dv['epsilon'], threshold=dv['threshold'])
     assert np.isclose(solution.objective_value, 4.)
 
 
 def test_imat_noweights(model):
-    sol = im.imat(model)
+    sol = im.imat(model=model)
     assert type(sol) == cobra.Solution
 
 
 def test_imat_fluxconsistency(model):
     weights = {r.id: 1. for r in model.reactions}
-    sol = im.imat(model, weights)
+    sol = im.imat(model=model, reaction_weights=weights)
     assert len(np.nonzero(sol.fluxes.values)[0]) == len(model.reactions)
 
 
 def test_imat_noflux(model):
     weights = {r.id: -1. for r in model.reactions}
-    sol = im.imat(model, weights)
+    sol = im.imat(model=model, reaction_weights=weights)
     assert len(np.nonzero(sol.fluxes.values)[0]) == 0
 
 
@@ -137,7 +140,7 @@ def test_read_solution(imatsol):
 
 def test_write_solution(model, imatsol):
     file = str(pathlib.Path(__file__).parent.joinpath("model", "example_r13m10_imatsolution.csv"))
-    solution, binary = rf.write_solution(model, imatsol, threshold=1e-3, filename=file)
+    solution, binary = rf.write_solution(model=model, solution=imatsol, threshold=dv['threshold'], filename=file)
     assert len(binary) == len(solution.fluxes)
 
 
@@ -146,7 +149,7 @@ def test_write_solution(model, imatsol):
 
 def test_rxn_enum(model, reaction_weights, imatsol):
     rxn_sol = enum.rxn_enum(model=model, reaction_weights=reaction_weights, prev_sol=imatsol)
-    assert np.isclose(rxn_sol.objective_value, 4.) and len(rxn_sol.solutions) == 3
+    assert np.isclose(rxn_sol.objective_value, 4.) and len(rxn_sol.unique_solutions) == 3
 
 
 def test_icut_partial(model, reaction_weights, imatsol):
