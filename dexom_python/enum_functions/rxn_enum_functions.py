@@ -3,7 +3,7 @@ import os
 import pandas as pd
 import numpy as np
 from dexom_python.imat_functions import imat
-from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options
+from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options, DEFAULT_VALUES
 from dexom_python.result_functions import read_solution, write_solution
 from dexom_python.enum_functions.enumeration import create_enum_variables
 from warnings import warn
@@ -21,8 +21,8 @@ class RxnEnumSolution(object):
         self.objective_value = objective_value
 
 
-def rxn_enum(model, reaction_weights, prev_sol=None, rxn_list=[], eps=1e-4, thr=1e-4, obj_tol=1e-3, out_path='enum_rxn',
-             save=False):
+def rxn_enum(model, reaction_weights, prev_sol=None, rxn_list=[], eps=DEFAULT_VALUES['epsilon'],
+             thr=DEFAULT_VALUES['threshold'], obj_tol=DEFAULT_VALUES['obj_tol'], out_path='enum_rxn', save=False):
     """
     Reaction enumeration method
 
@@ -153,13 +153,14 @@ def main():
     parser.add_argument('-r', '--reaction_weights', default=None,
                         help='Reaction weights in csv format (first row: reaction names, second row: weights)')
     parser.add_argument('-p', '--prev_sol', default=None, help='initial imat solution in .txt format')
-    parser.add_argument('-e', '--epsilon', type=float, default=1e-2,
+    parser.add_argument('-e', '--epsilon', type=float, default=DEFAULT_VALUES['epsilon'],
                         help='Activation threshold for highly expressed reactions')
-    parser.add_argument('--threshold', type=float, default=1e-5, help='Activation threshold for all reactions')
-    parser.add_argument('-t', '--timelimit', type=int, default=None, help='Solver time limit')
-    parser.add_argument('--tol', type=float, default=1e-7, help='Solver feasibility tolerance')
-    parser.add_argument('--mipgap', type=float, default=1e-3, help='Solver MIP gap tolerance')
-    parser.add_argument('--obj_tol', type=float, default=1e-3,
+    parser.add_argument('--threshold', type=float, default=DEFAULT_VALUES['threshold'],
+                        help='Activation threshold for all reactions')
+    parser.add_argument('-t', '--timelimit', type=int, default=DEFAULT_VALUES['timelimit'], help='Solver time limit')
+    parser.add_argument('--tol', type=float, default=DEFAULT_VALUES['tolerance'], help='Solver feasibility tolerance')
+    parser.add_argument('--mipgap', type=float, default=DEFAULT_VALUES['mipgap'], help='Solver MIP gap tolerance')
+    parser.add_argument('--obj_tol', type=float, default=DEFAULT_VALUES['obj_tol'],
                         help='objective value tolerance, as a fraction of the original value')
     parser.add_argument('-o', '--output', default='rxn_enum', help='Path of output files, without format')
     parser.add_argument('--save', action='store_true', help='Use this flag to save each solution individually')

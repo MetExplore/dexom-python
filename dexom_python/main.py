@@ -1,5 +1,5 @@
 import pandas as pd
-from dexom_python.model_functions import read_model, load_reaction_weights, check_model_options
+from dexom_python.model_functions import read_model, load_reaction_weights, check_model_options, DEFAULT_VALUES
 from dexom_python.result_functions import write_solution
 from dexom_python.imat_functions import imat
 from dexom_python.enum_functions.rxn_enum_functions import rxn_enum
@@ -14,12 +14,12 @@ def main():
     model = read_model('toy_models/small4M.json')
     reaction_weights = load_reaction_weights('toy_models/small4M_weights.csv')
 
-    eps = 1e-2  # threshold of activity for highly expressed reactions
-    thr = 1e-5  # threshold of activity for all reactions
-    obj_tol = 1e-2  # variance allowed for the objective_value
-    tlim = 600  # time limit (in seconds) for the imat model.optimisation() call
-    tol = 1e-6  # feasibility tolerance for the solver
-    mipgap = 1e-3  # mip gap tolerance for the solver
+    eps = DEFAULT_VALUES['epsilon']  # threshold of activity for highly expressed reactions
+    thr = DEFAULT_VALUES['threshold']  # threshold of activity for all reactions
+    obj_tol = DEFAULT_VALUES['obj_tol']  # variance allowed for the objective_value
+    tlim = DEFAULT_VALUES['timelimit']  # time limit (in seconds) for the imat model.optimisation() call
+    tol = DEFAULT_VALUES['tolerance']  # feasibility tolerance for the solver
+    mipgap = DEFAULT_VALUES['mipgap']  # mip gap tolerance for the solver
     maxiter = 5  # maximum number of iterations
     dist_anneal = 0.9  # diversity-enumeration parameter
 

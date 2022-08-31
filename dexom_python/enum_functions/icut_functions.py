@@ -2,6 +2,7 @@ import six
 import time
 import numpy as np
 from symengine import sympify
+from dexom_python.model_functions import DEFAULT_VALUES
 from dexom_python.imat_functions import imat
 from dexom_python.enum_functions.enumeration import EnumSolution
 from dexom_python.enum_functions.enumeration import create_enum_variables
@@ -47,7 +48,8 @@ def create_icut_constraint(model, reaction_weights, threshold, prev_sol, name, f
     return constraint
 
 
-def icut(model, reaction_weights, prev_sol=None, eps=1e-4, thr=1e-4, obj_tol=1e-3, maxiter=10, full=False):
+def icut(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['epsilon'], thr=DEFAULT_VALUES['threshold'],
+         obj_tol=DEFAULT_VALUES['obj_tol'], maxiter=DEFAULT_VALUES['maxiter'], full=False):
     """
     integer-cut method
 

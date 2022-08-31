@@ -3,7 +3,7 @@ from symengine import Add, sympify
 from numpy import abs
 import argparse
 import time
-from dexom_python.model_functions import read_model, check_model_options, load_reaction_weights
+from dexom_python.model_functions import read_model, check_model_options, load_reaction_weights, DEFAULT_VALUES
 from dexom_python.result_functions import write_solution
 
 
@@ -112,7 +112,8 @@ def create_new_partial_variables(model, reaction_weights, epsilon, threshold):
     return model
 
 
-def imat(model, reaction_weights=None, epsilon=1e-4, threshold=1e-4, full=False):
+def imat(model, reaction_weights=None, epsilon=DEFAULT_VALUES['epsilon'], threshold=DEFAULT_VALUES['threshold'],
+         full=False):
     """
     Modified version of the integrative Metabolic Analysis Tool with reaction weights
 
@@ -191,12 +192,13 @@ def main():
     parser.add_argument('-m', '--model', help='Metabolic model in sbml, json, or matlab format')
     parser.add_argument('-r', '--reaction_weights', default={},
                         help='Reaction weights in csv format with column names: (reactions, weights)')
-    parser.add_argument('-e', '--epsilon', type=float, default=1e-4,
+    parser.add_argument('-e', '--epsilon', type=float, default=DEFAULT_VALUES['epsilon'],
                         help='Activation threshold for highly expressed reactions')
-    parser.add_argument('--threshold', type=float, default=1e-4, help='Activation threshold for all reactions')
-    parser.add_argument('-t', '--timelimit', type=int, default=None, help='Solver time limit')
-    parser.add_argument('--tol', type=float, default=1e-7, help='Solver feasibility tolerance')
-    parser.add_argument('--mipgap', type=float, default=1e-3, help='Solver MIP gap tolerance')
+    parser.add_argument('--threshold', type=float, default=DEFAULT_VALUES['threshold'],
+                        help='Activation threshold for all reactions')
+    parser.add_argument('-t', '--timelimit', type=int, default=DEFAULT_VALUES['timelimit'], help='Solver time limit')
+    parser.add_argument('--tol', type=float, default=DEFAULT_VALUES['tolerance'], help='Solver feasibility tolerance')
+    parser.add_argument('--mipgap', type=float, default=DEFAULT_VALUES['mipgap'], help='Solver MIP gap tolerance')
     parser.add_argument('-o', '--output', default='imat_solution', help='Path of the output file, without format')
     args = parser.parse_args()
     model = read_model(args.model)

@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from dexom_python.result_functions import read_solution
 from dexom_python.imat_functions import create_new_partial_variable_single, create_full_variable_single
 from scipy.spatial.distance import pdist, squareform
-from dexom_python.model_functions import read_model, get_all_reactions_from_model
+from dexom_python.model_functions import read_model, get_all_reactions_from_model, DEFAULT_VALUES
 
 
 class EnumSolution(object):
@@ -29,7 +29,8 @@ class EnumSolution(object):
         self.objective_value = objective_value
 
 
-def create_enum_variables(model, reaction_weights, eps=1e-2, thr=1e-5, full=False):
+def create_enum_variables(model, reaction_weights, eps=DEFAULT_VALUES['epsilon'], thr=DEFAULT_VALUES['threshold'],
+                          full=False):
     for rid in reaction_weights.keys():
         if rid not in model.reactions:
             pass
@@ -70,8 +71,9 @@ def get_recent_solution_and_iteration(dirpath, startsol_num):
     return solution, iteration
 
 
-def write_rxn_enum_script(directory, modelfile, weightfile, imatsol=None, reactionlist=None, eps=1e-4, thr=1e-5,
-                          tol=1e-8, iters=100, maxiters=1e10):
+def write_rxn_enum_script(directory, modelfile, weightfile, imatsol=None, reactionlist=None,
+                          eps=DEFAULT_VALUES['epsilon'], thr=DEFAULT_VALUES['threshold'], tol=DEFAULT_VALUES['tolerance'],
+                          obj_tol=DEFAULT_VALUES['obj_tol'], iters=100, maxiters=1e10):
     os.makedirs(directory, exist_ok=True)
     if directory[-1] not in ['/', '\\']:
         directory += '/'
@@ -98,16 +100,17 @@ def write_rxn_enum_script(directory, modelfile, weightfile, imatsol=None, reacti
                     'activate\nexport PYTHONPATH=${PYTHONPATH}:"/home/%s/work/CPLEX_Studio1210/cplex/python/3.7'
                     '/x86-64_linux"\n')
             f.write('python dexom_python/enum_functions/rxn_enum_functions.py -o %s/rxn_enum_%i --range %i_%i -m %s -r '
-                    '%s %s %s -t 6000 --save -e %s --threshold %s --tol %s\n'
-                    % (directory, i, i*iters, i*iters+iters, modelfile, weightfile, rstring, istring, eps, thr, tol))
+                    '%s %s %s -t 6000 --save -e %s --threshold %s --tol %s --obj_tol %s\n'
+                    % (directory, i, i*iters, i*iters+iters, modelfile, weightfile, rstring, istring, eps, thr, tol, obj_tol))
     with open(directory+'/rxn_runfiles.sh', 'w+') as f:
         f.write('#!/bin/bash\n#SBATCH --mail-type=ALL\n#SBATCH -J runfiles\n#SBATCH -o runout.out\n#SBATCH '
                 '-e runerr.out\ncd $SLURM_SUBMIT_DIR\nfor i in {0..%i}\ndo\n    dos2unix file_"$i".sh\n    sbatch'
                 ' file_"$i".sh\ndone' % (rxn_num-1))
 
 
-def write_batch_script_divenum(directory, modelfile, weightfile, rxnsols, objtol, eps=1e-4, thr=1e-5,
-                               tol=1e-8, filenums=100, iters=100, t=6000):
+def write_batch_script_divenum(directory, modelfile, weightfile, rxnsols, objtol, eps=DEFAULT_VALUES['epsilon'],
+                               thr=DEFAULT_VALUES['threshold'], tol=DEFAULT_VALUES['tolerance'],
+                               obj_tol=DEFAULT_VALUES['obj_tol'], filenums=100, iters=100, t=DEFAULT_VALUES['timelimit']):
     os.makedirs(directory, exist_ok=True)
     if directory[-1] not in ['/', '\\']:
         directory += '/'
@@ -121,8 +124,9 @@ def write_batch_script_divenum(directory, modelfile, weightfile, rxnsols, objtol
                     '/x86-64_linux"\n')
             a = (1-1/(filenums*2*(iters/10)))**i
             f.write('python dexom_python/enum_functions/diversity_enum_functions.py -o %sdiv_enum_%i -m %s -r %s -p '
-                    '%s%s_solution_%i.csv -a %.5f -i %i --obj_tol %.4f -e %s --threshold %s --tol %s -t %i'
-                    % (directory, i, modelfile, weightfile, directory, rxnsols, i, a, iters, objtol, eps, thr, tol, t))
+                    '%s%s_solution_%i.csv -a %.5f -i %i --obj_tol %.4f -e %s --threshold %s --tol %s -t %i --obj_tol %s'
+                    % (directory, i, modelfile, weightfile, directory, rxnsols, i, a, iters, objtol, eps, thr, tol, t,
+                       obj_tol))
     with open(directory+'runfiles.sh', 'w+') as f:
         f.write('#!/bin/bash\n#SBATCH --mail-type=ALL\n#SBATCH -J runfiles\n#SBATCH -o runout.out\n#SBATCH '
                 '-e runerr.out\ncd $SLURM_SUBMIT_DIR\nfor i in {0..%i}\ndo\n    dos2unix file_"$i".sh\n    sbatch'
@@ -130,8 +134,8 @@ def write_batch_script_divenum(directory, modelfile, weightfile, rxnsols, objtol
     return True
 
 
-def write_batch_script1(directory, modelfile, weightfile, cplexpath, reactionlist=None, imatsol=None, objtol=1e-2,
-                        filenums=100, iters=100):
+def write_batch_script1(directory, modelfile, weightfile, cplexpath, reactionlist=None, imatsol=None,
+                        objtol=DEFAULT_VALUES['obj_tol'], filenums=100, iters=100):
     """
     Writes bash scripts for dexom-python parallelization approach 1 on a slurm cluster. Within each batch,
     reaction-enumeration and diversity-enumeration are performed. These scripts assume that you have setup
@@ -189,7 +193,7 @@ def write_batch_script1(directory, modelfile, weightfile, cplexpath, reactionlis
     return True
 
 
-def write_batch_script2(directory, modelfile, weightfile, cplexpath, objtol=1e-2, filenums=100):
+def write_batch_script2(directory, modelfile, weightfile, cplexpath, objtol=DEFAULT_VALUES['obj_tol'], filenums=100):
     """
     Writes bash scripts for dexom-python parallelization approach 2 on a slurm cluster. In this approach, indiviual
     diversity-enumeration iterations are laucnhed in each batch - this requires the existance of reaction-enumeration
@@ -317,7 +321,7 @@ def main():
     parser.add_argument('-p', '--prev_sol', default=None, help='starting solution')
     parser.add_argument('-c', '--cplex_path', help='path to the cplex solver',
                         default='/home/mstingl/save/CPLEX_Studio1210/cplex/python/3.7/x86-64_linux')
-    parser.add_argument('--obj_tol', type=float, default=1e-2,
+    parser.add_argument('--obj_tol', type=float, default=DEFAULT_VALUES['obj_tol'],
                         help='objective value tolerance, as a fraction of the original value')
     parser.add_argument('-n', '--filenums', type=int, default=100, help='number of parallel threads')
     parser.add_argument('-i', '--iterations', type=int, default=100, help='number of div-enum iterations per thread')

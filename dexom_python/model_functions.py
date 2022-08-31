@@ -8,6 +8,21 @@ from warnings import warn
 from cobra.exceptions import SolverNotFound
 
 
+DEFAULT_VALUES = {  # these are the default values used for all the functions in the dexom_python package
+    'solver': 'cplex',
+    'timelimit': None,
+    'mipgap': 1e-3,
+    'tolerance': 1e-7,
+    'verbosity': 1,
+    'epsilon': 1e-4,
+    'threshold': 1e-4,
+    'obj_tol': 1e-3,
+    'maxiter': 10,
+    'dist_anneal': 0.95,
+
+}
+
+
 def read_model(modelfile, solver='cplex'):
     fileformat = Path(modelfile).suffix
     model = None
@@ -28,7 +43,8 @@ def read_model(modelfile, solver='cplex'):
     return model
 
 
-def check_model_options(model, timelimit=None, feasibility=1e-7, mipgaptol=1e-3, verbosity=1):
+def check_model_options(model, timelimit=None, feasibility=DEFAULT_VALUES['tolerance'],
+                        mipgaptol=DEFAULT_VALUES['mipgap'], verbosity=1):
     model.solver.configuration.timeout = timelimit
     model.tolerance = feasibility
     model.solver.configuration.verbosity = verbosity

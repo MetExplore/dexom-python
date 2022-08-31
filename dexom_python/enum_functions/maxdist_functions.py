@@ -7,7 +7,7 @@ from symengine import Add, sympify
 from dexom_python.enum_functions.icut_functions import create_icut_constraint
 from dexom_python.imat_functions import imat
 from dexom_python.result_functions import read_solution
-from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options
+from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options, DEFAULT_VALUES
 from dexom_python.enum_functions.enumeration import EnumSolution, get_recent_solution_and_iteration, create_enum_variables
 
 
@@ -86,8 +86,8 @@ def create_maxdist_objective(model, reaction_weights, prev_sol, prev_sol_bin, on
     return objective
 
 
-def maxdist(model, reaction_weights, prev_sol=None, eps=1e-4, thr=1e-4, obj_tol=1e-3, maxiter=10, icut=True, full=False,
-            only_ones=False):
+def maxdist(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['epsilon'], thr=DEFAULT_VALUES['threshold'],
+            obj_tol=DEFAULT_VALUES['obj_tol'], maxiter=DEFAULT_VALUES['maxiter'], icut=True, full=False, only_ones=False):
     """
 
     Parameters
@@ -167,15 +167,16 @@ def main():
     parser.add_argument('-r', '--reaction_weights', default=None,
                         help='Reaction weights in csv format (first row: reaction names, second row: weights)')
     parser.add_argument('-p', '--prev_sol', default=[], help='starting solution or directory of recent solutions')
-    parser.add_argument('-e', '--epsilon', type=float, default=1e-4,
+    parser.add_argument('-e', '--epsilon', type=float, default=DEFAULT_VALUES['epsilon'],
                         help='Activation threshold for highly expressed reactions')
-    parser.add_argument('--threshold', type=float, default=1e-4, help='Activation threshold for all reactions')
-    parser.add_argument('-t', '--timelimit', type=int, default=None, help='Solver time limit')
-    parser.add_argument('-i', '--maxiter', type=int, default=10, help='Iteration limit')
-    parser.add_argument('--tol', type=float, default=1e-7, help='Solver feasibility tolerance')
-    parser.add_argument('--mipgap', type=float, default=1e-3, help='Solver MIP gap tolerance')
-    parser.add_argument('--obj_tol', type=float, default=1e-3,
+    parser.add_argument('--threshold', type=float, default=DEFAULT_VALUES['threshold'],
+                        help='Activation threshold for all reactions')
+    parser.add_argument('-t', '--timelimit', type=int, default=DEFAULT_VALUES['timelimit'], help='Solver time limit')
+    parser.add_argument('--tol', type=float, default=DEFAULT_VALUES['tolerance'], help='Solver feasibility tolerance')
+    parser.add_argument('--mipgap', type=float, default=DEFAULT_VALUES['mipgap'], help='Solver MIP gap tolerance')
+    parser.add_argument('--obj_tol', type=float, default=DEFAULT_VALUES['obj_tol'],
                         help='objective value tolerance, as a fraction of the original value')
+    parser.add_argument('-i', '--maxiter', type=int, default=DEFAULT_VALUES['maxiter'], help='Iteration limit')
     parser.add_argument('-o', '--output', default='div_enum', help='Base name of output files, without format')
     parser.add_argument('--noicut', action='store_true', help='Use this flag to remove the icut constraint')
     parser.add_argument('--full', action='store_true', help='Use this flag to assign non-zero weights to all reactions')
