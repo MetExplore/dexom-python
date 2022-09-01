@@ -48,8 +48,11 @@ def diversity_enum(model, reaction_weights, prev_sol=None, eps=1e-4, thr=1e-4, o
     -------
     solution: an EnumSolution object
     """
+    savetimes = []
+    buildtimes = []
+    runtimes = []
     if prev_sol is None:
-        prev_sol = imat(model, reaction_weights, epsilon=eps, threshold=thr, full=full)
+        prev_sol, a, b = imat(model, reaction_weights, epsilon=eps, threshold=thr, full=full)
     else:
         model = create_enum_variables(model=model, reaction_weights=reaction_weights, eps=eps, thr=thr, full=full)
     tol = model.solver.configuration.tolerances.feasibility
@@ -84,17 +87,21 @@ def diversity_enum(model, reaction_weights, prev_sol=None, eps=1e-4, thr=1e-4, o
         try:
             t2 = time.perf_counter()
             print('time before optimizing in iteration '+str(idx)+':', t2-t0)
+            buildtimes.append(str(t2-t0))
             with model:
                 prev_sol = model.optimize()
             prev_sol_bin = (np.abs(prev_sol.fluxes) >= thr-tol).values.astype(int)
             all_solutions.append(prev_sol)
             all_binary.append(prev_sol_bin)
-            if save:
-                write_solution(model, prev_sol, thr,
-                               filename=out_path+'_solution_'+time.strftime('%Y%m%d-%H%M%S')+'.csv')
             t1 = time.perf_counter()
             print('time for optimizing in iteration ' + str(idx) + ':', t1 - t2)
             times.append(t1 - t0)
+            runtimes.append(str(t1-t2))
+            if save:
+                write_solution(model, prev_sol, thr,
+                               filename=out_path+'_solution_'+time.strftime('%Y%m%d-%H%M%S')+'.csv')
+                t3 = time.perf_counter()
+                savetimes.append(str(t3-t1))
         except:
             print('An error occured in iteration %i of dexom, no solution was returned' % idx)
             times.append(-1)
@@ -108,7 +115,7 @@ def diversity_enum(model, reaction_weights, prev_sol=None, eps=1e-4, thr=1e-4, o
     if save:
         df.to_csv(out_path+time.strftime('%Y%m%d-%H%M%S')+'_results.csv')
         sol.to_csv(out_path+time.strftime('%Y%m%d-%H%M%S')+'_solutions.csv')
-    return solution, df
+    return solution, df, savetimes, buildtimes, runtimes
 
 
 if __name__ == '__main__':
