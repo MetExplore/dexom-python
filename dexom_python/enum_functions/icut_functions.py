@@ -1,11 +1,16 @@
+import argparse
 import six
 import time
+import os
 import numpy as np
+import pandas as pd
+from pathlib import Path
+from warnings import warn
 from symengine import sympify
-from dexom_python.model_functions import DEFAULT_VALUES
 from dexom_python.imat_functions import imat
-from dexom_python.enum_functions.enumeration import EnumSolution
-from dexom_python.enum_functions.enumeration import create_enum_variables
+from dexom_python.result_functions import read_solution, write_solution
+from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options, DEFAULT_VALUES
+from dexom_python.enum_functions.enumeration import EnumSolution, get_recent_solution_and_iteration, create_enum_variables
 
 
 def create_icut_constraint(model, reaction_weights, threshold, prev_sol, name, full=False):
@@ -113,3 +118,67 @@ def icut(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['epsilon'], 
     else:
         print('partial icut iterations: ', i+1)
     return solution
+
+
+def main():
+    """
+    This function is called when you run this script from the commandline.
+    It performs the integer-cut enumeration algorithm
+    Use --help to see commandline parameters
+    """
+    description = 'Performs the integer-cut enumeration algorithm'
+    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
+    parser.add_argument('-m', '--model', help='Metabolic model in sbml, matlab, or json format')
+    parser.add_argument('-r', '--reaction_weights', default=None,
+                        help='Reaction weights in csv format (first row: reaction names, second row: weights)')
+    parser.add_argument('-p', '--prev_sol', default=[], help='starting solution or directory of recent solutions')
+    parser.add_argument('-e', '--epsilon', type=float, default=DEFAULT_VALUES['epsilon'],
+                        help='Activation threshold for highly expressed reactions')
+    parser.add_argument('--threshold', type=float, default=DEFAULT_VALUES['threshold'],
+                        help='Activation threshold for all reactions')
+    parser.add_argument('-t', '--timelimit', type=int, default=DEFAULT_VALUES['timelimit'], help='Solver time limit')
+    parser.add_argument('--tol', type=float, default=DEFAULT_VALUES['tolerance'], help='Solver feasibility tolerance')
+    parser.add_argument('--mipgap', type=float, default=DEFAULT_VALUES['mipgap'], help='Solver MIP gap tolerance')
+    parser.add_argument('--obj_tol', type=float, default=DEFAULT_VALUES['obj_tol'],
+                        help='objective value tolerance, as a fraction of the original value')
+    parser.add_argument('-i', '--maxiter', type=int, default=DEFAULT_VALUES['maxiter'], help='Iteration limit')
+    parser.add_argument('-o', '--output', default='div_enum', help='Base name of output files, without format')
+    parser.add_argument('--full', action='store_true', help='Use this flag to assign non-zero weights to all reactions')
+    args = parser.parse_args()
+
+    model = read_model(args.model)
+    check_model_options(model, timelimit=args.timelimit, feasibility=args.tol, mipgaptol=args.mipgap)
+    reaction_weights = {}
+    if args.reaction_weights is not None:
+        reaction_weights = load_reaction_weights(args.reaction_weights)
+
+    prev_sol_success = False
+    if args.prev_sol is not None:
+        prev_sol_path = Path(args.prev_sol)
+        if prev_sol_path.is_file():
+            prev_sol, prev_bin = read_solution(args.prev_sol, model)
+            model = create_enum_variables(model, reaction_weights, eps=args.epsilon, thr=args.threshold, full=args.full)
+            prev_sol_success = True
+        elif prev_sol_path.is_dir():
+            try:
+                prev_sol, i = get_recent_solution_and_iteration(args.prev_sol, args.startsol_num)
+            except:
+                warn('Could not find solution in directory %s, computing new starting solution' % args.prev_sol)
+            else:
+                model = create_enum_variables(model, reaction_weights, eps=args.epsilon, thr=args.threshold,
+                                              full=args.full)
+                prev_sol_success = True
+        else:
+            warn('Could not read previous solution at path %s, computing new starting solution' % args.prev_sol)
+    if not prev_sol_success:
+        prev_sol = imat(model, reaction_weights, epsilon=args.epsilon, threshold=args.threshold)
+
+    maxdist_sol = icut(model=model, reaction_weights=reaction_weights, prev_sol=prev_sol, eps=args.epsilon,
+                       thr=args.threshold, obj_tol=args.obj_tol, maxiter=args.maxiter, full=args.full)
+    sol = pd.DataFrame(maxdist_sol.binary)
+    sol.to_csv(args.output+'_solutions.csv')
+    return True
+
+
+if __name__ == '__main__':
+    main()
