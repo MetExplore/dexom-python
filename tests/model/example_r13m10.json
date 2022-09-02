@@ -60,7 +60,8 @@
 },
 "lower_bound":-10.0,
 "upper_bound":50.0,
-"gene_reaction_rule":"G_IMP_A"
+"gene_reaction_rule":"G_IMP_A",
+"subsystem":"Exchange"
 },
 {
 "id":"EX_b",
@@ -70,7 +71,8 @@
 },
 "lower_bound":-10.0,
 "upper_bound":50.0,
-"gene_reaction_rule":"G_IMP_B"
+"gene_reaction_rule":"G_IMP_B",
+"subsystem":"Exchange"
 },
 {
 "id":"EX_e",
@@ -80,7 +82,8 @@
 },
 "lower_bound":-10.0,
 "upper_bound":50.0,
-"gene_reaction_rule":"G_IMP_E"
+"gene_reaction_rule":"G_IMP_E",
+"subsystem":"Exchange"
 },
 {
 "id":"EX_g",
@@ -90,7 +93,8 @@
 },
 "lower_bound":-50.0,
 "upper_bound":50.0,
-"gene_reaction_rule":"G_IMP_G"
+"gene_reaction_rule":"G_IMP_G",
+"subsystem":"Exchange"
 },
 {
 "id":"EX_h",
@@ -100,7 +104,8 @@
 },
 "lower_bound":-50.0,
 "upper_bound":50.0,
-"gene_reaction_rule":"G_IMP_H"
+"gene_reaction_rule":"G_IMP_H",
+"subsystem":"Exchange"
 },
 {
 "id":"EX_i",
@@ -110,7 +115,8 @@
 },
 "lower_bound":-20.0,
 "upper_bound":50.0,
-"gene_reaction_rule":"G_IMP_I"
+"gene_reaction_rule":"G_IMP_I",
+"subsystem":"Exchange"
 },
 {
 "id":"EX_j",
@@ -120,7 +126,8 @@
 },
 "lower_bound":-50.0,
 "upper_bound":50.0,
-"gene_reaction_rule":"G_IMP_J"
+"gene_reaction_rule":"G_IMP_J",
+"subsystem":"Exchange"
 },
 {
 "id":"R_a_f",
@@ -131,7 +138,8 @@
 },
 "lower_bound":-50.0,
 "upper_bound":50.0,
-"gene_reaction_rule":"G_A_F"
+"gene_reaction_rule":"G_A_F",
+"subsystem":"sidepath"
 },
 {
 "id":"R_ab_cd",
@@ -144,7 +152,8 @@
 },
 "lower_bound":0.0,
 "upper_bound":50.0,
-"gene_reaction_rule":"G_AB_CD"
+"gene_reaction_rule":"G_AB_CD",
+"subsystem":"mainpath"
 },
 {
 "id":"R_ef_gh",
@@ -157,7 +166,8 @@
 },
 "lower_bound":0.0,
 "upper_bound":100.0,
-"gene_reaction_rule":"G_EF_GH"
+"gene_reaction_rule":"G_EF_GH",
+"subsystem":"sidepath"
 },
 {
 "id":"R_f_i",
@@ -168,7 +178,8 @@
 },
 "lower_bound":-100.0,
 "upper_bound":100.0,
-"gene_reaction_rule":"G_F_I"
+"gene_reaction_rule":"G_F_I",
+"subsystem":"sidepath"
 },
 {
 "id":"R_cj_i",
@@ -180,7 +191,8 @@
 },
 "lower_bound":0.0,
 "upper_bound":100.0,
-"gene_reaction_rule":"G_CJ_I"
+"gene_reaction_rule":"G_CJ_I",
+"subsystem":"mainpath"
 },
 {
 "id":"R_d_j",
@@ -191,7 +203,8 @@
 },
 "lower_bound":-10.0,
 "upper_bound":10.0,
-"gene_reaction_rule":"G_D_J"
+"gene_reaction_rule":"G_D_J",
+"subsystem":"mainpath"
 }
 ],
 "genes":[

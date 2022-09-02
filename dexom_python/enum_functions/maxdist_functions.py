@@ -182,6 +182,7 @@ def main():
     parser.add_argument('-o', '--output', default='div_enum', help='Base name of output files, without format')
     parser.add_argument('--noicut', action='store_true', help='Use this flag to remove the icut constraint')
     parser.add_argument('--full', action='store_true', help='Use this flag to assign non-zero weights to all reactions')
+    parser.add_argument('--onlyones', action='store_true', help='Use this flag for the old implementation of maxdist')
     args = parser.parse_args()
 
     model = read_model(args.model)
@@ -213,7 +214,7 @@ def main():
     icut = False if args.noicut else True
     maxdist_sol = maxdist(model=model, reaction_weights=reaction_weights, prev_sol=prev_sol, eps=args.epsilon,
                           thr=args.threshold, obj_tol=args.obj_tol, maxiter=args.maxiter, icut=icut, full=args.full,
-                          only_ones=False)
+                          only_ones=args.onlyones)
     sol = pd.DataFrame(maxdist_sol.binary)
     sol.to_csv(args.output+'_solutions.csv')
     return True
