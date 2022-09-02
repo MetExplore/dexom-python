@@ -155,9 +155,13 @@ def analyze_dexom_cluster_results(in_folder, out_folder, approach=1, filenums=10
     return full
 
 
-if __name__ == '__main__':
+def main():
+    """
+    This function is called when you run this script from the commandline.
+    It compiles and analyzes results from the DEXOM cluster pipelines
+    Use --help to see commandline parameters
+    """
     description = 'Compiles and analyzes results from parallel DEXOM'
-
     parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('-i', '--in_path', default='', help='Path in which the cluster results were saved')
     parser.add_argument('-o', '--out_path', default='', help='Path in which to save compiled results')
@@ -165,6 +169,9 @@ if __name__ == '__main__':
     parser.add_argument('-a', '--approach', type=int, default=1,
                         help='which parallelization approach was used (1 by default)')
     args = parser.parse_args()
-
     analyze_dexom_cluster_results(in_folder=args.in_path, out_folder=args.out_path, approach=args.approach,
                                   filenums=args.filenums)
+
+
+if __name__ == '__main__':
+    main()
