@@ -19,7 +19,6 @@ DEFAULT_VALUES = {  # these are the default values used for all the functions in
     'obj_tol': 1e-3,
     'maxiter': 10,
     'dist_anneal': 0.95,
-
 }
 
 

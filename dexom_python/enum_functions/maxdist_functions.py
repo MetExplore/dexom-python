@@ -3,6 +3,8 @@ import six
 import time
 import pandas as pd
 import numpy as np
+from pathlib import Path
+from warnings import warn
 from symengine import Add, sympify
 from dexom_python.enum_functions.icut_functions import create_icut_constraint
 from dexom_python.imat_functions import imat
@@ -188,17 +190,26 @@ def main():
     if args.reaction_weights is not None:
         reaction_weights = load_reaction_weights(args.reaction_weights)
 
-    a = args.dist_anneal
-    if '.' in args.prev_sol:
-        prev_sol, prev_bin = read_solution(args.prev_sol, model)
-        model = create_enum_variables(model, reaction_weights, eps=args.epsilon, thr=args.threshold, full=args.full)
-    elif args.prev_sol is not None:
-        prev_sol, i = get_recent_solution_and_iteration(args.prev_sol, args.startsol_num)
-        a = a ** i
-        model = create_enum_variables(model, reaction_weights, eps=args.epsilon, thr=args.threshold, full=args.full)
-    else:
+    prev_sol_success = False
+    if args.prev_sol is not None:
+        prev_sol_path = Path(args.prev_sol)
+        if prev_sol_path.is_file():
+            prev_sol, prev_bin = read_solution(args.prev_sol, model)
+            model = create_enum_variables(model, reaction_weights, eps=args.epsilon, thr=args.threshold, full=args.full)
+            prev_sol_success = True
+        elif prev_sol_path.is_dir():
+            try:
+                prev_sol, i = get_recent_solution_and_iteration(args.prev_sol, args.startsol_num)
+            except:
+                warn('Could not find solution in directory %s, computing new starting solution' % args.prev_sol)
+            else:
+                model = create_enum_variables(model, reaction_weights, eps=args.epsilon, thr=args.threshold,
+                                              full=args.full)
+                prev_sol_success = True
+        else:
+            warn('Could not read previous solution at path %s, computing new starting solution' % args.prev_sol)
+    if not prev_sol_success:
         prev_sol = imat(model, reaction_weights, epsilon=args.epsilon, threshold=args.threshold)
-
     icut = False if args.noicut else True
     maxdist_sol = maxdist(model=model, reaction_weights=reaction_weights, prev_sol=prev_sol, eps=args.epsilon,
                           thr=args.threshold, obj_tol=args.obj_tol, maxiter=args.maxiter, icut=icut, full=args.full,
