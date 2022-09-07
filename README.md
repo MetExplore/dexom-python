@@ -83,7 +83,8 @@ maxdist and div-enum also have one additional parameter:
 ## Parallelized DEXOM
 
 The DEXOM algorithm is a combination of several network enumeration methods.  
-`enumeration.py` contains the `write_batch_script1` function, which is used for creating a parallelization of DEXOM on a slurm computation cluster. 
+`write_cluster_scripts.py` contains functions which are used for creating a parallelization of DEXOM on a slurm computation cluster.
+The default function is `write_batch_script1`.
 The main inputs of this function are:
 - `filenums`: the number of parallel batches which should be launched on slurm
 - `iters`: the number of div-enum iterations per batch  
@@ -115,14 +116,14 @@ python dexom_python/gpr_rules -m example_data/recon2v2_corrected.json -g example
  
 Then, call imat to produce a first context-specific subnetwork. This will create a file named "imat_solution.csv" in the example_data folder:  
 ```
-python dexom_python/imat -m example_data/recon2v2_corrected.json -r example_data/pval_0-01_reactionweights.csv -o example_data/imat_solution
+python dexom_python/imat_functions.py -m example_data/recon2v2_corrected.json -r example_data/pval_0-01_reactionweights.csv -o example_data/imat_solution
 ```
 To run DEXOM on a slurm cluster, call the enumeration.py script to create the necessary batch files (here: 100 batches with 100 iterations).   
 Be careful to put the path to your installation of the CPLEX solver as the `-c` argument.   
 This script assumes that you have cloned the `dexom-python` project on the cluster, which contains the `dexom_python` folder and the `example_data` folder in the same directory.  
 Note that this step creates a file called "recon2v2_reactions_shuffled.csv", which shows the order in which rxn-enum will call the reactions from the model.  
 ```
-python dexom_python/enum_functions/enumeration -m example_data/recon2v2_corrected.json -r example_data/pval_0-01_reactionweights.csv -p example_data/imat_solution.csv -o example_data/ -n 100 -i 100 -c /home/mstingl/save/CPLEX_Studio1210/cplex/python/3.7/x86-64_linux
+python dexom_python/cluster_utils/write_cluster_scripts.py -m example_data/recon2v2_corrected.json -r example_data/pval_0-01_reactionweights.csv -p example_data/imat_solution.csv -o example_data/ -n 100 -i 100 -c /home/mstingl/save/CPLEX_Studio1210/cplex/python/3.7/x86-64_linux
 ```
 Then, submit the job to the slurm cluster.  
 Note that if you created the files on a Windows pc, you must use the command `dos2unix runfiles.sh` before `sbatch runfiles.sh`:  
@@ -133,9 +134,9 @@ cd ..
 ```
 After all jobs are completed, you can analyze the results using the following scripts:  
 ```
-python dexom_python/dexom_cluster_results -i example_data/ -o example_data/ -n 100
-python dexom_python/pathway_enrichment -s example_data/all_dexom_sols.csv -m example_data/recon2v2_corrected.json -o example_data/
-python dexom_python/result_functions -s example_data/all_dexom_sols.csv -o example_data/
+python dexom_python/cluster_utils/dexom_cluster_results.py -i example_data/ -o example_data/ -n 100
+python dexom_python/pathway_enrichment.py -s example_data/all_dexom_sols.csv -m example_data/recon2v2_corrected.json -o example_data/
+python dexom_python/result_functions.py -s example_data/all_dexom_sols.csv -o example_data/
 ```
 The file `all_dexom_sols.csv` contains all unique solutions enumerated with DEXOM.  
 The file `output.txt` contains the average computation time per iteration and the proportion of duplicate solutions.  

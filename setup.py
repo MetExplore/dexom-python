@@ -21,7 +21,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name='dexom_python',
-    version='0.4.4',
+    version='0.5',
     packages=find_packages('.'),
     install_requires=requirements,
     include_package_data=True,
@@ -30,7 +30,7 @@ setup(
     description='Python implementation of DEXOM using cobrapy',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    url='https://github.com/Metexplore/dexom-python',
+    url='https://forgemia.inra.fr/metexplore/cbm/dexom-python',
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Education',
