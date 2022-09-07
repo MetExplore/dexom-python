@@ -11,6 +11,7 @@ Documentation for dexom_python
    readme
    dexom_python
    dexom_python.enum_functions
+   dexom_python.cluster_utils
 
 
 Indices and tables

@@ -4,3 +4,4 @@ from dexom_python.gpr_rules import expression2qualitative, apply_gpr
 from dexom_python.pathway_enrichment import Fisher_pathways, Fischer_groups, plot_Fisher_pathways
 from dexom_python.imat_functions import imat
 import dexom_python.enum_functions
+import dexom_python.cluster_utils

@@ -87,7 +87,7 @@ def analyze_dexom_cluster_results(in_folder, out_folder, approach=1, filenums=10
             print(output_file[-1])
             output_file.append('Average time per iteration: %.2f s' % (fulltime*2/counter))
             print(output_file[-1])
-    if approach == 2:
+    elif approach == 2:
         all_res = []
         for i in range(filenums):
             try:
@@ -150,8 +150,7 @@ def analyze_dexom_cluster_results(in_folder, out_folder, approach=1, filenums=10
     full = full.drop_duplicates(ignore_index=True)
     full.to_csv(out_folder+'all_dexom_sols.csv')
     with open(out_folder+'output.txt', 'w+') as file:
-        for x in output_file:
-            file.write(x+'\n')
+        file.write('\n'.join(output_file))
     return full
 
 

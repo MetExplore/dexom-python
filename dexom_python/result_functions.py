@@ -72,34 +72,6 @@ def read_solution(filename, model=None):
     return solution, sol_bin
 
 
-def combine_binary_solutions(sol_path, solution_pattern='*solutions*.csv', out_path=''):
-    """
-    Combines several binary solution files into one
-
-    Parameters
-    ----------
-    sol_path: str
-        folder in which binary solutions are saved
-    solution_pattern: str
-        pattern which is used to find binary solution files
-    out_path: str
-        path to which the combined solutions are saved
-
-    Returns
-    -------
-    uniquesol: pandas.DataFrame
-    """
-    solutions = Path(sol_path).glob(solution_pattern)
-    sollist = []
-    for sol in solutions:
-        sollist.append(pd.read_csv(sol, index_col=0))
-    fullsol = pd.concat(sollist, ignore_index=True)
-    uniquesol = fullsol.drop_duplicates()
-    print('There are %i unique solutions and %i duplicates.' % (len(uniquesol), len(fullsol) - len(uniquesol)))
-    uniquesol.to_csv(out_path+'combined_solutions.csv')
-    return uniquesol
-
-
 def compile_solutions(solutions, out_path='compiled_solutions', solution_pattern='*.csv', model=None, threshold=None):
     """
     Compiles individual solution files into one binary solution DataFrame
@@ -108,7 +80,7 @@ def compile_solutions(solutions, out_path='compiled_solutions', solution_pattern
     ----------
     solutions: list or str
         If list, must contain either solution files in .csv format, or Solution objects, or binary solution arrays. -
-        If str, must be a folder in which all .csv files are solutions
+        If str, must be a folder in which the solution files math the sollution_pattern parameter
     out_path: str
         path to which the combined solutions will be saved
     solution_pattern: str
@@ -211,7 +183,7 @@ def plot_pca(solution_path, rxn_enum_solutions=None, save=True, save_name=''):
 def main():
     """
     This function is called when you run this script from the commandline.
-    It plots a 2-dimensional PCA of enumeration solutions and saves as png'
+    It plots a 2-dimensional PCA of enumeration solutions and saves as png
     Use --help to see commandline parameters
     """
     description = 'Plots a 2-dimensional PCA of enumeration solutions and saves as png'
