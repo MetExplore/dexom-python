@@ -30,7 +30,7 @@ solution\_compilation module
 Module contents
 ---------------
 
-.. automodule:: dexom_python.enum_functions
+.. automodule:: dexom_python.cluster_utils
    :members:
    :undoc-members:
    :show-inheritance:
