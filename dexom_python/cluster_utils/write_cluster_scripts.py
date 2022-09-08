@@ -71,7 +71,7 @@ def write_batch_script_divenum(directory, modelfile, weightfile, cplexpath, rxns
 
 
 def write_batch_script1(directory, modelfile, weightfile, cplexpath, reactionlist=None, imatsol=None,
-                        objtol=DEFAULT_VALUES['obj_tol'], filenums=100, iters=100):
+                        objtol=DEFAULT_VALUES['obj_tol'], filenums=100, iters=100, rxniters=5):
     """
     Writes bash scripts for dexom-python parallelization approach 1 on a slurm cluster. Within each batch,
     reaction-enumeration and diversity-enumeration are performed. These scripts assume that you have setup
@@ -117,7 +117,8 @@ def write_batch_script1(directory, modelfile, weightfile, cplexpath, reactionlis
             f.write('cd $SLURM_SUBMIT_DIR\ncd ..\nmodule purge\nmodule load system/Python-3.7.4\nsource env/bin/'
                     'activate\nexport PYTHONPATH=${PYTHONPATH}:"%s/x86-64_linux"\n' % cplexpath)
             f.write('python dexom_python/enum_functions/rxn_enum_functions.py -o %srxn_enum_%i --range %i_%i -m %s -r '
-                    '%s %s %s -t 600 --save\n' % (directory, i, i*5, i*5+5, modelfile, weightfile, rstring, istring))
+                    '%s %s %s -t 600 --save\n' % (directory, i, i*rxniters, i*rxniters+rxniters, modelfile, weightfile,
+                                                  rstring, istring))
             a = (1-1/(filenums*2*(iters/10)))**i
             f.write('python dexom_python/enum_functions/diversity_enum_functions.py -o %sdiv_enum_%i -m %s -r %s -p '
                     '%srxn_enum_%i_solution_1.csv -a %.5f -i %i --obj_tol %.4f'
@@ -217,6 +218,7 @@ def main():
                         help='objective value tolerance, as a fraction of the original value')
     parser.add_argument('-n', '--filenums', type=int, default=100, help='number of parallel threads')
     parser.add_argument('-i', '--iterations', type=int, default=100, help='number of div-enum iterations per thread')
+    parser.add_argument('--rxniters', type=int, default=5, help='number of rxn-enum iterations per thread (approach 1)')
     parser.add_argument('-a', '--approach', type=int, default=1, help='which parallelisation approach to use')
 
     args = parser.parse_args()
@@ -233,7 +235,7 @@ def main():
     if args.approach == 1:
         print('Approach 1: Within each batch, reaction-enumeration and diversity-enumeration are performed.')
         write_batch_script1(args.out_path, args.model, args.reaction_weights, args.cplex_path, reactionlist,
-                            args.prev_sol, args.obj_tol, args.filenums, args.iterations)
+                            args.prev_sol, args.obj_tol, args.filenums, args.iterations, args.rxniters)
     elif args.approach == 2:
         print('Approach 2: Indiviual diversity-enumeration iterations are launched in each batch - this requires the '
               'existance of reaction-enumeration solutions beforehand.')

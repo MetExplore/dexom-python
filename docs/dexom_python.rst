@@ -52,14 +52,6 @@ pathway\_enrichment module
    :undoc-members:
    :show-inheritance:
 
-dexom\_cluster\_results module
---------------------------------------------
-
-.. automodule:: dexom_python.dexom_cluster_results
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 Module contents
 ---------------
 
