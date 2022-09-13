@@ -55,7 +55,7 @@ def Fisher_groups(model, solpath, outpath='Fisher_groups'):
     return over, under
 
 
-def Fisher_subsystems(solpath, subframe, sublist, outpath=''):
+def Fisher_subsystems(solpath, subframe, sublist, outpath='Fisher_subsystems'):
     """
     !!! This only works if the pathway name is stored in the model.reaction.subsystem property !!!
     For models where the pathways are stored in the model.groups property, use the Fischer_groups function

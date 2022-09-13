@@ -179,7 +179,7 @@ def main():
                                       thr=args.threshold, maxiter=args.maxiter, obj_tol=args.obj_tol, dist_anneal=a,
                                       out_path=args.output, icut=icut, full=args.full, save=args.save)
     dex_res.to_csv(args.output + '_results.csv')
-    sol = pd.DataFrame(dex_sol.binary, columns=[r.id for r in model.columns])
+    sol = pd.DataFrame(dex_sol.binary, columns=[r.id for r in model.reactions])
     sol.to_csv(args.output + '_solutions.csv')
     return True
 
