@@ -121,6 +121,7 @@ def get_subsystems_from_model(model, save=True, out_path=''):
             sub_list.append(rxn.subsystem)
     if sub_list[-1] == '':
         sub_list.pop()
+    sub_list.sort()
     rxn_sub = pd.DataFrame.from_dict(rxn_sub, orient='index', columns=['ID', 'subsystem'])
     if save:
         rxn_sub.to_csv(out_path+model.id+'_reactions_subsystems.csv')

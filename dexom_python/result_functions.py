@@ -28,17 +28,19 @@ def write_solution(model, solution, threshold, filename='imat_sol.csv'):
     return solution, solution_binary
 
 
-def read_solution(filename, model=None):
+def read_solution(filename, model=None, solution_index=0):
     """
     Reads a solution from a .csv file. If the provided file is a binary solutions file
-    (as output by enumeration methods), the first solution will be read
+    (as output by enumeration methods), the solution number solution_index will be read
 
     Parameters
     ----------
     filename: str
         name of the file containing the solution
     model: cobra.Model
-        required if the filename points to a binary solution file
+        optional unless the filename points to a binary solution file without reaction IDs
+    solution_index: int
+        defines which solution will be read from the binary solution file
 
     Returns
     -------
@@ -55,11 +57,11 @@ def read_solution(filename, model=None):
             objective_value = float(reader[-2].split()[-1])
             status = reader[-1].split()[-1]
     if binary:
-        fluxes = pd.read_csv(filename, index_col=0).iloc[0]
+        fluxes = pd.read_csv(filename, index_col=0).iloc[solution_index]
         if model is not None:
             fluxes.index = [rxn.id for rxn in model.reactions]
         else:
-            warn('A model is necessary for setting the reaction IDs in a binary solution.'
+            warn('A model is necessary for setting the reaction IDs in a binary solution. '
                  'Disregard this warning if the columns of the binary solution are already reaction IDs')
         sol_bin = np.array(fluxes.values)
         objective_value = 0.

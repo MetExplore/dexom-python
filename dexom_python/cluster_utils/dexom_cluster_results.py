@@ -117,9 +117,9 @@ def analyze_dexom_cluster_results(in_folder, out_folder, approach=1, filenums=10
             except FileNotFoundError:
                 pass
     elif approach == 2:
-        solname = Path(in_folder).glob('div_enum2021*_solutions.csv')
+        solname = Path(in_folder).glob('div*_solutions.csv')
         all_sol = [pd.read_csv(str(x), index_col=0) for x in solname]
-        resname = Path(in_folder).glob('div_enum2021*_results.csv')
+        resname = Path(in_folder).glob('div*_results.csv')
         all_res = [pd.read_csv(str(x), index_col=0) for x in resname]
     sol = pd.concat(all_sol, ignore_index=True)
     res = pd.concat(all_res, ignore_index=True)
