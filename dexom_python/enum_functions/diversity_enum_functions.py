@@ -124,7 +124,7 @@ def main():
     parser.add_argument('-m', '--model', help='Metabolic model in sbml, matlab, or json format')
     parser.add_argument('-r', '--reaction_weights', default=None,
                         help='Reaction weights in csv format (first row: reaction names, second row: weights)')
-    parser.add_argument('-p', '--prev_sol', default=[], help='starting solution or directory of recent solutions')
+    parser.add_argument('-p', '--prev_sol', default=None, help='starting solution or directory of recent solutions')
     parser.add_argument('-e', '--epsilon', type=float, default=DEFAULT_VALUES['epsilon'],
                         help='Activation threshold for highly expressed reactions')
     parser.add_argument('--threshold', type=float, default=DEFAULT_VALUES['threshold'],

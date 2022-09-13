@@ -34,16 +34,16 @@ def read_model(modelfile, solver='cplex'):
     elif fileformat == '':
         warn('Wrong model path')
     else:
-        warn('Only SBML, JSON, and Matlab formats are supported for the models')
+        raise TypeError('Only SBML, JSON, and Matlab formats are supported for the models')
     try:
         model.solver = solver
     except SolverNotFound:
-        warn('The solver: %s is not available or not properly installed' % solver)
+        warn('The solver: %s is not available or not properly installed\n' % solver)
     return model
 
 
-def check_model_options(model, timelimit=None, feasibility=DEFAULT_VALUES['tolerance'],
-                        mipgaptol=DEFAULT_VALUES['mipgap'], verbosity=1):
+def check_model_options(model, timelimit=DEFAULT_VALUES['timelimit'], feasibility=DEFAULT_VALUES['tolerance'],
+                        mipgaptol=DEFAULT_VALUES['mipgap'], verbosity=DEFAULT_VALUES['verbosity']):
     model.solver.configuration.timeout = timelimit
     model.tolerance = feasibility
     model.solver.configuration.verbosity = verbosity

@@ -67,6 +67,8 @@ def rxn_enum(model, reaction_weights, prev_sol=None, rxn_list=[], eps=DEFAULT_VA
     unique_reactions = []
     if save:  # when saving each individual solution, ensure that the out_path is a directory
         os.makedirs(out_path, exist_ok=True)
+        if out_path[-1] not in ('\\', '/'):
+            out_path += os.sep
     if not rxn_list:
         rxns = list(model.reactions)
         rxn_list = [r.id for r in rxns]
