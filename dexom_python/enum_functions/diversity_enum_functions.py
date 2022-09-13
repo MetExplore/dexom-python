@@ -1,7 +1,6 @@
 import argparse
 import six
 import time
-import os
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -48,6 +47,7 @@ def diversity_enum(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['e
     Returns
     -------
     solution: an EnumSolution object
+    stats: a pandas.DataFrame containing the number of selected reactions and runtime of each iteration
     """
     if prev_sol is None:
         prev_sol = imat(model, reaction_weights, epsilon=eps, threshold=thr, full=full)
@@ -63,8 +63,6 @@ def diversity_enum(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['e
     # preserve the optimality of the original solution
     opt_const = create_maxdist_constraint(model, reaction_weights, prev_sol, obj_tol, 'dexom_optimality', full=full)
     model.solver.add(opt_const)
-    if save:  # when saving each individual solution, ensure that the out_path is a directory
-        os.makedirs(out_path, exist_ok=True)
     for idx in range(1, maxiter+1):
         t0 = time.perf_counter()
         if icut:
@@ -104,12 +102,12 @@ def diversity_enum(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['e
     model.solver.remove([const for const in icut_constraints if const in model.solver.constraints])
     model.solver.remove(opt_const)
     solution = EnumSolution(all_solutions, all_binary, all_solutions[0].objective_value)
-    df = pd.DataFrame({'selected reactions': selected_recs, 'time': times})
+    stats = pd.DataFrame({'selected reactions': selected_recs, 'time': times})
     sol = pd.DataFrame(solution.binary)
     if save:
-        df.to_csv(out_path+time.strftime('%Y%m%d-%H%M%S')+'_results.csv')
+        stats.to_csv(out_path+time.strftime('%Y%m%d-%H%M%S')+'_results.csv')
         sol.to_csv(out_path+time.strftime('%Y%m%d-%H%M%S')+'_solutions.csv')
-    return solution, df
+    return solution, stats
 
 
 def main():
@@ -139,8 +137,10 @@ def main():
     parser.add_argument('-a', '--dist_anneal', type=float, default=DEFAULT_VALUES['dist_anneal'],
                         help='this parameter 0<=a<=1 controls the distance between each successive solution, '
                              '0 meaning no distance and 1 maximal distance')
-    parser.add_argument('-s', '--startsol_num', type=int, default=1, help='number of starting solutions'
-                                                                          '(if prev_sol is a directory)')
+    parser.add_argument('-s', '--startsol', type=int, default=1, help='total number of starting solutions '
+                                                                      '(if prev_sol is a directory)'
+                                                                      'which solution to use as starting point'
+                                                                      '(if prev_sol is a binary solution file)')
     parser.add_argument('--noicut', action='store_true', help='Use this flag to remove the icut constraint')
     parser.add_argument('--full', action='store_true', help='Use this flag to assign non-zero weights to all reactions')
     parser.add_argument('--save', action='store_true', help='Use this flag to save each individual solution')
@@ -161,7 +161,7 @@ def main():
             prev_sol_success = True
         elif prev_sol_path.is_dir():
             try:
-                prev_sol, i = get_recent_solution_and_iteration(args.prev_sol, args.startsol_num)
+                prev_sol, i = get_recent_solution_and_iteration(args.prev_sol, args.startsol)
             except:
                 warn('Could not find solution in directory %s, computing new starting solution' % args.prev_sol)
             else:
@@ -177,9 +177,10 @@ def main():
 
     dex_sol, dex_res = diversity_enum(model=model, reaction_weights=reaction_weights, prev_sol=prev_sol,
                                       thr=args.threshold, maxiter=args.maxiter, obj_tol=args.obj_tol, dist_anneal=a,
-                                      icut=icut, full=args.full, save=args.save)
+                                      out_path=args.output, icut=icut, full=args.full, save=args.save)
     dex_res.to_csv(args.output + '_results.csv')
-    pd.DataFrame(dex_sol.binary).to_csv(args.output + '_solutions.csv')
+    sol = pd.DataFrame(dex_sol.binary, columns=[r.id for r in model.columns])
+    sol.to_csv(args.output + '_solutions.csv')
     return True
 
 

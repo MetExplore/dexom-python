@@ -21,7 +21,7 @@ class RxnEnumSolution(object):
         self.objective_value = objective_value
 
 
-def rxn_enum(model, reaction_weights, prev_sol=None, rxn_list=[], eps=DEFAULT_VALUES['epsilon'],
+def rxn_enum(model, reaction_weights, prev_sol=None, rxn_list=None, eps=DEFAULT_VALUES['epsilon'],
              thr=DEFAULT_VALUES['threshold'], obj_tol=DEFAULT_VALUES['obj_tol'], out_path='enum_rxn', save=False):
     """
     Reaction enumeration method
@@ -33,14 +33,12 @@ def rxn_enum(model, reaction_weights, prev_sol=None, rxn_list=[], eps=DEFAULT_VA
         keys = reactions and values = weights
     prev_sol: imat Solution object
         an imat solution used as a starting point
+    rxn_list: list
+        a list of reactions on which reaction-enumeration will be performed. By default, all reactions are used
     eps: float
         activation threshold in imat
     thr: float
         detection threshold of activated reactions
-    tlim: int
-        time limit for imat
-    tol: float
-        tolerance for imat
     obj_tol: float
         variance allowed in the objective_values of the solutions
     out_path: str
@@ -69,7 +67,7 @@ def rxn_enum(model, reaction_weights, prev_sol=None, rxn_list=[], eps=DEFAULT_VA
         os.makedirs(out_path, exist_ok=True)
         if out_path[-1] not in ('\\', '/'):
             out_path += os.sep
-    if not rxn_list:
+    if rxn_list is None:
         rxns = list(model.reactions)
         rxn_list = [r.id for r in rxns]
     for rid in rxn_list:
@@ -203,6 +201,7 @@ def main():
                         eps=args.epsilon, thr=args.threshold, obj_tol=args.obj_tol, out_path=args.output,
                         save=args.save)
     uniques = pd.DataFrame(solution.unique_binary)
+    uniques.columns = [r.id for r in model.reactions]
     uniques.to_csv(args.output + '_solutions.csv')
     return True
 

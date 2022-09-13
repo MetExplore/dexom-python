@@ -176,6 +176,7 @@ def main():
     maxdist_sol = icut(model=model, reaction_weights=reaction_weights, prev_sol=prev_sol, eps=args.epsilon,
                        thr=args.threshold, obj_tol=args.obj_tol, maxiter=args.maxiter, full=args.full)
     sol = pd.DataFrame(maxdist_sol.binary)
+    sol.columns = [r.id for r in model.reactions]
     sol.to_csv(args.output+'_solutions.csv')
     return True
 

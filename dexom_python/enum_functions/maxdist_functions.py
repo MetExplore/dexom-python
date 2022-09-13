@@ -216,6 +216,7 @@ def main():
                           thr=args.threshold, obj_tol=args.obj_tol, maxiter=args.maxiter, icut=icut, full=args.full,
                           only_ones=args.onlyones)
     sol = pd.DataFrame(maxdist_sol.binary)
+    sol.columns = [r.id for r in model.reactions]
     sol.to_csv(args.output+'_solutions.csv')
     return True
 
