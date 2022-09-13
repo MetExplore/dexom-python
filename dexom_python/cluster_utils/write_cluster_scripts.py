@@ -1,5 +1,6 @@
 import os
 import argparse
+import numpy as np
 from pathlib import Path
 from dexom_python.model_functions import read_model, get_all_reactions_from_model, DEFAULT_VALUES
 from warnings import warn
@@ -38,18 +39,19 @@ def write_rxn_enum_script(directory, modelfile, weightfile, cplexpath, imatsol=N
             f.write('cd $SLURM_SUBMIT_DIR\ncd ..\nmodule purge\nmodule load system/Python-3.7.4\nsource env/bin/'
                     'activate\nexport PYTHONPATH=${PYTHONPATH}:"%s"\n' % cplexpath)
             f.write('python dexom_python/enum_functions/rxn_enum_functions.py -o %srxn_enum_%i --range %i_%i -m %s -r '
-                    '%s %s %s -t 6000 -e %s --threshold %s --tol %s --obj_tol %s %s\n'
-                    % (directory, i, i*iters, i*iters+iters, modelfile, weightfile, rstring, istring, eps, thr, tol,
-                       objtol, t))
+                    '%s %s %s -t 6000 -e %s --threshold %s --tol %s --obj_tol %s %s\n' %
+                    (directory, i, i*iters, i*iters+iters, modelfile, weightfile, rstring, istring, eps, thr, tol,
+                     objtol, t))
     with open(directory+'rxn_runfiles.sh', 'w+') as f:
         f.write('#!/bin/bash\n#SBATCH --mail-type=ALL\n#SBATCH -J runfiles\n#SBATCH -o runout.out\n#SBATCH '
                 '-e runerr.out\ncd $SLURM_SUBMIT_DIR\nfor i in {0..%i}\ndo\n    dos2unix rxn_batch_"$i".sh\n    sbatch'
                 ' rxn_batch_"$i".sh\ndone' % (rxn_num-1))
     with open(directory+'compile_solutions.sh', 'w+') as f:
         f.write('#!/bin/bash\n#SBATCH --mail-type=ALL\n#SBATCH -J compile\n#SBATCH -o compout.out\n#SBATCH '
-                '-e comperr.out\ncd $SLURM_SUBMIT_DIR\n'
-                'python dexom_python/cluster_utils/solution_compilation.py -p "*solutions.csv" -i %s -o %s' %
-                (directory, directory))
+                '-e comperr.out\ncd $SLURM_SUBMIT_DIR\ncd ..\nmodule purge\nmodule load system/Python-3.7.4\n'
+                'source env/bin/activate\nexport PYTHONPATH=${PYTHONPATH}:"%s"\n'
+                'python dexom_python/cluster_utils/solution_compilation.py -p "*solutions.csv" -s %s -o %s' %
+                (cplexpath, directory, directory))
 
 
 def write_batch_script_divenum(directory, modelfile, weightfile, cplexpath, rxnsols, objtol, filenums=100, iters=100,
@@ -65,14 +67,15 @@ def write_batch_script_divenum(directory, modelfile, weightfile, cplexpath, rxns
     for i in range(filenums):
         with open(directory+'batch_'+str(i)+'.sh', 'w+') as f:
             f.write('#!/bin/bash\n#SBATCH -p workq\n#SBATCH --mail-type=ALL\n#SBATCH --mem=64G\n#SBATCH -c 24\n'
-                    '#SBATCH -t 05:00:00\n#SBATCH -J dexom1_%i\n#SBATCH -o dex1out%i.out\n#SBATCH -e dex1err%i.out\n'
-                    % (i, i, i))
+                    '#SBATCH -t 05:00:00\n#SBATCH -J dexom1_{i}\n#SBATCH -o dex1out{i}.out\n#SBATCH -e dex1err{i}.out\n'
+                    ''.format(i=i))
             f.write('cd $SLURM_SUBMIT_DIR\ncd ..\nmodule purge\nmodule load system/Python-3.7.4\nsource env/bin/'
                     'activate\nexport PYTHONPATH=${PYTHONPATH}:"%s"\n' % cplexpath)
-            a = (1-1/(filenums*2*(iters/10)))**i
-            f.write('python dexom_python/enum_functions/diversity_enum_functions.py -o %sdiv_enum_%i -m %s -r %s -p '
-                    '%s%s_solution_%i.csv -a %.5f -i %i --obj_tol %.4f -e %s --threshold %s --tol %s %s'
-                    % (directory, i, modelfile, weightfile, directory, rxnsols, i, a, iters, objtol, eps, thr, tol, t))
+            a = np.around((1-1/(filenums*2*(iters/10)))**i, 5)
+            f.write('python dexom_python/enum_functions/diversity_enum_functions.py -o {d}div_enum_{i} -m {m} -r {w} -p'
+                    ' {d}{r}_solution_{i}.csv -a {a} -i {n} --obj_tol {o} -e {e} --threshold {thr} --tol {tol} -s {i} '
+                    '{t}'.format(d=directory, i=i, m=modelfile, w=weightfile, r=rxnsols, a=a, n=iters, o=objtol, e=eps,
+                                 thr=thr, tol=tol, t=t))
     with open(directory+'runfiles.sh', 'w+') as f:
         f.write('#!/bin/bash\n#SBATCH --mail-type=ALL\n#SBATCH -J runfiles\n#SBATCH -o runout.out\n#SBATCH '
                 '-e runerr.out\ncd $SLURM_SUBMIT_DIR\nfor i in {0..%i}\ndo\n    dos2unix batch_"$i".sh\n    sbatch'
@@ -138,10 +141,10 @@ def write_batch_script1(directory, modelfile, weightfile, cplexpath, reactionlis
             f.write('python dexom_python/enum_functions/rxn_enum_functions.py -o %srxn_enum_%i --range %i_%i -m %s -r '
                     '%s %s %s %s --save\n' % (directory, i, i*rxniters, i*rxniters+rxniters, modelfile, weightfile,
                                               rstring, istring, t))
-            a = (1-1/(filenums*2*(iters/10)))**i
-            f.write('python dexom_python/enum_functions/diversity_enum_functions.py -o %sdiv_enum_%i -m %s -r %s -p '
-                    '%srxn_enum_%i_solution_1.csv -a %.5f -i %i --obj_tol %.4f'
-                    % (directory, i, modelfile, weightfile, directory, i, a, iters, objtol))
+            a = np.around((1-1/(filenums*2*(iters/10)))**i, 5)
+            f.write('python dexom_python/enum_functions/diversity_enum_functions.py -o {d}div_enum_{i} -m {m} -r {w} -p '
+                    '{d}rxn_enum_{i}_solution_1.csv -a {a} -i {n} --obj_tol {o} {t}'
+                    ''.format(d=directory, i=i, m=modelfile, w=weightfile, a=a, n=iters, o=objtol, t=t))
     with open(directory+'runfiles.sh', 'w+') as f:
         f.write('#!/bin/bash\n#SBATCH --mail-type=ALL\n#SBATCH -J runfiles\n#SBATCH -o runout.out\n#SBATCH '
                 '-e runerr.out\ncd $SLURM_SUBMIT_DIR\nfor i in {0..%i}\ndo\n    dos2unix batch_"$i".sh\n    sbatch'
@@ -191,7 +194,7 @@ def write_batch_script2(directory, modelfile, weightfile, cplexpath, objtol=DEFA
         a = (1 - 1 / (rxnsols * 2 * (rxnsols / 10))) ** i
         with open(directory+'rxnstart_'+str(i)+'.sh', 'w+') as f:
             f.write('#!/bin/bash\n#SBATCH -p workq\n#SBATCH --mail-type=ALL\n#SBATCH --mem=64G\n#SBATCH -c 24\n'
-                    '#SBATCH -t 00:05:00\n#SBATCH -J dexom2_%i\n#SBATCH -o dex2out%i.out\n#SBATCH -e dex2err%i.out\n'
+                    '#SBATCH -t 00:10:00\n#SBATCH -J dexom2_%i\n#SBATCH -o dex2out%i.out\n#SBATCH -e dex2err%i.out\n'
                     % (i, i, i))
             f.write('cd $SLURM_SUBMIT_DIR\ncd ..\nmodule purge\nmodule load system/Python-3.7.4\nsource env/bin/'
                     'activate\nexport PYTHONPATH=${PYTHONPATH}:"%s"\n' % cplexpath)
@@ -200,7 +203,7 @@ def write_batch_script2(directory, modelfile, weightfile, cplexpath, objtol=DEFA
                     '%s -a %.5f -i 1 --obj_tol %.4f --save %s'
                     % (directory, i, modelfile, weightfile, sol, a, objtol, t))
     a = (1 - 1 / (filenums * 2 * (filenums / 10)))
-    with open('parallel_approach2/dexomstart.sh', 'w+') as f:
+    with open(directory+'dexomstart.sh', 'w+') as f:
         f.write('#!/bin/bash\n#SBATCH -p workq\n#SBATCH --mail-type=ALL\n#SBATCH --mem=64G\n#SBATCH -c 24\n'
                 '#SBATCH -t 01:00:00\n')
         f.write('cd $SLURM_SUBMIT_DIR\ncd ..\nmodule purge\nmodule load system/Python-3.7.4\nsource env/bin/'
@@ -278,9 +281,9 @@ def main():
         write_rxn_enum_script(args.out_path, args.model, args.reaction_weights, args.cplex_path, args.prev_sol,
                               reactionlist, args.obj_tol, DEFAULT_VALUES['epsilon'], DEFAULT_VALUES['threshold'],
                               DEFAULT_VALUES['tolerance'], DEFAULT_VALUES['timelimit'], args.rxniters, maxiters=1e10)
-        write_batch_script_divenum(args.out_path, args.model, args.reaction_weights, args.cplex_path, args.out_path,
-                                   args.filenums, args.iterations, DEFAULT_VALUES['epsilon'],
-                                   DEFAULT_VALUES['threshold'], DEFAULT_VALUES['tolerance'],
+        write_batch_script_divenum(args.out_path, args.model, args.reaction_weights, args.cplex_path,
+                                   'combined_solutions.csv', args.out_path, args.filenums, args.iterations,
+                                   DEFAULT_VALUES['epsilon'], DEFAULT_VALUES['threshold'], DEFAULT_VALUES['tolerance'],
                                    DEFAULT_VALUES['timelimit'])
     else:
         print('approach parameter value must be 1, 2, or 3')
