@@ -67,13 +67,13 @@ def write_batch_script_divenum(directory, modelfile, weightfile, cplexpath, rxns
     for i in range(filenums):
         with open(directory+'batch_'+str(i)+'.sh', 'w+') as f:
             f.write('#!/bin/bash\n#SBATCH -p workq\n#SBATCH --mail-type=ALL\n#SBATCH --mem=64G\n#SBATCH -c 24\n'
-                    '#SBATCH -t 05:00:00\n#SBATCH -J dexom1_{i}\n#SBATCH -o dex1out{i}.out\n#SBATCH -e dex1err{i}.out\n'
+                    '#SBATCH -t 05:00:00\n#SBATCH -J div_{i}\n#SBATCH -o divout{i}.out\n#SBATCH -e diverr{i}.out\n'
                     ''.format(i=i))
             f.write('cd $SLURM_SUBMIT_DIR\ncd ..\nmodule purge\nmodule load system/Python-3.7.4\nsource env/bin/'
                     'activate\nexport PYTHONPATH=${PYTHONPATH}:"%s"\n' % cplexpath)
             a = np.around((1-1/(filenums*2*(iters/10)))**i, 5)
             f.write('python dexom_python/enum_functions/diversity_enum_functions.py -o {d}div_enum_{i} -m {m} -r {w} -p'
-                    ' {d}{r}_solution_{i}.csv -a {a} -i {n} --obj_tol {o} -e {e} --threshold {thr} --tol {tol} -s {i} '
+                    ' {d}{r} -a {a} -i {n} --obj_tol {o} -e {e} --threshold {thr} --tol {tol} -s {i} '
                     '{t}'.format(d=directory, i=i, m=modelfile, w=weightfile, r=rxnsols, a=a, n=iters, o=objtol, e=eps,
                                  thr=thr, tol=tol, t=t))
     with open(directory+'runfiles.sh', 'w+') as f:
@@ -282,7 +282,7 @@ def main():
                               reactionlist, args.obj_tol, DEFAULT_VALUES['epsilon'], DEFAULT_VALUES['threshold'],
                               DEFAULT_VALUES['tolerance'], DEFAULT_VALUES['timelimit'], args.rxniters, maxiters=1e10)
         write_batch_script_divenum(args.out_path, args.model, args.reaction_weights, args.cplex_path,
-                                   'combined_solutions.csv', args.out_path, args.filenums, args.iterations,
+                                   'combined_solutions.csv', args.obj_tol, args.filenums, args.iterations,
                                    DEFAULT_VALUES['epsilon'], DEFAULT_VALUES['threshold'], DEFAULT_VALUES['tolerance'],
                                    DEFAULT_VALUES['timelimit'])
     else:
