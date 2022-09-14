@@ -21,6 +21,12 @@ def model():
 
 
 @pytest.fixture()
+def model_sbml():
+    file = str(pathlib.Path(__file__).parent.joinpath('model', 'example_r13m10.xml'))
+    return mf.read_model(modelfile=file)
+
+
+@pytest.fixture()
 def reaction_weights():
     file = str(pathlib.Path(__file__).parent.joinpath('model', 'example_r13m10_weights.csv'))
     return mf.load_reaction_weights(filename=file)
@@ -43,8 +49,18 @@ def imatsol(model, reaction_weights):
 # Testing model_functions
 
 
-def test_read_model(model):
+def test_read_model_json(model):
     assert type(model) == cobra.Model
+
+
+def test_read_model_sbml(model_sbml):
+    assert type(model_sbml) == cobra.Model
+
+
+def test_read_model_mat():
+    file = str(pathlib.Path(__file__).parent.joinpath('model', 'example_r13m10.mat'))
+    m = mf.read_model(modelfile=file)
+    assert type(m) == cobra.Model
 
 
 def test_check_model_options(model):
@@ -217,10 +233,19 @@ def test_imat_main(mock_args):
 
 
 @mock.patch('argparse.ArgumentParser.parse_args',
-            return_value=argparse.Namespace(solutions='model/results/example_r13m10_rxnenum_solutions.csv', sublist=None,
-                                            model='model/example_r13m10.json', subframe=None,
+            return_value=argparse.Namespace(solutions='model/results/example_r13m10_rxnenum_solutions.csv',
+                                            model='model/example_r13m10.json', sublist=None, subframe=None,
                                             out_path='model/results/example_r13m10_'))
-def test_pathway_main(mock_args):
+def test_pathway_main_json(mock_args):
+    res = pe.main()
+    assert res is True
+
+
+@mock.patch('argparse.ArgumentParser.parse_args',
+            return_value=argparse.Namespace(solutions='model/results/example_r13m10_rxnenum_solutions.csv',
+                                            model='model/example_r13m10.xml', sublist=None, subframe=None,
+                                            out_path='model/results/example_r13m10_'))
+def test_pathway_main_sbml(mock_args):
     res = pe.main()
     assert res is True
 

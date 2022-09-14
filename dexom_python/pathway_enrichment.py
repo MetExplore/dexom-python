@@ -17,10 +17,11 @@ def Fisher_groups(model, solpath, outpath='Fisher_groups'):
 
     Parameters
     ----------
-    solpath: file containing DEXOM solutions
-    subframe: csv file associating reactions with subsystems
-    sublist: list of subsystems
-    outpath: path to which results are saved
+    model: cobra.Model
+    solpath: str
+        file containing DEXOM solutions
+    outpath: str
+        path to which results are saved
 
     Returns
     -------
@@ -64,10 +65,14 @@ def Fisher_subsystems(solpath, subframe, sublist, outpath='Fisher_subsystems'):
 
     Parameters
     ----------
-    solpath: file containing DEXOM solutions
-    subframe: csv file associating reactions with subsystems
-    sublist: list of subsystems
-    outpath: path to which results are saved
+    solpath: str
+        file containing DEXOM solutions
+    subframe: pandas.DataFrame
+        dataframe with 'ID' column containing reaction IDs and one 'subsystem' column containing pathways
+    sublist: list
+        list of subsystems
+    outpath: str
+        path to which results are saved
 
     Returns
     -------
@@ -172,7 +177,7 @@ def main():
         sublist = pd.read_csv(args.sublist, sep=';').columns.to_list()
 
     if groups:
-        Fisher_groups(model=model, solpath=args.solution, outpath=args.out_path)
+        Fisher_groups(model=model, solpath=args.solutions, outpath=args.out_path)
     else:
         Fisher_subsystems(solpath=args.solutions, subframe=subframe, sublist=sublist, outpath=args.out_path)
     plot_Fisher_pathways(filename_over=args.out_path+'pathways_pvalues_over.csv', sublist=sublist,
