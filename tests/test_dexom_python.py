@@ -209,6 +209,24 @@ def test_plot_pca():
     assert np.shape(pca.components_) == (2, 13)
 
 
+def test_read_prev_sol_imat(model, reaction_weights):
+    file = str(pathlib.Path(__file__).parent.joinpath('model', 'results', 'example_r13m10_imatsolution.csv'))
+    sol, _ = enum.read_prev_sol(file, model, reaction_weights)
+    assert np.isclose(sol.objective_value, 4.)
+
+
+def test_read_prev_sol_directory(model, reaction_weights):
+    file = str(pathlib.Path(__file__).parent.joinpath('model', 'results'))
+    sol, a = enum.read_prev_sol(file, model, reaction_weights, pattern='*solution*.csv')
+    assert np.isclose(sol.objective_value, 4.) and np.isclose(a, DV['dist_anneal']**5)
+
+
+def test_read_prev_sol_binary(model, reaction_weights):
+    file = str(pathlib.Path(__file__).parent.joinpath('model', 'results', 'example_r13m10_rxnenum_solutions.csv'))
+    sol, _ = enum.read_prev_sol(file, model, reaction_weights)
+    assert np.isclose(sol.objective_value, 4.)
+
+
 # Testing main functions
 
 
@@ -229,24 +247,6 @@ def test_gpr_main(mock_args):
                                             output='model/results/example_r13m10_imatsolution'))
 def test_imat_main(mock_args):
     res = im.main()
-    assert res is True
-
-
-@mock.patch('argparse.ArgumentParser.parse_args',
-            return_value=argparse.Namespace(solutions='model/results/example_r13m10_rxnenum_solutions.csv',
-                                            model='model/example_r13m10.json', sublist=None, subframe=None,
-                                            out_path='model/results/example_r13m10_'))
-def test_pathway_main_json(mock_args):
-    res = pe.main()
-    assert res is True
-
-
-@mock.patch('argparse.ArgumentParser.parse_args',
-            return_value=argparse.Namespace(solutions='model/results/example_r13m10_rxnenum_solutions.csv',
-                                            model='model/example_r13m10.xml', sublist=None, subframe=None,
-                                            out_path='model/results/example_r13m10_'))
-def test_pathway_main_sbml(mock_args):
-    res = pe.main()
     assert res is True
 
 
@@ -300,7 +300,25 @@ def test_maxdist_main(mock_args):
                                             threshold=DV['threshold'], timelimit=DV['timelimit'], mipgap=DV['mipgap'],
                                             output='model/results/example_r13m10_divenum', obj_tol=DV['obj_tol'], save=False,
                                             prev_sol='model/results/example_r13m10_imatsolution.csv', noicut=False, full=False,
-                                            maxiter=DV['maxiter'], dist_anneal=DV['dist_anneal']))
+                                            maxiter=DV['maxiter'], dist_anneal=DV['dist_anneal'], startsol=1))
 def test_divenum_main(mock_args):
     res = enum.diversity_enum_functions.main()
+    assert res is True
+
+
+@mock.patch('argparse.ArgumentParser.parse_args',
+            return_value=argparse.Namespace(solutions='model/results/example_r13m10_rxnenum_solutions.csv',
+                                            model='model/example_r13m10.json', sublist=None, subframe=None,
+                                            out_path='model/results/example_r13m10_'))
+def test_pathway_main_json(mock_args):
+    res = pe.main()
+    assert res is True
+
+
+@mock.patch('argparse.ArgumentParser.parse_args',
+            return_value=argparse.Namespace(solutions='model/results/example_r13m10_rxnenum_solutions.csv',
+                                            model='model/example_r13m10.xml', sublist=None, subframe=None,
+                                            out_path='model/results/example_r13m10_'))
+def test_pathway_main_sbml(mock_args):
+    res = pe.main()
     assert res is True

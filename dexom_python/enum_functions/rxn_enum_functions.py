@@ -4,8 +4,8 @@ import pandas as pd
 import numpy as np
 from dexom_python.imat_functions import imat
 from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options, DEFAULT_VALUES
-from dexom_python.result_functions import read_solution, write_solution
-from dexom_python.enum_functions.enumeration import create_enum_variables
+from dexom_python.result_functions import write_solution
+from dexom_python.enum_functions.enumeration import create_enum_variables, read_prev_sol
 from warnings import warn
 
 
@@ -190,14 +190,10 @@ def main():
         rxn_list = reactions[start:]
     else:
         rxn_list = reactions[start:int(rxn_range[1])]
+    prev_sol, _ = read_prev_sol(prev_sol_arg=args.prev_sol, model=model, rw=reaction_weights, eps=args.epsilon,
+                                thr=args.threshold)
 
-    if args.prev_sol is not None:
-        initial_solution, initial_binary = read_solution(args.prev_sol, model)
-        model = create_enum_variables(model, reaction_weights, eps=args.epsilon, thr=args.threshold, full=False)
-    else:
-        initial_solution = imat(model, reaction_weights, epsilon=args.epsilon, threshold=args.threshold)
-
-    solution = rxn_enum(model=model, rxn_list=rxn_list, prev_sol=initial_solution, reaction_weights=reaction_weights,
+    solution = rxn_enum(model=model, rxn_list=rxn_list, prev_sol=prev_sol, reaction_weights=reaction_weights,
                         eps=args.epsilon, thr=args.threshold, obj_tol=args.obj_tol, out_path=args.output,
                         save=args.save)
     uniques = pd.DataFrame(solution.unique_binary)

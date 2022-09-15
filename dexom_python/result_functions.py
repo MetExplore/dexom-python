@@ -64,7 +64,7 @@ def read_solution(filename, model=None, solution_index=0):
             warn('A model is necessary for setting the reaction IDs in a binary solution. '
                  'Disregard this warning if the columns of the binary solution are already reaction IDs')
         sol_bin = np.array(fluxes.values)
-        objective_value = 0.
+        objective_value = -1.
         status = 'binary'
     else:
         df = pd.read_csv(filename, index_col=0, skipfooter=2, engine='python')

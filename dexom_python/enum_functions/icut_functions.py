@@ -1,16 +1,12 @@
 import argparse
 import six
 import time
-import os
 import numpy as np
 import pandas as pd
-from pathlib import Path
-from warnings import warn
 from symengine import sympify
 from dexom_python.imat_functions import imat
-from dexom_python.result_functions import read_solution, write_solution
 from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options, DEFAULT_VALUES
-from dexom_python.enum_functions.enumeration import EnumSolution, get_recent_solution_and_iteration, create_enum_variables
+from dexom_python.enum_functions.enumeration import EnumSolution, create_enum_variables, read_prev_sol
 
 
 def create_icut_constraint(model, reaction_weights, threshold, prev_sol, name, full=False):
@@ -151,27 +147,8 @@ def main():
     reaction_weights = {}
     if args.reaction_weights is not None:
         reaction_weights = load_reaction_weights(args.reaction_weights)
-
-    prev_sol_success = False
-    if args.prev_sol is not None:
-        prev_sol_path = Path(args.prev_sol)
-        if prev_sol_path.is_file():
-            prev_sol, prev_bin = read_solution(args.prev_sol, model)
-            model = create_enum_variables(model, reaction_weights, eps=args.epsilon, thr=args.threshold, full=args.full)
-            prev_sol_success = True
-        elif prev_sol_path.is_dir():
-            try:
-                prev_sol, i = get_recent_solution_and_iteration(args.prev_sol, args.startsol_num)
-            except:
-                warn('Could not find solution in directory %s, computing new starting solution' % args.prev_sol)
-            else:
-                model = create_enum_variables(model, reaction_weights, eps=args.epsilon, thr=args.threshold,
-                                              full=args.full)
-                prev_sol_success = True
-        else:
-            warn('Could not read previous solution at path %s, computing new starting solution' % args.prev_sol)
-    if not prev_sol_success:
-        prev_sol = imat(model, reaction_weights, epsilon=args.epsilon, threshold=args.threshold)
+    prev_sol, _ = read_prev_sol(prev_sol_arg=args.prev_sol, model=model, rw=reaction_weights, eps=args.epsilon,
+                                thr=args.threshold, full=args.full)
 
     maxdist_sol = icut(model=model, reaction_weights=reaction_weights, prev_sol=prev_sol, eps=args.epsilon,
                        thr=args.threshold, obj_tol=args.obj_tol, maxiter=args.maxiter, full=args.full)
