@@ -15,8 +15,8 @@ https://dexom-python.readthedocs.io/en/stable/
 The package can be installed using pip: ``pip install dexom-python``
 
 You can also clone the git repository with
-``git clone https://github.com/MetExplore/dexom-python`` and then
-install dependencies with ``python setup.py install``
+``https://forgemia.inra.fr/metexplore/cbm/dexom-python``
+and then install dependencies with ``poetry install`` or or ``pip install -e .``
 
 To view changes between versions, see :ref:`changelog`
 
