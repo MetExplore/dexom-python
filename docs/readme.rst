@@ -18,6 +18,9 @@ You can also clone the git repository with
 ``git clone https://github.com/MetExplore/dexom-python`` and then
 install dependencies with ``python setup.py install``
 
+To view changes between versions, see :ref:`changelog`
+
+
 Requirements
 ------------
 

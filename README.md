@@ -13,6 +13,8 @@ The package can be installed using pip: `pip install dexom-python`
 
 You can also clone the git repository with `git clone https://github.com/MetExplore/dexom-python` and then install dependencies with `python setup.py install`
 
+To view changes between versions, see [changelog](docs/changelog.rst)
+
 ## Requirements
 - Python 3.7 - 3.9
 - CPLEX 12.10 - 22.10
