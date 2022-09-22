@@ -12,7 +12,7 @@ Documentation for dexom_python
    dexom_python
    dexom_python.enum_functions
    dexom_python.cluster_utils
-
+   changelog
 
 Indices and tables
 ==================
