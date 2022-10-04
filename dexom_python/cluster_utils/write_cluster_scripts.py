@@ -253,7 +253,7 @@ def main():
     parser.add_argument('-n', '--filenums', type=int, default=100, help='number of parallel threads')
     parser.add_argument('-i', '--iterations', type=int, default=100, help='number of div-enum iterations per thread')
     parser.add_argument('--rxniters', type=int, default=5, help='number of rxn-enum iterations per thread')
-    parser.add_argument('-a', '--approach', type=int, default=1, help='which parallelisation approach to use')
+    parser.add_argument('-a', '--approach', type=int, default=3, help='which parallelisation approach to use')
     args = parser.parse_args()
 
     os.makedirs(args.out_path, exist_ok=True)
