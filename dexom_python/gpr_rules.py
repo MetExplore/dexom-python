@@ -2,6 +2,7 @@ import re
 import argparse
 import numpy as np
 import pandas as pd
+from warnings import warn
 from symengine import sympify, Add, Mul, Max, Min, Pow, Symbol
 from dexom_python.model_functions import read_model, save_reaction_weights
 pd.options.mode.chained_assignment = None
@@ -61,9 +62,13 @@ def expression2qualitative(genes, column_list=None, proportion=0.25, method='kee
         column_list = list(genes.columns)
     elif len(column_list) == 0:
         column_list = list(genes.columns)
+    else:
+        for col in column_list:
+            if col not in genes.columns:
+                warn('Column %s is not present in gene expression file' % col)
+                column_list.remove(col)
     cutoff = 1/proportion
-    colnames = genes[column_list]
-    for col in colnames:
+    for col in column_list:
         if method == 'max':
             for x in set(genes.index):
                 genes[col][x] = genes[col][x].max()
@@ -80,7 +85,7 @@ def expression2qualitative(genes, column_list=None, proportion=0.25, method='kee
             genes.index = genes.index.astype(int)
             break
     if save:
-        genes.to_csv(outpath+'.csv')
+        genes[column_list].to_csv(outpath+'.csv')
     return genes
 
 

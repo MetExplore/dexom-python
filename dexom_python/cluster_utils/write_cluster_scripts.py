@@ -22,7 +22,7 @@ def write_rxn_enum_script(directory, modelfile, weightfile, cplexpath, imatsol=N
     else:
         rstring = ''
         model = read_model(modelfile)
-        rxn_num = len(model.reactions)
+        rxn_num = (len(model.reactions) // iters) + 1
     if imatsol is not None:
         istring = '-p ' + imatsol
     else:
