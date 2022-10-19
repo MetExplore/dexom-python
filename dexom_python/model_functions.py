@@ -10,7 +10,7 @@ from cobra.exceptions import SolverNotFound
 
 DEFAULT_VALUES = {  # these are the default values used for all the functions in the dexom_python package
     'solver': 'cplex',
-    'timelimit': None,
+    'timelimit': 600,
     'mipgap': 1e-3,
     'tolerance': 1e-7,
     'verbosity': 1,
