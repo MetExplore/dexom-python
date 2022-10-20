@@ -3,6 +3,7 @@ import six
 import time
 import numpy as np
 import pandas as pd
+from warnings import warn, catch_warnings, filterwarnings, resetwarnings
 from symengine import sympify
 from dexom_python.imat_functions import imat
 from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options, DEFAULT_VALUES
@@ -88,31 +89,45 @@ def icut(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['epsilon'], 
     all_solutions_binary = [prev_sol_binary]
     icut_constraints = []
 
-    for i in range(maxiter):
+    for idx in range(1, maxiter+1):
         t0 = time.perf_counter()
-        const = create_icut_constraint(model, reaction_weights, thr, prev_sol, name='icut_'+str(i), full=full)
+        const = create_icut_constraint(model, reaction_weights, thr, prev_sol, name='icut_'+str(idx), full=full)
         model.solver.add(const)
         icut_constraints.append(const)
-        try:
-            prev_sol = imat(model, reaction_weights, epsilon=eps, threshold=thr, full=full)
-        except:
-            print('An error occured in iteration %i of icut, check if all feasible solutions have been found' % (i+1))
-            break
-        t1 = time.perf_counter()
-        print('time for iteration '+str(i+1)+': ', t1-t0)
-        if prev_sol.objective_value >= optimal_objective_value:
-            all_solutions.append(prev_sol)
-            prev_sol_binary = (np.abs(prev_sol.fluxes) >= thr-tol).values.astype(int)
-            all_solutions_binary.append(prev_sol_binary)
-        else:
-            break
-
+        with catch_warnings():
+            filterwarnings('error')
+            try:
+                prev_sol = imat(model, reaction_weights, epsilon=eps, threshold=thr, full=full)
+                t1 = time.perf_counter()
+                print('time for iteration ' + str(idx) + ':', t1 - t0)
+                if prev_sol.objective_value >= optimal_objective_value:
+                    all_solutions.append(prev_sol)
+                    prev_sol_binary = (np.abs(prev_sol.fluxes) >= thr - tol).values.astype(int)
+                    all_solutions_binary.append(prev_sol_binary)
+                else:
+                    break
+            except UserWarning as w:
+                resetwarnings()
+                if 'time_limit' in str(w):
+                    print('The solver has reached the timelimit in iteration %i. If this happens frequently, there may '
+                          'be too many constraints in the model. Alternatively, you can try modifying solver '
+                          'parameters such as the feasibility tolerance or the MIP gap tolerance.' % idx)
+                    warn('Solver status is "time_limit" in iteration %i' % idx)
+                elif 'infeasible' in str(w):
+                    print('The solver has encountered an infeasible optimization in iteration %i. If this happens '
+                          'frequently, there may be a problem with the starting solution. Alternatively, you can try '
+                          'modifying solver parameters such as the feasibility tolerance or the MIP gap tolerance.'
+                          % idx)
+                    warn('Solver status is "infeasible" in iteration %i' % idx)
+                else:
+                    print('An unexpected error has occured during the solver call in iteration %i.' % idx)
+                    warn(w)
     model.solver.remove([const for const in icut_constraints if const in model.solver.constraints])
     solution = EnumSolution(all_solutions, all_solutions_binary, all_solutions[0].objective_value)
     if full:
-        print('full icut iterations: ', i+1)
+        print('full icut iterations: ', idx)
     else:
-        print('partial icut iterations: ', i+1)
+        print('partial icut iterations: ', idx)
     return solution
 
 

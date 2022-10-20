@@ -1,8 +1,9 @@
 import six
-from symengine import Add, sympify
-from numpy import abs
 import argparse
 import time
+from symengine import Add, sympify
+from numpy import abs
+from warnings import warn, catch_warnings, filterwarnings, resetwarnings
 from dexom_python.model_functions import read_model, check_model_options, load_reaction_weights, DEFAULT_VALUES
 from dexom_python.result_functions import write_solution
 
@@ -171,12 +172,29 @@ def imat(model, reaction_weights=None, epsilon=DEFAULT_VALUES['epsilon'], thresh
         objective = model.solver.interface.Objective(Add(*rh_objective) + Add(*rl_objective), direction='max')
         model.objective = objective
         t1 = time.perf_counter()
-        with model:
-            solution = model.optimize()
-            t2 = time.perf_counter()
-            print('%.2fs before optimize call' % (t1-t0))
-            print('%.2fs during optimize call' % (t2-t1))
-            return solution
+        print('%.2fs before optimize call' % (t1 - t0))
+        with catch_warnings():
+            filterwarnings('error')
+            try:
+                with model:
+                    solution = model.optimize()
+                    t2 = time.perf_counter()
+                    print('%.2fs during optimize call' % (t2-t1))
+                    return solution
+            except UserWarning as w:
+                resetwarnings()
+                if 'time_limit' in str(w):
+                    print('The solver has reached the timelimit. This can happen if there are too many constraints on '
+                          'the model, or if some of the following parameters have too low values: epsilon, threshold, '
+                          'feasibility tolerance, MIP gap tolerance.')
+                    warn('Solver status is "time_limit"')
+                elif 'infeasible' in str(w):
+                    print('The solver has encountered an infeasible optimization. This can happen if there are too '
+                          'many constraints on the model, or if some of the following parameters have too low values: '
+                          'epsilon, threshold, feasibility tolerance, MIP gap tolerance.')
+                else:
+                    print('An unexpected error has occured during the solver call')
+                    warn(w)
     finally:
         pass
 

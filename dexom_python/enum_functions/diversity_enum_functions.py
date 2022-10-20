@@ -1,9 +1,9 @@
 import argparse
-import warnings
 import six
 import time
 import numpy as np
 import pandas as pd
+from warnings import catch_warnings, filterwarnings, resetwarnings, warn
 from dexom_python.imat_functions import imat
 from dexom_python.result_functions import write_solution
 from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options, DEFAULT_VALUES
@@ -79,11 +79,11 @@ def diversity_enum(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['e
         selected_recs.append(i)
         objective = create_maxdist_objective(model, tempweights, prev_sol, prev_sol_bin, full=full)
         model.objective = objective
-        with warnings.catch_warnings():
-            warnings.filterwarnings('error')
+        t2 = time.perf_counter()
+        print('time before optimizing in iteration ' + str(idx) + ':', t2 - t0)
+        with catch_warnings():
+            filterwarnings('error')
             try:
-                t2 = time.perf_counter()
-                print('time before optimizing in iteration '+str(idx)+':', t2-t0)
                 with model:
                     prev_sol = model.optimize()
                 prev_sol_bin = (np.abs(prev_sol.fluxes) >= thr-tol).values.astype(int)
@@ -96,22 +96,23 @@ def diversity_enum(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['e
                 print('time for optimizing in iteration ' + str(idx) + ':', t1 - t2)
                 times.append(t1 - t0)
             except UserWarning as w:
-                warnings.resetwarnings()
+                resetwarnings()
                 times.append(-1)
                 prev_sol = all_solutions[-1]
                 if 'time_limit' in str(w):
-                    warnings.warn('The solver has reached the timelimit. If this happens frequently, '
-                                  'there may be too many constraints in the model. Alternatively, the problem may '
-                                  'be solved by modifying solver parameters such as the feasibility tolerance or the '
-                                  'MIP gap tolerance.', UserWarning)
+                    print('The solver has reached the timelimit in iteration %i. If this happens frequently, there may '
+                          'be too many constraints in the model. Alternatively, you can try modifying solver '
+                          'parameters such as the feasibility tolerance or the MIP gap tolerance.' % idx)
+                    warn('Solver status is "time_limit" in iteration %i' % idx)
                 elif 'infeasible' in str(w):
-                    warnings.warn('The solver has encountered an infeasible iteration. If this happens frequently, '
-                                  'there may be a problem with the starting solution. Alternatively, the problem may '
-                                  'be solved by modifying solver parameters such as the feasibility tolerance or the '
-                                  'MIP gap tolerance.', UserWarning)
+                    print('The solver has encountered an infeasible optimization in iteration %i. If this happens '
+                          'frequently, there may be a problem with the starting solution. Alternatively, you can try '
+                          'modifying solver parameters such as the feasibility tolerance or the MIP gap tolerance.'
+                          % idx)
+                    warn('Solver status is "infeasible" in iteration %i' % idx)
                 else:
-                    warnings.warn(w, UserWarning)
-
+                    print('An unexpected error has occured during the solver call in iteration %i.' % idx)
+                    warn(w)
     model.solver.remove([const for const in icut_constraints if const in model.solver.constraints])
     model.solver.remove(opt_const)
     solution = EnumSolution(all_solutions, all_binary, all_solutions[0].objective_value)
