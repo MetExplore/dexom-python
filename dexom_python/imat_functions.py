@@ -192,6 +192,7 @@ def imat(model, reaction_weights=None, epsilon=DEFAULT_VALUES['epsilon'], thresh
                     print('The solver has encountered an infeasible optimization. This can happen if there are too '
                           'many constraints on the model, or if some of the following parameters have too low values: '
                           'epsilon, threshold, feasibility tolerance, MIP gap tolerance.')
+                    warn('Solver status is "infeasible"')
                 else:
                     print('An unexpected error has occured during the solver call')
                     warn(w)
