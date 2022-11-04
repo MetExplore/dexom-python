@@ -8,6 +8,10 @@ from dexom_python.model_functions import read_model, check_model_options, load_r
 from dexom_python.result_functions import write_solution
 
 
+class ImatException(Exception):
+    pass
+
+
 def create_full_variable_single(model, rid, reaction_weights, epsilon, threshold):
     # the x_rid variables represent a binary condition of flux activation
     if 'x_' + rid not in model.solver.variables:
@@ -187,15 +191,18 @@ def imat(model, reaction_weights=None, epsilon=DEFAULT_VALUES['epsilon'], thresh
                     print('The solver has reached the timelimit. This can happen if there are too many constraints on '
                           'the model, or if some of the following parameters have too low values: epsilon, threshold, '
                           'feasibility tolerance, MIP gap tolerance.')
-                    warn('Solver status is "time_limit"')
+                    # warn('Solver status is "time_limit"')
+                    raise ImatException('Solver status is "time_limit", timelimit error')
                 elif 'infeasible' in str(w):
                     print('The solver has encountered an infeasible optimization. This can happen if there are too '
                           'many constraints on the model, or if some of the following parameters have too low values: '
                           'epsilon, threshold, feasibility tolerance, MIP gap tolerance.')
-                    warn('Solver status is "infeasible"')
+                    # warn('Solver status is "infeasible"')
+                    raise ImatException('Solver status is "infeasible", feasibility error')
                 else:
                     print('An unexpected error has occured during the solver call')
-                    warn(w)
+                    # warn(w)
+                    raise ImatException(str(w))
     finally:
         pass
 

@@ -2,7 +2,7 @@ import argparse
 import os
 import pandas as pd
 import numpy as np
-from dexom_python.imat_functions import imat
+from dexom_python.imat_functions import imat, ImatException
 from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options, DEFAULT_VALUES
 from dexom_python.result_functions import write_solution
 from dexom_python.enum_functions.enumeration import create_enum_variables, read_prev_sol
@@ -72,97 +72,105 @@ def rxn_enum(model, reaction_weights, prev_sol=None, rxn_list=None, eps=DEFAULT_
         rxn_list = [r.id for r in rxns]
     for rid in rxn_list:
         if rid not in model.reactions:
-            warn('The following reaction ID was not found in the model: %s' % rid)
-        else:
-            idx = np.where(prev_sol.fluxes.index == rid)[0][0]
-            with model as model_temp:
-                if rid in model.reactions:
-                    rxn = model_temp.reactions.get_by_id(rid)
-                    # for active fluxes, check inactivation
-                    if prev_sol_bin[idx] == 1:
-                        rxn.bounds = (0., 0.)
-                    # for inactive fluxes, check activation
+            print('The following reaction ID was not found in the model: %s' % rid)
+            continue
+        idx = np.where(prev_sol.fluxes.index == rid)[0][0]
+        with model as model_temp:
+            if rid in model.reactions:
+                rxn = model_temp.reactions.get_by_id(rid)
+                # for active fluxes, check inactivation
+                if prev_sol_bin[idx] == 1:
+                    rxn.bounds = (0., 0.)
+                # for inactive fluxes, check activation
+                else:
+                    upper_bound_temp = rxn.upper_bound
+                    # for inactive reversible fluxes, check activation in backwards direction
+                    if rxn.lower_bound < 0.:
+                        # with catch_warnings():
+                        #     filterwarnings('error')
+                        try:
+                            rxn.upper_bound = -thr
+                            temp_sol = imat(model_temp, reaction_weights, epsilon=eps, threshold=thr)
+                            temp_sol_bin = (np.abs(temp_sol.fluxes) >= thr-tol).values.astype(int)
+                            if temp_sol.objective_value >= optimal_objective_value:
+                                all_solutions.append(temp_sol)
+                                all_solutions_binary.append(temp_sol_bin)
+                                if not np.any(np.all(temp_sol_bin == unique_solutions_binary, axis=1)):
+                                    unique_solutions.append(temp_sol)
+                                    unique_solutions_binary.append(temp_sol_bin)
+                                    unique_reactions.append(rid+'_backwards')
+                                    if save:
+                                        filename = out_path+'_solution_'+str(len(unique_solutions)-1)+'.csv'
+                                        write_solution(model, temp_sol, thr, filename)
+                        except ImatException as w:
+                            # resetwarnings()
+                            if 'time_limit' in str(w):
+                                print('The solver has reached the timelimit for reaction %s_reverse. If this '
+                                      'happens frequently, there may be too many constraints in the model. '
+                                      'Alternatively, you can try modifying solver parameters such as the '
+                                      'feasibility tolerance or the MIP gap tolerance.' % rid)
+                                warn('Solver status is "time_limit" with reaction %s_reverse' % rid)
+                            elif 'feasibility' in str(w):
+                                print('The solver has encountered an infeasible optimization with reaction '
+                                      '%s_reverse. The model may be infeasible when this reaction is '
+                                      'irreversible. If this happens frequently, there may be a problem with '
+                                      'the starting solution, or the tolerance parameters.' % rid)
+                                warn('Solver status is "infeasible" when reaction %s_reverse is irreversible' % rid)
+                            else:
+                                print('An unexpected error has occured during the solver call with reaction '
+                                      '%s_reverse.' % rid)
+                                warn(str(w))
+                        finally:
+                            rxn.upper_bound = upper_bound_temp
+                    # for all inactive fluxes, check activation in forwards direction
+                    if rxn.upper_bound >= thr:
+                        rxn.lower_bound = thr
                     else:
-                        upper_bound_temp = rxn.upper_bound
-                        # for inactive reversible fluxes, check activation in backwards direction
-                        if rxn.lower_bound < 0.:
-                            with catch_warnings():
-                                filterwarnings('error')
-                                try:
-                                    rxn.upper_bound = -thr
-                                    temp_sol = imat(model_temp, reaction_weights, epsilon=eps, threshold=thr)
-                                    temp_sol_bin = (np.abs(temp_sol.fluxes) >= thr-tol).values.astype(int)
-                                    if temp_sol.objective_value >= optimal_objective_value:
-                                        all_solutions.append(temp_sol)
-                                        all_solutions_binary.append(temp_sol_bin)
-                                        if not np.any(np.all(temp_sol_bin == unique_solutions_binary, axis=1)):
-                                            unique_solutions.append(temp_sol)
-                                            unique_solutions_binary.append(temp_sol_bin)
-                                            unique_reactions.append(rid+'_backwards')
-                                            if save:
-                                                filename = out_path+'_solution_'+str(len(unique_solutions)-1)+'.csv'
-                                                write_solution(model, temp_sol, thr, filename)
-                                except UserWarning as w:
-                                    resetwarnings()
-                                    if 'time_limit' in str(w):
-                                        print('The solver has reached the timelimit for reaction %s_reverse. If this '
-                                              'happens frequently, there may be too many constraints in the model. '
-                                              'Alternatively, you can try modifying solver parameters such as the '
-                                              'feasibility tolerance or the MIP gap tolerance.' % rid)
-                                        warn('Solver status is "time_limit" with reaction %s_reverse' % rid)
-                                    elif 'feasibility' in str(w):
-                                        print('The solver has encountered an infeasible optimization with reaction '
-                                              '%s_reverse. The model may be infeasible when this reaction is '
-                                              'irreversible. If this happens frequently, there may be a problem with '
-                                              'the starting solution, or the tolerance parameters.' % rid)
-                                        warn('Solver status is "infeasible" with reaction %s_reverse' % rid)
-                                    else:
-                                        print('An unexpected error has occured during the solver call with reaction '
-                                              '%s_reverse.' % rid)
-                                        warn(w)
-                                finally:
-                                    rxn.upper_bound = upper_bound_temp
-                        # for all inactive fluxes, check activation in forwards direction
-                        if rxn.upper_bound >= thr:
-                            rxn.lower_bound = thr
-                        else:
-                            rxn.lower_bound = rxn.upper_bound
-                    # for all fluxes: compute solution with new bounds
-                    try:
-                        temp_sol = imat(model_temp, reaction_weights, epsilon=eps, threshold=thr)
-                        temp_sol_bin = (np.abs(temp_sol.fluxes) >= thr-tol).values.astype(int)
-                        if temp_sol.objective_value >= optimal_objective_value:
-                            all_solutions.append(temp_sol)
-                            all_solutions_binary.append(temp_sol_bin)
-                            all_reactions.append(rid)
-                            if not np.any(np.all(temp_sol_bin == unique_solutions_binary, axis=1)):
-                                unique_solutions.append(temp_sol)
-                                unique_solutions_binary.append(temp_sol_bin)
-                                unique_reactions.append(rid)
-                                if save:
-                                    filename = out_path+'_solution_'+str(len(unique_solutions)-1)+'.csv'
-                                    write_solution(model, temp_sol, thr, filename)
-                    except UserWarning as w:
-                        resetwarnings()
-                        if 'time_limit' in str(w):
-                            print('The solver has reached the timelimit for reaction %s. If this happens frequently, '
-                                  'there may be too many constraints in the model. Alternatively, you can try '
-                                  'modifying solver parameters such as the feasibility tolerance or the MIP gap '
-                                  'tolerance.' % rid)
-                            warn('Solver status is "time_limit" with reaction %s_reverse' % rid)
-                        elif 'feasibility' in str(w) and prev_sol_bin[idx] == 1:
-                            print('The solver has encountered an infeasible optimization with reaction %s. '
-                                  'The model may be infeasible when this reaction is blocked. If this happens '
-                                  'frequently, the model may contain many blocked reactions, or there may be a problem '
-                                  'with the starting solution, or the tolerance parameters.' % rid)
-                        elif 'feasibility' in str(w) and prev_sol_bin[idx] == 0:
-                            print('The solver has encountered an infeasible optimization with reaction %s. '
-                                  'The model may be infeasible when this reaction is irreversible. If this happens '
-                                  'frequently, there may be a problem with the starting solution, or the tolerance '
-                                  'parameters.' % rid)
-                        else:
-                            print('An unexpected error has occured during the solver call with reaction %s.' % rid)
-                            warn(w)
+                        print('reaction %s has an upper bound below the detection limit, it cannot carry flux.' % rid)
+                        rxn.lower_bound = rxn.upper_bound
+                        continue
+                # for all fluxes: compute solution with new bounds
+                # with catch_warnings():
+                #     filterwarnings('error')
+                try:
+                    temp_sol = imat(model_temp, reaction_weights, epsilon=eps, threshold=thr)
+                    if temp_sol is None:
+                        print('this print should not be reached')
+                    #     warn('this warning should not be reached')
+                    temp_sol_bin = (np.abs(temp_sol.fluxes) >= thr-tol).values.astype(int)
+                    if temp_sol.objective_value >= optimal_objective_value:
+                        all_solutions.append(temp_sol)
+                        all_solutions_binary.append(temp_sol_bin)
+                        all_reactions.append(rid)
+                        if not np.any(np.all(temp_sol_bin == unique_solutions_binary, axis=1)):
+                            unique_solutions.append(temp_sol)
+                            unique_solutions_binary.append(temp_sol_bin)
+                            unique_reactions.append(rid)
+                            if save:
+                                filename = out_path+'_solution_'+str(len(unique_solutions)-1)+'.csv'
+                                write_solution(model, temp_sol, thr, filename)
+                except ImatException as w:
+                    if 'time_limit' in str(w):
+                        print('The solver has reached the timelimit for reaction %s. If this happens frequently, '
+                              'there may be too many constraints in the model. Alternatively, you can try '
+                              'modifying solver parameters such as the feasibility tolerance or the MIP gap '
+                              'tolerance.' % rid)
+                        warn('Solver status is "time_limit" with reaction %s' % rid)
+                    elif 'feasibility' in str(w) and prev_sol_bin[idx] == 1:
+                        print('The solver has encountered an infeasible optimization with reaction %s. '
+                              'The model may be infeasible when this reaction is blocked. If this happens '
+                              'frequently, the model may contain many blocked reactions, or there may be a problem '
+                              'with the starting solution, or the tolerance parameters.' % rid)
+                        warn('Solver status is "infeasible" when reaction %s is blocked' % rid)
+                    elif 'feasibility' in str(w) and prev_sol_bin[idx] == 0:
+                        print('The solver has encountered an infeasible optimization with reaction %s. '
+                              'The model may be infeasible when this reaction is irreversible. If this happens '
+                              'frequently, there may be a problem with the starting solution, or the tolerance '
+                              'parameters.' % rid)
+                        warn('Solver status is "infeasible" when reaction %s is irreversible' % rid)
+                    else:
+                        print('An unexpected error has occured during the solver call with reaction %s.' % rid)
+                        warn(str(w))
     solution = RxnEnumSolution(all_solutions, unique_solutions, all_solutions_binary, unique_solutions_binary,
                                all_reactions, unique_reactions, prev_sol.objective_value)
     return solution
