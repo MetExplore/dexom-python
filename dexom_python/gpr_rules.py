@@ -97,7 +97,7 @@ def apply_gpr(model, gene_weights, save=True, filename='reaction_weights', dupli
     ----------
     model: cobra.Model
         a cobrapy model
-    gene_weights: dict or pd.Series
+    gene_weights: dict or pandas.Series or pandas.DataFrame
         a dictionary of pandas Series containing gene IDs & weights
     save: bool
         if True, saves the reaction weights as a csv file
@@ -113,13 +113,23 @@ def apply_gpr(model, gene_weights, save=True, filename='reaction_weights', dupli
     """
     operations = {'min': np.min, 'max': np.max, 'mean': np.mean, 'median': np.median,
                   'remove': lambda x: x.mean() if len(x.value_counts()) == 1 else 0.}
-    if isinstance(gene_weights, pd.Series):
+    if isinstance(gene_weights, pd.DataFrame):
+        print('The gene_weights argument was passed as a DataFrame, '
+              'the reaction_weights will be saved but not returned')
+        reaction_weights = []
+        for condition in gene_weights:
+            rw = apply_gpr(model=model, gene_weights=gene_weights[condition], save=True,
+                           filename=filename+'_'+condition, duplicates=duplicates, null=null)
+            reaction_weights.append(pd.Series(rw, name=condition))
+        return pd.concat(reaction_weights)
+    elif isinstance(gene_weights, pd.Series):
         for gene in set(gene_weights.index):
             if isinstance(gene_weights[gene], pd.Series):
                 vals = gene_weights.pop(gene)
                 gene_weights[gene] = operations[duplicates](vals)
         gene_weights = gene_weights.to_dict()
-
+    if not isinstance(gene_weights, dict):
+        raise TypeError('gene_weights must be a dictionary, pandas.Series or pandas.DataFrame')
     reaction_weights = {}
     gene_weight_dict = {}
     for k, v in gene_weights.items():
@@ -160,7 +170,7 @@ def main():
     parser.add_argument('-o', '--output', default='reaction_weights',
                         help='Path to which the reaction_weights .csv file is saved')
     parser.add_argument('--gene_ID', default='ID', help='column containing the gene identifiers')
-    parser.add_argument('--gene_score', default='t', help='column containing the gene scores')
+    parser.add_argument('--gene_score', default='t', help='columns containing the gene scores, comma-separated')
     parser.add_argument('-d', '--duplicates', default='remove', help='column containing the gene scores')
     parser.add_argument('--convert', action='store_true', help='converts gene expression to qualitative weights')
     parser.add_argument('-t', '--threshold', type=float, default=.25,
@@ -169,13 +179,17 @@ def main():
                         help='value assigned to reactions/genes with no associated information')
     args = parser.parse_args()
 
+    score_columns = args.gene_score.split(',')
+    print(score_columns)
     model = read_model(args.model)
     genes = pd.read_csv(args.gene_file).set_index(args.gene_ID)
     if args.convert:
-        genes = expression2qualitative(genes, column_list=[args.gene_score], proportion=args.threshold,
+        genes = expression2qualitative(genes, column_list=score_columns, proportion=args.threshold,
                                        outpath=args.output+'_qual_geneweights')
-    gene_weights = pd.Series(genes[args.gene_score].values, index=genes.index)
-
+    if len(score_columns) == 1:
+        gene_weights = pd.Series(genes[score_columns[0]].values, index=genes.index)
+    else:
+        gene_weights = genes[score_columns].copy()
     reaction_weights = apply_gpr(model=model, gene_weights=gene_weights, save=True, filename=args.output,
                                  duplicates=args.duplicates, null=args.null)
     return True

@@ -1,0 +1,14 @@
+,reactions,weights
+0,EX_a,20.0
+1,EX_b,1.0
+2,EX_e,2.0
+3,EX_g,7.0
+4,EX_h,8.0
+5,EX_i,3.0
+6,EX_j,9.0
+7,R_a_f,19.0
+8,R_ab_cd,10.0
+9,R_ef_gh,11.0
+10,R_f_i,12.0
+11,R_cj_i,13.0
+12,R_d_j,14.0
