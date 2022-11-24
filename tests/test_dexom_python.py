@@ -232,7 +232,7 @@ def test_read_prev_sol_binary(model, reaction_weights):
 @mock.patch('argparse.ArgumentParser.parse_args',
             return_value=argparse.Namespace(model='model/example_r13m10.json', gene_ID='ID', gene_score='expr',
                                             gene_file='model/example_r13m10_expression.csv', duplicates='remove',
-                                            convert=True, threshold=0.25, null=0.,
+                                            convert=True, threshold=0.25, null=0., significant='both',
                                             output='model/example_r13m10_weights'))
 def test_gpr_main(mock_args):
     res = gr.main()
@@ -240,9 +240,9 @@ def test_gpr_main(mock_args):
 
 
 @mock.patch('argparse.ArgumentParser.parse_args',
-            return_value=argparse.Namespace(model='model/example_r13m10.json', gene_ID='ID', gene_score='expr,testexpr',
+            return_value=argparse.Namespace(model='model/example_r13m10.json', gene_ID='ID', gene_score=None,
                                             gene_file='model/example_r13m10_expression_gprtest.csv', duplicates='remove',
-                                            convert=False, threshold=0.25, null=0.,
+                                            convert=False, threshold=0.25, null=0., significant='both',
                                             output='model/example_r13m10_weights'))
 def test_gpr_main_dataframe(mock_args):
     res = gr.main()
