@@ -4,6 +4,7 @@ import time
 from symengine import Add, sympify
 from numpy import abs
 from warnings import warn, catch_warnings, filterwarnings, resetwarnings
+from cobra.exceptions import OptimizationError
 from dexom_python.model_functions import read_model, check_model_options, load_reaction_weights, DEFAULT_VALUES
 from dexom_python.result_functions import write_solution
 
@@ -203,6 +204,10 @@ def imat(model, reaction_weights=None, epsilon=DEFAULT_VALUES['epsilon'], thresh
                     print('An unexpected error has occured during the solver call')
                     # warn(w)
                     raise ImatException(str(w))
+            except OptimizationError as e:
+                resetwarnings()
+                print('An unexpected error has occured during the solver call.')
+                raise ImatException(str(e))
     finally:
         pass
 

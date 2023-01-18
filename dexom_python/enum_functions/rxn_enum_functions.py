@@ -103,7 +103,6 @@ def rxn_enum(model, reaction_weights, prev_sol=None, rxn_list=None, eps=DEFAULT_
                                         filename = out_path+'_solution_'+str(len(unique_solutions)-1)+'.csv'
                                         write_solution(model, temp_sol, thr, filename)
                         except ImatException as w:
-                            # resetwarnings()
                             if 'time_limit' in str(w):
                                 print('The solver has reached the timelimit for reaction %s_reverse. If this '
                                       'happens frequently, there may be too many constraints in the model. '

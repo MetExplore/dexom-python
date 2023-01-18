@@ -3,8 +3,9 @@ import six
 import time
 import numpy as np
 import pandas as pd
-from warnings import warn, catch_warnings, filterwarnings, resetwarnings
 from symengine import sympify
+from warnings import warn, catch_warnings, filterwarnings, resetwarnings
+from cobra.exceptions import OptimizationError
 from dexom_python.imat_functions import imat
 from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options, DEFAULT_VALUES
 from dexom_python.enum_functions.enumeration import EnumSolution, create_enum_variables, read_prev_sol
@@ -108,6 +109,7 @@ def icut(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['epsilon'], 
                     break
             except UserWarning as w:
                 resetwarnings()
+                prev_sol = all_solutions[-1]
                 if 'time_limit' in str(w):
                     print('The solver has reached the timelimit in iteration %i. If this happens frequently, there may '
                           'be too many constraints in the model. Alternatively, you can try modifying solver '
@@ -122,6 +124,11 @@ def icut(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['epsilon'], 
                 else:
                     print('An unexpected error has occured during the solver call in iteration %i.' % idx)
                     warn(w)
+            except OptimizationError as e:
+                resetwarnings()
+                prev_sol = all_solutions[-1]
+                print('An unexpected error has occured during the solver call in iteration %i.' % idx)
+                warn(str(e), UserWarning)
     model.solver.remove([const for const in icut_constraints if const in model.solver.constraints])
     solution = EnumSolution(all_solutions, all_solutions_binary, all_solutions[0].objective_value)
     if full:

@@ -4,6 +4,7 @@ import time
 import numpy as np
 import pandas as pd
 from warnings import catch_warnings, filterwarnings, resetwarnings, warn
+from cobra.exceptions import OptimizationError
 from dexom_python.imat_functions import imat
 from dexom_python.result_functions import write_solution
 from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options, DEFAULT_VALUES
@@ -113,6 +114,12 @@ def diversity_enum(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['e
                 else:
                     print('An unexpected error has occured during the solver call in iteration %i.' % idx)
                     warn(w)
+            except OptimizationError as e:
+                resetwarnings()
+                times.append(-1)
+                prev_sol = all_solutions[-1]
+                print('An unexpected error has occured during the solver call in iteration %i.' % idx)
+                warn(str(e), UserWarning)
     model.solver.remove([const for const in icut_constraints if const in model.solver.constraints])
     model.solver.remove(opt_const)
     solution = EnumSolution(all_solutions, all_binary, all_solutions[0].objective_value)
