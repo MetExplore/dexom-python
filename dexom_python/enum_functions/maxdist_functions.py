@@ -117,6 +117,10 @@ def maxdist(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['epsilon'
     -------
     solution: EnumSolution object
     """
+
+    primals = ['']
+    constraints = ['']
+
     if prev_sol is None:
         prev_sol = imat(model, reaction_weights, epsilon=eps, threshold=thr, full=full)
     else:
@@ -145,6 +149,8 @@ def maxdist(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['epsilon'
             try:
                 with model:
                     prev_sol = model.optimize()
+                    primals.append(pd.Series(model.solver.primal_values))
+                    constraints.append(pd.Series(model.solver.constraint_values))
                 prev_sol_bin = (np.abs(prev_sol.fluxes) >= thr-tol).values.astype(int)
                 all_solutions.append(prev_sol)
                 all_binary.append(prev_sol_bin)
@@ -175,7 +181,7 @@ def maxdist(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['epsilon'
     model.solver.remove([const for const in icut_constraints if const in model.solver.constraints])
     model.solver.remove(opt_const)
     solution = EnumSolution(all_solutions, all_binary, all_solutions[0].objective_value)
-    return solution
+    return solution, primals, constraints
 
 
 def main():

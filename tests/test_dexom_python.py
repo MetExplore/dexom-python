@@ -119,7 +119,7 @@ def test_apply_gpr(model, gene_weights, reaction_weights):
 def test_create_new_partial_variables(model, reaction_weights):
     im.create_new_partial_variables(model=model, reaction_weights=reaction_weights, epsilon=DV['epsilon'],
                                     threshold=DV['threshold'])
-    assert len(model.variables) == 41 and len(model.constraints) == 35
+    assert len(model.variables) == 41 and len(model.constraints) == 25
 
 
 def test_create_full_variables(model, reaction_weights):

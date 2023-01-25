@@ -49,6 +49,10 @@ def diversity_enum(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['e
     solution: an EnumSolution object
     stats: a pandas.DataFrame containing the number of selected reactions and runtime of each iteration
     """
+
+    primals = ['']
+    constraints = ['']
+
     if prev_sol is None:
         prev_sol = imat(model, reaction_weights, epsilon=eps, threshold=thr, full=full)
     else:
@@ -87,6 +91,8 @@ def diversity_enum(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['e
             try:
                 with model:
                     prev_sol = model.optimize()
+                    primals.append(pd.Series(model.solver.primal_values))
+                    constraints.append(pd.Series(model.solver.constraint_values))
                 prev_sol_bin = (np.abs(prev_sol.fluxes) >= thr-tol).values.astype(int)
                 all_solutions.append(prev_sol)
                 all_binary.append(prev_sol_bin)
@@ -128,7 +134,7 @@ def diversity_enum(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['e
     if save:
         stats.to_csv(out_path+time.strftime('%Y%m%d-%H%M%S')+'_results.csv')
         sol.to_csv(out_path+time.strftime('%Y%m%d-%H%M%S')+'_solutions.csv')
-    return solution, stats
+    return solution, stats, primals, constraints
 
 
 def main():

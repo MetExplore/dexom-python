@@ -55,8 +55,10 @@ In addition, the following solver parameters have been made available through th
 - `timelimit`: the maximum amount of time allowed for solver optimization (in seconds)
 - `feasibility`: the solver feasbility tolerance
 - `mipgaptol`: the solver MIP gap tolerance
-note: the feasibility determines the solver's capacity to return correct results. 
-In particular, it is necessary that `epsilon` > `threshold` > `ub*feasibility` (where `ub` is the maximal upper bound for reaction flux in the model)
+
+note: the feasibility determines the solver's capacity to return correct results.  
+**It is absolutely necessary** to uphold the following rule: `epsilon > threshold > ub*feasibility` (where `ub` is the maximal upper bound for reaction flux in the model).
+
 
 By default, imat uses the `create_new_partial_variables` function. In this version, binary flux indicator variables are created for each reaction with a non-zero weight.  
 In the full-DEXOM implementation, binary flux indicator variables are created for every reaction in the model. This does not change the result of the imat function, but can be used for the enumeration methods below.
