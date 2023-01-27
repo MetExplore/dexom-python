@@ -8,7 +8,7 @@ from warnings import warn, catch_warnings, filterwarnings, resetwarnings
 from cobra.exceptions import OptimizationError
 from dexom_python.enum_functions.icut_functions import create_icut_constraint
 from dexom_python.imat_functions import imat
-from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options, DEFAULT_VALUES
+from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options, DEFAULT_VALUES, check_threshold_tolerance
 from dexom_python.enum_functions.enumeration import EnumSolution, create_enum_variables, read_prev_sol
 
 
@@ -117,10 +117,7 @@ def maxdist(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['epsilon'
     -------
     solution: EnumSolution object
     """
-
-    primals = ['']
-    constraints = ['']
-
+    check_threshold_tolerance(model=model, epsilon=eps, threshold=thr)
     if prev_sol is None:
         prev_sol = imat(model, reaction_weights, epsilon=eps, threshold=thr, full=full)
     else:
@@ -149,8 +146,6 @@ def maxdist(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['epsilon'
             try:
                 with model:
                     prev_sol = model.optimize()
-                    primals.append(pd.Series(model.solver.primal_values))
-                    constraints.append(pd.Series(model.solver.constraint_values))
                 prev_sol_bin = (np.abs(prev_sol.fluxes) >= thr-tol).values.astype(int)
                 all_solutions.append(prev_sol)
                 all_binary.append(prev_sol_bin)
@@ -181,7 +176,7 @@ def maxdist(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['epsilon'
     model.solver.remove([const for const in icut_constraints if const in model.solver.constraints])
     model.solver.remove(opt_const)
     solution = EnumSolution(all_solutions, all_binary, all_solutions[0].objective_value)
-    return solution, primals, constraints
+    return solution
 
 
 def main():

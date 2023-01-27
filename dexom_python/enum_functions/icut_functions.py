@@ -7,7 +7,7 @@ from symengine import sympify
 from warnings import warn, catch_warnings, filterwarnings, resetwarnings
 from cobra.exceptions import OptimizationError
 from dexom_python.imat_functions import imat
-from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options, DEFAULT_VALUES
+from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options, DEFAULT_VALUES, check_threshold_tolerance
 from dexom_python.enum_functions.enumeration import EnumSolution, create_enum_variables, read_prev_sol
 
 
@@ -86,6 +86,7 @@ def icut(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['epsilon'], 
     solution: EnumSolution object
         In the case of integer-cut, all_solutions and unique_solutions are identical
     """
+    check_threshold_tolerance(model=model, epsilon=eps, threshold=thr)
     if prev_sol is None:
         prev_sol = imat(model, reaction_weights, epsilon=eps, threshold=thr, full=full)
     else:

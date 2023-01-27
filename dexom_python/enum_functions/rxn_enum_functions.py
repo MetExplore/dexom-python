@@ -3,10 +3,10 @@ import os
 import pandas as pd
 import numpy as np
 from dexom_python.imat_functions import imat, ImatException
-from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options, DEFAULT_VALUES
+from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options, DEFAULT_VALUES, check_threshold_tolerance
 from dexom_python.result_functions import write_solution
 from dexom_python.enum_functions.enumeration import create_enum_variables, read_prev_sol
-from warnings import warn, filterwarnings, catch_warnings, resetwarnings
+from warnings import warn
 
 
 class RxnEnumSolution(object):
@@ -49,6 +49,7 @@ def rxn_enum(model, reaction_weights, prev_sol=None, rxn_list=None, eps=DEFAULT_
     -------
     solution: RxnEnumSolution object
     """
+    check_threshold_tolerance(model=model, epsilon=eps, threshold=thr)
     if prev_sol is None:
         prev_sol = imat(model, reaction_weights, epsilon=eps, threshold=thr, full=False)
     else:

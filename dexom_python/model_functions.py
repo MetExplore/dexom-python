@@ -1,6 +1,7 @@
 import optlang
 import pandas as pd
 import numpy as np
+import cobra
 from pathlib import Path
 from cobra.io import load_json_model, read_sbml_model, load_matlab_model
 from cobra.flux_analysis import find_blocked_reactions
@@ -14,8 +15,8 @@ DEFAULT_VALUES = {  # these are the default values used for all the functions in
     'mipgap': 1e-3,
     'tolerance': 1e-7,
     'verbosity': 1,
-    'epsilon': 2e-4+1e-5,
-    'threshold': 2e-3,
+    'epsilon': 3e-4,
+    'threshold': 2e-4,
     'obj_tol': 1e-3,
     'maxiter': 10,
     'dist_anneal': 0.95,
@@ -53,6 +54,21 @@ def check_model_options(model, timelimit=DEFAULT_VALUES['timelimit'], feasibilit
     else:
         warn('setting the MIP gap tolerance is only available with the cplex solver')
     return model
+
+
+def check_threshold_tolerance(model, epsilon, threshold):
+    cobra_config = cobra.Configuration()
+    limit = model.tolerance * max(abs(cobra_config.upper_bound), abs(cobra_config.lower_bound))
+    if threshold < 2*limit:
+        raise ValueError('The threshold parameter value is too low compared to the current model tolerance. '
+                         'Current threshold value: %s. Current tolerance value:%s. Minimum threshold value: %s'
+                         % (str(threshold), str(model.tolerance), str(2*limit)))
+    if epsilon < np.around(threshold + limit, 10):
+        raise ValueError('The epsilon parameter value is too low compared to the current threshold and model tolerance.'
+                         ' Current epsilon value: %s. Current threshold value: %s. Current tolerance value:%s. '
+                         'Minimum epsilon value: %s'
+                         % (str(epsilon), str(threshold), str(model.tolerance), str(threshold + limit)))
+    return 0
 
 
 def get_all_reactions_from_model(model, save=True, shuffle=True, out_path=''):

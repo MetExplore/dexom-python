@@ -5,7 +5,7 @@ from symengine import Add, sympify
 from numpy import abs
 from warnings import catch_warnings, filterwarnings, resetwarnings
 from cobra.exceptions import OptimizationError
-from dexom_python.model_functions import read_model, check_model_options, load_reaction_weights, DEFAULT_VALUES
+from dexom_python.model_functions import read_model, check_model_options, load_reaction_weights, DEFAULT_VALUES, check_threshold_tolerance
 from dexom_python.result_functions import write_solution
 
 
@@ -48,7 +48,7 @@ def create_new_partial_variable_single(model, rid, epsilon, threshold, pos):
     # the variable definition is more precise than in the original iMAT implementation
     # this is done in order to avoid problems with enumeration methods, and doesn't affect the results of iMAT
     # tol = model.tolerance*1000
-    if pos == 1 and 'rh_' + rid + '_pos' not in model.solver.variables:
+    if pos and 'rh_' + rid + '_pos' not in model.solver.variables:
         rxn = model.reactions.get_by_id(rid)
         xtot = model.solver.interface.Variable('x_%s' % rid, type='binary')
         xf = model.solver.interface.Variable('rh_%s_pos' % rid, type='binary')
@@ -57,80 +57,29 @@ def create_new_partial_variable_single(model, rid, epsilon, threshold, pos):
         model.solver.add(xf)
         model.solver.add(xr)
         xtot_def = model.solver.interface.Constraint(xtot - xf - xr, lb=0., ub=0., name='x_%s_def' % rid)
-        # xf_upper = model.solver.interface.Constraint(
-        #     rxn.forward_variable - rxn.upper_bound * xf, ub=0., name='xr_%s_upper' % rid)
-        # xr_upper = model.solver.interface.Constraint(
-        #     rxn.reverse_variable + rxn.lower_bound * xr, ub=0., name='xf_%s_upper' % rid)
-        # xf_lower = model.solver.interface.Constraint(
-        #     rxn.forward_variable - epsilon * xf, lb=0., name='xf_%s_lower' % rid)
-        # xr_lower = model.solver.interface.Constraint(
-        #     rxn.reverse_variable - epsilon * xr, lb=0., name='xr_%s_lower' % rid)
         model.solver.add(xtot_def)
-        # model.solver.add(xf_upper)
-        # model.solver.add(xr_upper)
-        # model.solver.add(xf_lower)
-        # model.solver.add(xr_lower)
-
         up = model.solver.interface.Constraint(rxn.forward_variable - rxn.reverse_variable
                                                - xf * epsilon - xr * rxn.lower_bound, lb=0., name='test%s_lower' % rid)
         lo = model.solver.interface.Constraint(rxn.forward_variable - rxn.reverse_variable
                                                + xr * epsilon - xf * rxn.upper_bound, ub=0., name='test%s_upper' % rid)
         model.solver.add(up)
         model.solver.add(lo)
-    if pos == -1 and 'rl_' + rid not in model.solver.variables:
+    elif 'rl_' + rid not in model.solver.variables:
         rxn = model.reactions.get_by_id(rid)
         xtot = model.solver.interface.Variable('rl_%s' % rid, type='binary')
         xf = model.solver.interface.Variable('xf_%s' % rid, type='binary')
         xr = model.solver.interface.Variable('xr_%s' % rid, type='binary')
-
-        # test = model.solver.interface.Constraint(tol*xf + tol*xr, lb=tol, ub=tol, name='test%s'%rid)
-        # model.solver.add(test)
-
         model.solver.add(xtot)
         model.solver.add(xf)
         model.solver.add(xr)
         xtot_def = model.solver.interface.Constraint(xtot - xf - xr, lb=0., ub=0., name='x_%s_def' % rid)
-        # xf_upper = model.solver.interface.Constraint(
-        #     rxn.forward_variable - rxn.upper_bound * xf, ub=0., name='xr_%s_upper' % rid)
-        # xr_upper = model.solver.interface.Constraint(
-        #     rxn.reverse_variable + rxn.lower_bound * xr, ub=0., name='xf_%s_upper' % rid)
-        # xf_lower = model.solver.interface.Constraint(
-        #     rxn.forward_variable - threshold * xf, lb=0., name='xf_%s_lower' % rid)
-        # xr_lower = model.solver.interface.Constraint(
-        #     rxn.reverse_variable - threshold * xr, lb=0., name='xr_%s_lower' % rid)
         model.solver.add(xtot_def)
-        # model.solver.add(xf_upper)
-        # model.solver.add(xr_upper)
-        # model.solver.add(xf_lower)
-        # model.solver.add(xr_lower)
         up = model.solver.interface.Constraint(rxn.forward_variable - rxn.reverse_variable
                                                - xf * threshold - xr * rxn.lower_bound, lb=0., name='test%s_lower' % rid)
         lo = model.solver.interface.Constraint(rxn.forward_variable - rxn.reverse_variable
                                                + xr * threshold - xf * rxn.upper_bound, ub=0., name='test%s_upper' % rid)
         model.solver.add(up)
         model.solver.add(lo)
-    # if pos == 0 and 'xtot_' + rid not in model.solver.variables:
-    #     rxn = model.reactions.get_by_id(rid)
-    #     xtot = model.solver.interface.Variable('xtot_%s' % rid, type='binary')
-    #     xf = model.solver.interface.Variable('xf_%s' % rid, type='binary')
-    #     xr = model.solver.interface.Variable('xr_%s' % rid, type='binary')
-    #     model.solver.add(xtot)
-    #     model.solver.add(xf)
-    #     model.solver.add(xr)
-    #     xtot_def = model.solver.interface.Constraint(xtot - xf - xr, lb=0., ub=0., name='x_%s_def' % rid)
-    #     xf_upper = model.solver.interface.Constraint(
-    #         rxn.forward_variable - rxn.upper_bound * xf, ub=0., name='xr_%s_upper' % rid)
-    #     xr_upper = model.solver.interface.Constraint(
-    #         rxn.reverse_variable + rxn.lower_bound * xr, ub=0., name='xf_%s_upper' % rid)
-    #     xf_lower = model.solver.interface.Constraint(
-    #         rxn.forward_variable - threshold * xf, lb=0., name='xf_%s_lower' % rid)
-    #     xr_lower = model.solver.interface.Constraint(
-    #         rxn.reverse_variable - threshold * xr, lb=0., name='xr_%s_lower' % rid)
-    #     model.solver.add(xtot_def)
-    #     model.solver.add(xf_upper)
-    #     model.solver.add(xr_upper)
-    #     model.solver.add(xf_lower)
-    #     model.solver.add(xr_lower)
     return model
 
 
@@ -153,13 +102,10 @@ def create_new_partial_variables(model, reaction_weights, epsilon, threshold):
             weight = reaction_weights[rxn.id]
             if weight > 0:
                 model = create_new_partial_variable_single(model=model, rid=rxn.id, epsilon=epsilon,
-                                                           threshold=threshold, pos=1)
+                                                           threshold=threshold, pos=True)
             elif weight < 0:  # the rl_rid variables represent the lowly expressed reactions
                 model = create_new_partial_variable_single(model=model, rid=rxn.id, epsilon=epsilon,
-                                                           threshold=threshold, pos=-1)
-        else:
-            model = create_new_partial_variable_single(model=model, rid=rxn.id, epsilon=epsilon,
-                                                       threshold=threshold, pos=0)
+                                                           threshold=threshold, pos=False)
     return model
 
 
@@ -185,6 +131,7 @@ def imat(model, reaction_weights=None, epsilon=DEFAULT_VALUES['epsilon'], thresh
     -------
     solution: cobra.Solution
     """
+    check_threshold_tolerance(model=model, epsilon=epsilon, threshold=threshold)
     if reaction_weights is None:
         reaction_weights = {}
     y_variables = list()

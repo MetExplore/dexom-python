@@ -53,12 +53,11 @@ The remaining inputs of imat are:
 
 In addition, the following solver parameters have been made available through the solver API:
 - `timelimit`: the maximum amount of time allowed for solver optimization (in seconds)
-- `feasibility`: the solver feasbility tolerance
+- `feasibility`: the solver feasibility tolerance
 - `mipgaptol`: the solver MIP gap tolerance
 
 note: the feasibility determines the solver's capacity to return correct results.  
 **It is absolutely necessary** to uphold the following rule: `epsilon > threshold > ub*feasibility` (where `ub` is the maximal upper bound for reaction flux in the model).
-
 
 By default, imat uses the `create_new_partial_variables` function. In this version, binary flux indicator variables are created for each reaction with a non-zero weight.  
 In the full-DEXOM implementation, binary flux indicator variables are created for every reaction in the model. This does not change the result of the imat function, but can be used for the enumeration methods below.
@@ -77,11 +76,13 @@ Each of these methods can be used on its own. The same model and reaction_weight
 Additional parameters for all 4 methods are:
 - `prev_sol`: an imat solution used as a starting point (if none is provided, a new one will be computed)  
 - `obj_tol`: the relative tolerance on the imat objective value for the optimality of the solutions  
-icut, maxdist, and diversity-enum also have two additional parameters:
+- 
+icut, maxdist, and diversity-enum also have two more parameters:
 - `maxiter`: the maximum number of iterations to run
 - `full`: set to True to use the full-DEXOM implementation  
 As previously explained, the full-DEXOM implementation defines binary indicator variables for all reactions in the model. Although only the reactions with non-zero weights have an impact on the imat objective function, the distance maximization function which is used in maxdist and diversity-enum can utilize the binary indicators for all reactions. This increases the distance between the solutions and their diversity, but requires significantly more computation time.  
-maxdist and div-enum also have one additional parameter:  
+
+- maxdist and div-enum also have one additional parameter:  
 - `icut`: if True, an icut constraint will be applied to prevent duplicate solutions
 
 ## Parallelized DEXOM
@@ -122,7 +123,7 @@ Then, call imat to produce a first context-specific subnetwork. This will create
 ```
 python dexom_python/imat_functions.py -m example_data/recon2v2_corrected.json -r example_data/pval_0-01_reactionweights.csv -o example_data/imat_solution
 ```
-To run DEXOM on a slurm cluster, call the enumeration.py script to create the necessary batch files (here: 100 batches with 100 iterations).   
+To run DEXOM on a slurm cluster, call `write_cluster_scripts.py` to create the necessary batch files (here: 100 batches with 100 iterations).   
 Be careful to put the path to your installation of the CPLEX solver as the `-c` argument.   
 This script assumes that you have cloned the `dexom-python` project on the cluster, which contains the `dexom_python` folder and the `example_data` folder in the same directory.  
 Note that this step creates a file called "recon2v2_reactions_shuffled.csv", which shows the order in which rxn-enum will call the reactions from the model.  
@@ -145,3 +146,7 @@ python dexom_python/result_functions.py -s example_data/all_dexom_sols.csv -o ex
 The file `all_dexom_sols.csv` contains all unique solutions enumerated with DEXOM.  
 The file `output.txt` contains the average computation time per iteration and the proportion of duplicate solutions.  
 The `.png` files contain boxplots of the pathway enrichment tests as well as a 2D PCA plot of the binary solution vectors.
+
+### Cell-specific reconstruction
+
+A more complete example of how to use DEXOM-python as a part of a cell-specific network reconstruction pipeline, including a snakemake workflow adapted for cluster usage, can be found here: https://forgemia.inra.fr/metexplore/cbm/ocmmed
