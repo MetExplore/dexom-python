@@ -15,11 +15,11 @@ https://dexom-python.readthedocs.io/en/stable/
 The package can be installed using pip: ``pip install dexom-python``
 
 You can also clone the git repository with
-``https://forgemia.inra.fr/metexplore/cbm/dexom-python``
-and then install dependencies with ``poetry install`` or or ``pip install -e .``
+``git clone https://forgemia.inra.fr/metexplore/cbm/dexom-python`` and
+then install dependencies with ``poetry install`` or
+``pip install -e .``
 
-To view changes between versions, see :ref:`changelog`
-
+To view changes between versions, see `changelog <docs/changelog.rst>`__
 
 Requirements
 ------------
@@ -88,11 +88,14 @@ switching between the partial & full-DEXOM implementation
 In addition, the following solver parameters have been made available
 through the solver API: - ``timelimit``: the maximum amount of time
 allowed for solver optimization (in seconds) - ``feasibility``: the
-solver feasbility tolerance - ``mipgaptol``: the solver MIP gap
-tolerance note: the feasibility determines the solver’s capacity to
-return correct results. In particular, it is necessary that ``epsilon``
-> ``threshold`` > ``ub*feasibility`` (where ``ub`` is the maximal upper
-bound for reaction flux in the model)
+solver feasibility tolerance - ``mipgaptol``: the solver MIP gap
+tolerance
+
+| note: the feasibility determines the solver’s capacity to return
+  correct results.
+| **It is absolutely necessary** to uphold the following rule:
+  ``epsilon > threshold > ub*feasibility`` (where ``ub`` is the maximal
+  upper bound for reaction flux in the model).
 
 | By default, imat uses the ``create_new_partial_variables`` function.
   In this version, binary flux indicator variables are created for each
@@ -123,8 +126,8 @@ name: ``diversity_enum``)
   be computed)
 | - ``obj_tol``: the relative tolerance on the imat objective value for
   the optimality of the solutions
-| icut, maxdist, and diversity-enum also have two additional parameters:
-  - ``maxiter``: the maximum number of iterations to run - ``full``: set
+| - icut, maxdist, and diversity-enum also have two more parameters: -
+  ``maxiter``: the maximum number of iterations to run - ``full``: set
   to True to use the full-DEXOM implementation
 | As previously explained, the full-DEXOM implementation defines binary
   indicator variables for all reactions in the model. Although only the
@@ -133,9 +136,10 @@ name: ``diversity_enum``)
   and diversity-enum can utilize the binary indicators for all
   reactions. This increases the distance between the solutions and their
   diversity, but requires significantly more computation time.
-| maxdist and div-enum also have one additional parameter:
-| - ``icut``: if True, an icut constraint will be applied to prevent
-  duplicate solutions
+
+-  maxdist and div-enum also have one additional parameter:
+-  ``icut``: if True, an icut constraint will be applied to prevent
+   duplicate solutions
 
 Parallelized DEXOM
 ------------------
@@ -144,11 +148,10 @@ Parallelized DEXOM
   methods.
 | ``write_cluster_scripts.py`` contains functions which are used for
   creating a parallelization of DEXOM on a slurm computation cluster.
-| The default function is ``write_batch_script1``.
-| The main inputs of this function are:
-| - ``filenums``: the number of parallel batches which should be
-  launched on slurm
-| - ``iters``: the number of div-enum iterations per batch
+  The default function is ``write_batch_script1``. The main inputs of
+  this function are: - ``filenums``: the number of parallel batches
+  which should be launched on slurm - ``iters``: the number of div-enum
+  iterations per batch
 
 Other inputs are used for personalizing the directories and filenames on
 the cluster.
@@ -194,7 +197,7 @@ Recon 2.2
 
 ::
 
-   python dexom_python/gpr_rules.py -m example_data/recon2v2_corrected.json -g example_data/pval_0-01_geneweights.csv -o example_data/pval_0-01_reactionweights
+   python dexom_python/gpr_rules -m example_data/recon2v2_corrected.json -g example_data/pval_0-01_geneweights.csv -o example_data/pval_0-01_reactionweights
 
 Then, call imat to produce a first context-specific subnetwork. This
 will create a file named “imat_solution.csv” in the example_data folder:
@@ -203,7 +206,7 @@ will create a file named “imat_solution.csv” in the example_data folder:
 
    python dexom_python/imat_functions.py -m example_data/recon2v2_corrected.json -r example_data/pval_0-01_reactionweights.csv -o example_data/imat_solution
 
-| To run DEXOM on a slurm cluster, call the enumeration.py script to
+| To run DEXOM on a slurm cluster, call ``write_cluster_scripts.py`` to
   create the necessary batch files (here: 100 batches with 100
   iterations).
 | Be careful to put the path to your installation of the CPLEX solver as
@@ -244,3 +247,11 @@ following scripts:
   iteration and the proportion of duplicate solutions.
 | The ``.png`` files contain boxplots of the pathway enrichment tests as
   well as a 2D PCA plot of the binary solution vectors.
+
+Cell-specific reconstruction
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A more complete example of how to use DEXOM-python as a part of a
+cell-specific network reconstruction pipeline, including a snakemake
+workflow adapted for cluster usage, can be found here:
+https://forgemia.inra.fr/metexplore/cbm/ocmmed

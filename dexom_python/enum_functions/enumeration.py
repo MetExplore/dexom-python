@@ -38,9 +38,9 @@ def create_enum_variables(model, reaction_weights, eps=DEFAULT_VALUES['epsilon']
         elif full and 'x_' + rid not in model.solver.variables:
             model = create_full_variable_single(model=model, rid=rid, reaction_weights=reaction_weights, epsilon=eps,
                                                 threshold=thr)
-        elif reaction_weights[rid] > 0 and 'rh_' + rid + '_pos' not in model.solver.variables:
+        elif reaction_weights[rid] > 0:
             model = create_new_partial_variable_single(model=model, epsilon=eps, threshold=thr, rid=rid, pos=True)
-        elif reaction_weights[rid] < 0 and 'rl_' + rid not in model.solver.variables:
+        elif reaction_weights[rid] < 0:
             model = create_new_partial_variable_single(model=model, epsilon=eps, threshold=thr, rid=rid, pos=False)
     return model
 

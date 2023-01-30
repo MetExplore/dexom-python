@@ -87,8 +87,6 @@ def rxn_enum(model, reaction_weights, prev_sol=None, rxn_list=None, eps=DEFAULT_
                     upper_bound_temp = rxn.upper_bound
                     # for inactive reversible fluxes, check activation in backwards direction
                     if rxn.lower_bound < 0.:
-                        # with catch_warnings():
-                        #     filterwarnings('error')
                         try:
                             rxn.upper_bound = -thr
                             temp_sol = imat(model_temp, reaction_weights, epsilon=eps, threshold=thr)
@@ -130,13 +128,8 @@ def rxn_enum(model, reaction_weights, prev_sol=None, rxn_list=None, eps=DEFAULT_
                         rxn.lower_bound = rxn.upper_bound
                         continue
                 # for all fluxes: compute solution with new bounds
-                # with catch_warnings():
-                #     filterwarnings('error')
                 try:
                     temp_sol = imat(model_temp, reaction_weights, epsilon=eps, threshold=thr)
-                    if temp_sol is None:
-                        print('this print should not be reached')
-                    #     warn('this warning should not be reached')
                     temp_sol_bin = (np.abs(temp_sol.fluxes) >= thr-tol).values.astype(int)
                     if temp_sol.objective_value >= optimal_objective_value:
                         all_solutions.append(temp_sol)

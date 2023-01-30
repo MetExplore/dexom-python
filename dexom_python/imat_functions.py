@@ -64,7 +64,7 @@ def create_new_partial_variable_single(model, rid, epsilon, threshold, pos):
                                                + xr * epsilon - xf * rxn.upper_bound, ub=0., name='test%s_upper' % rid)
         model.solver.add(up)
         model.solver.add(lo)
-    elif 'rl_' + rid not in model.solver.variables:
+    elif not pos and 'rl_' + rid not in model.solver.variables:
         rxn = model.reactions.get_by_id(rid)
         xtot = model.solver.interface.Variable('rl_%s' % rid, type='binary')
         xf = model.solver.interface.Variable('xf_%s' % rid, type='binary')
