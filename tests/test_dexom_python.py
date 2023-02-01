@@ -100,7 +100,22 @@ def test_load_reaction_weights(model, reaction_weights):
     assert sum([r.id in reaction_weights.keys() for r in model.reactions]) == 13
 
 
-# Testing apply_gpr
+def test_check_threshold_tolerance(model):
+    assert mf.check_threshold_tolerance(model, epsilon=3e-4, threshold=2e-4) == 0
+
+
+def test_check_threshold_tolerance_thresholderror(model):
+    with pytest.raises(ValueError, match=r'The threshold parameter value') as e:
+        mf.check_threshold_tolerance(model, epsilon=3e-4, threshold=1e-4)
+    assert e.match(r'0.0001')
+
+
+def test_check_threshold_tolerance_epsilonerror(model):
+    with pytest.raises(ValueError, match=r'The epsilon parameter value') as e:
+        mf.check_threshold_tolerance(model, epsilon=2e-4, threshold=2e-4)
+    assert e.match(r'0.0002')
+
+# Testing gpr_rules
 
 
 def test_expression2qualitative(gene_weights):
@@ -113,7 +128,7 @@ def test_apply_gpr(model, gene_weights, reaction_weights):
     assert test_wei == reaction_weights
 
 
-# Testing imat
+# Testing imat_functions
 
 
 def test_create_new_partial_variables(model, reaction_weights):
