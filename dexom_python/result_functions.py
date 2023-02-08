@@ -182,7 +182,7 @@ def plot_pca(solution_path, rxn_enum_solutions=None, save=True, save_name=''):
     return pca
 
 
-def main():
+def _main():
     """
     This function is called when you run this script from the commandline.
     It plots a 2-dimensional PCA of enumeration solutions and saves as png
@@ -201,4 +201,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    _main()

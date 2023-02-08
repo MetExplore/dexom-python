@@ -204,7 +204,7 @@ def imat(model, reaction_weights=None, epsilon=DEFAULT_VALUES['epsilon'], thresh
         pass
 
 
-def main():
+def _main():
     """
     This function is called when you run this script from the commandline.
     It performs the modified iMAT algorithm with reaction weights.
@@ -235,4 +235,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    _main()

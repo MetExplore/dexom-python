@@ -132,7 +132,7 @@ def diversity_enum(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['e
     return solution, stats
 
 
-def main():
+def _main():
     """
     This function is called when you run this script from the commandline.
     It performs the reaction-enumeration algorithm on a specified list of reactions
@@ -189,4 +189,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    _main()

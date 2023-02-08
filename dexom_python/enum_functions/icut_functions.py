@@ -147,7 +147,7 @@ def icut(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['epsilon'], 
     return solution
 
 
-def main():
+def _main():
     """
     This function is called when you run this script from the commandline.
     It performs the integer-cut enumeration algorithm
@@ -190,4 +190,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    _main()

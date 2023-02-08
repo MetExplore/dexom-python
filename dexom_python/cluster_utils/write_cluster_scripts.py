@@ -219,7 +219,7 @@ def write_batch_script2(directory, modelfile, weightfile, cplexpath, objtol=DEFA
     return True
 
 
-def main():
+def _main():
     """
     This function is called when you run this script from the commandline.
     It writes batch scripts for launching DEXOM on a slurm cluster.
@@ -291,4 +291,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    _main()

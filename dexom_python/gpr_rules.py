@@ -178,7 +178,7 @@ def apply_gpr(model, gene_weights, save=True, filename='reaction_weights', dupli
     return reaction_weights
 
 
-def main():
+def _main():
     """
     This function is called when you run this script from the commandline.
     It applies GPR rules to transform gene weights into reaction weights
@@ -235,4 +235,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    _main()

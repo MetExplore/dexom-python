@@ -251,7 +251,7 @@ def test_read_prev_sol_binary(model, reaction_weights):
                                             convert=True, threshold='0.25', null=0., significant='both',
                                             output='model/example_r13m10_weights'))
 def test_gpr_main(mock_args):
-    res = gr.main()
+    res = gr._main()
     assert res is True
 
 
@@ -261,7 +261,7 @@ def test_gpr_main(mock_args):
                                             convert=False, threshold='0.25', null=0., significant='both',
                                             output='model/example_r13m10_weights'))
 def test_gpr_main_dataframe(mock_args):
-    res = gr.main()
+    res = gr._main()
     assert res is True
 
 
@@ -271,7 +271,7 @@ def test_gpr_main_dataframe(mock_args):
                                             threshold=DV['threshold'], timelimit=DV['timelimit'], mipgap=DV['mipgap'],
                                             output='model/results/example_r13m10_imatsolution'))
 def test_imat_main(mock_args):
-    res = im.main()
+    res = im._main()
     assert res is True
 
 
@@ -279,7 +279,7 @@ def test_imat_main(mock_args):
             return_value=argparse.Namespace(solutions='model/results/example_r13m10_rxnenum_solutions.csv',
                                             rxn_solutions=None, out_path='model/results/example_r13m10_'))
 def test_result_functions_main(mock_args):
-    res = rf.main()
+    res = rf._main()
     assert res is True
 
 
@@ -291,7 +291,7 @@ def test_result_functions_main(mock_args):
                                             prev_sol='model/results/example_r13m10_imatsolution.csv', reaction_list=None,
                                             range='_'))
 def test_rxnenum_main(mock_args):
-    res = enum.rxn_enum_functions.main()
+    res = enum.rxn_enum_functions._main()
     assert res is True
 
 
@@ -303,7 +303,7 @@ def test_rxnenum_main(mock_args):
                                             prev_sol='model/results/example_r13m10_imatsolution.csv', full=False,
                                             maxiter=DV['maxiter']))
 def test_icut_main(mock_args):
-    res = enum.icut_functions.main()
+    res = enum.icut_functions._main()
     assert res is True
 
 
@@ -315,7 +315,7 @@ def test_icut_main(mock_args):
                                             prev_sol='model/results/example_r13m10_imatsolution.csv', noicut=False, full=False,
                                             maxiter=DV['maxiter'], onlyones=False))
 def test_maxdist_main(mock_args):
-    res = enum.maxdist_functions.main()
+    res = enum.maxdist_functions._main()
     assert res is True
 
 
@@ -327,7 +327,7 @@ def test_maxdist_main(mock_args):
                                             prev_sol='model/results/example_r13m10_imatsolution.csv', noicut=False, full=False,
                                             maxiter=DV['maxiter'], dist_anneal=DV['dist_anneal'], startsol=1))
 def test_divenum_main(mock_args):
-    res = enum.diversity_enum_functions.main()
+    res = enum.diversity_enum_functions._main()
     assert res is True
 
 
@@ -336,7 +336,7 @@ def test_divenum_main(mock_args):
                                             model='model/example_r13m10.json', sublist=None, subframe=None,
                                             out_path='model/results/example_r13m10_'))
 def test_pathway_main_json(mock_args):
-    res = pe.main()
+    res = pe._main()
     assert res is True
 
 
@@ -345,5 +345,5 @@ def test_pathway_main_json(mock_args):
                                             model='model/example_r13m10.xml', sublist=None, subframe=None,
                                             out_path='model/results/example_r13m10_'))
 def test_pathway_main_sbml(mock_args):
-    res = pe.main()
+    res = pe._main()
     assert res is True

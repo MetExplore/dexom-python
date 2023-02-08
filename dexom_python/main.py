@@ -6,7 +6,7 @@ from dexom_python.enum_functions.rxn_enum_functions import rxn_enum
 from dexom_python.enum_functions.diversity_enum_functions import diversity_enum
 
 
-def main():
+def _main():
     """
     This function is called when you run this script from the commandline.
     It performs iMAT, reaction-enumeration, and diversity-enumeration on a toy model
@@ -43,4 +43,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    _main()

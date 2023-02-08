@@ -154,7 +154,7 @@ def analyze_dexom_cluster_results(in_folder, out_folder, approach=1, filenums=10
     return full
 
 
-def main():
+def _main():
     """
     This function is called when you run this script from the commandline.
     It compiles and analyzes results from the DEXOM cluster pipelines
@@ -173,4 +173,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    _main()

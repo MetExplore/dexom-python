@@ -2,7 +2,7 @@ import argparse
 from dexom_python.enum_functions.enumeration import combine_binary_solutions
 
 
-def main():
+def _main():
     """
     This function is called when you run this script from the commandline.
     Compiles binary enumeration solutions from a given folder
@@ -19,4 +19,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    _main()

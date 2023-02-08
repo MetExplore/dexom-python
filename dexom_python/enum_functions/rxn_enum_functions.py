@@ -169,7 +169,7 @@ def rxn_enum(model, reaction_weights, prev_sol=None, rxn_list=None, eps=DEFAULT_
     return solution
 
 
-def main():
+def _main():
     """
     This function is called when you run this script from the commandline.
     It performs the reaction-enumeration algorithm on a specified list of reactions
@@ -235,4 +235,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    _main()

@@ -148,7 +148,7 @@ def plot_Fisher_pathways(filename_over, filename_under, sublist, outpath='pathwa
     return over, under
 
 
-def main():
+def _main():
     """
     This function is called when you run this script from the commandline.
     It performs pathway enrichment analysis using a hypergeometric test (Fischer exact test)
@@ -186,4 +186,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    _main()
