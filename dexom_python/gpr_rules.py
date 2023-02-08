@@ -32,19 +32,19 @@ def replace_MulMax_AddMin(expression):
             # return expression.func(*replaced_args)
 
 
-def expression2qualitative(genes, column_list=None, proportion=0.25, method='keep', significant_genes='both', save=True,
-                           outpath='geneweights'):
+def expression2qualitative(genes, column_list=None, proportion=0.25, method='keep', significant_genes='both',
+                           save=True, outpath='geneweights'):
     """
     Transforms gene expression values/ gene scores into qualitative gene weights
 
     Parameters
     ----------
-    genes: pandas.DataFrame
+    genes: pandas.DataFrame or pandas.Series
         dataframe with gene IDs in the index and gene expression values in a later column
     column_list: list
         column indexes containing gene expression values to be transformed. If empty, all columns will be transformed
-    proportion: float
-        proportion of genes to be used for determining high/low gene expression
+    proportion: tuple or float
+        proportion of genes to be used for determining low and high gene expression
     method: str
         one of "max", "mean" or "keep". chooses how to deal with genes containing multiple conflicting expression values
     significant_genes: str
@@ -60,6 +60,9 @@ def expression2qualitative(genes, column_list=None, proportion=0.25, method='kee
     gene_weights: a pandas DataFrame containing qualitative gene weights
         (-1 for low expression, 1 for high expression, 0 for in-between or no information)
     """
+    if isinstance(genes, pd.Series):
+        genes = pd.DataFrame(genes)
+        column_list = list(genes.columns)
     genes = genes[genes.index == genes.index]  # eliminates NaN values in index
     if column_list is None:
         column_list = list(genes.columns)
@@ -69,7 +72,15 @@ def expression2qualitative(genes, column_list=None, proportion=0.25, method='kee
         for col in column_list:
             if col not in genes.columns:
                 raise KeyError('Column %s is not present in gene expression file' % col)
-    cutoff = 1/proportion
+    if isinstance(proportion, float):
+        # lowthreshold = int(len(genes)*proportion)
+        # highthreshold = int(len(genes)*proportion/(proportion-1))
+        lowthreshold = proportion
+        highthreshold = 1-proportion
+    else:
+        # lowthreshold = int(len(genes)*proportion[0])
+        # highthreshold = int(len(genes)*proportion[1])
+        lowthreshold, highthreshold = proportion
     for col in column_list:
         if method == 'max':
             for x in set(genes.index):
@@ -78,15 +89,18 @@ def expression2qualitative(genes, column_list=None, proportion=0.25, method='kee
             for x in set(genes.index):
                 genes[col][x] = genes[col][x].mean()
         genes.sort_values(col, inplace=True)
-        genes[col].iloc[:int(len(genes)//cutoff)] = -1.
-        genes[col].iloc[int(len(genes)//cutoff):int(len(genes)*(cutoff-1)//cutoff)] = 0.
-        genes[col].iloc[int(len(genes) * (cutoff-1) // cutoff):] = 1.
+        genes[genes < genes.quantile(lowthreshold)] = -1.
+        genes[(genes >= genes.quantile(lowthreshold)) & (genes < genes.quantile(highthreshold))] = 0.
+        genes[genes >= genes.quantile(highthreshold)] = 1.
+        # genes[col].iloc[:lowthreshold] = -1.
+        # genes[col].iloc[lowthreshold:highthreshold] = 0.
+        # genes[col].iloc[highthreshold:] = 1.
         if significant_genes == 'high':
             print('applying expression2qualitative only on genes with highest expression')
-            genes[col].iloc[:int(len(genes)*(cutoff-1)//cutoff)] = 0.
+            genes[col][genes == -1.] = 0.
         elif significant_genes == 'low':
             print('applying expression2qualitative only on genes with lowest expression')
-            genes[col].iloc[int(len(genes)//cutoff):] = 0.
+            genes[col][genes == 1.] = 0.
     for x in genes.index:
         if isinstance(x, float):
             genes.index = genes.index.astype(int)
@@ -126,8 +140,8 @@ def apply_gpr(model, gene_weights, save=True, filename='reaction_weights', dupli
         reaction_weights = []
         for condition in gene_weights:
             rw = apply_gpr(model=model, gene_weights=gene_weights[condition], save=True,
-                           filename=filename+'_'+condition, duplicates=duplicates, null=null)
-            reaction_weights.append(pd.Series(rw, name=condition))
+                           filename=filename+'_'+str(condition), duplicates=duplicates, null=null)
+            reaction_weights.append(pd.Series(rw, name=str(condition)))
         return pd.concat(reaction_weights)
     elif isinstance(gene_weights, pd.Series):
         for gene in set(gene_weights.index):
@@ -182,8 +196,8 @@ def main():
     parser.add_argument('-n', '--null', type=float, default=0.,
                         help='value assigned to reactions/genes with no associated information')
     parser.add_argument('--convert', action='store_true', help='converts gene expression to qualitative weights')
-    parser.add_argument('-t', '--threshold', type=float, default=.25,
-                        help='proportion of genes that are highly/lowly expressed (only used if --convert is selected)')
+    parser.add_argument('-t', '--threshold', default='0.25_0.75',
+                        help='proportion of genes that are lowly/highly expressed (only used if --convert is selected)')
     parser.add_argument('-s', '--significant', default='both',
                         help='which genes have significant expression (either "high", "low" or "both", '
                              'only if --convert is selected)')
@@ -197,7 +211,18 @@ def main():
         score_columns = args.gene_score.split(',')
 
     if args.convert:
-        genes = expression2qualitative(genes=genes, column_list=score_columns, proportion=args.threshold, method='keep',
+        proportion = args.threshold.split('_')
+        if len(proportion) == 1:
+            proportion = float(proportion[0])
+        elif proportion[0] == '':
+            proportion = (float(proportion[1]), 1.)
+        elif proportion[1] == '':
+            proportion = (0., float(proportion[1]))
+        elif len(proportion) == 2:
+            proportion = (float(proportion[0]), float(proportion[1]))
+        else:
+            ValueError('The threshold argument was provided in an incorrect format.')
+        genes = expression2qualitative(genes=genes, column_list=score_columns, proportion=proportion, method='keep',
                                        significant_genes=args.significant, save=True,
                                        outpath=args.output+'_qual_geneweights')
     if len(score_columns) == 1:

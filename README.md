@@ -2,6 +2,7 @@
 
 <a href = "https://github.com/MetExplore/dexom-python/blob/master/LICENSE"><img alt="GitHub license" src="https://img.shields.io/github/license/maximiliansti/dexom_python"></a>
 <a href="https://pypi.org/project/dexom-python/"><img alt = "PyPI Package" src = "https://img.shields.io/pypi/v/dexom-python"/></a>  
+<a href="https://archive.softwareheritage.org/browse/origin/?origin_url=https://pypi.org/project/dexom-python/"><img src="https://archive.softwareheritage.org/badge/origin/https://pypi.org/project/dexom-python//"></a>
 
 This is a python implementation of DEXOM (Diversity-based enumeration of optimal context-specific metabolic networks)  
 The original project, which was developped in MATLAB, can be found here: https://github.com/MetExplore/dexom  
