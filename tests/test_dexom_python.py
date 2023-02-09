@@ -141,7 +141,7 @@ def test_create_new_partial_variables(model, reaction_weights):
 def test_create_full_variables(model, reaction_weights):
     im.create_full_variables(model=model, reaction_weights=reaction_weights, epsilon=DV['epsilon'],
                              threshold=DV['threshold'])
-    assert len(model.variables) == 65 and len(model.constraints) == 75
+    assert len(model.variables) == 65 and len(model.constraints) == 49
 
 
 def test_imat(model, reaction_weights):

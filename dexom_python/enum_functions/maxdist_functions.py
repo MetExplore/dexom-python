@@ -17,37 +17,17 @@ def create_maxdist_constraint(model, reaction_weights, prev_sol, obj_tol, name='
     Creates the optimality constraint for the maxdist algorithm.
     This constraint conserves the optimal objective value of the previous solution
     """
-    y_variables = []
-    y_weights = []
-    x_variables = []
-    x_weights = []
-
-    if full:
-        for rid, weight in six.iteritems(reaction_weights):
-            if weight > 0:
-                y_pos = model.solver.variables['xf_' + rid]
-                y_neg = model.solver.variables['xr_' + rid]
-                y_variables.append([y_neg, y_pos])
-                y_weights.append(weight)
-            elif weight < 0:
-                x = sympify('1') - model.solver.variables['x_' + rid]
-                x_variables.append(x)
-                x_weights.append(abs(weight))
-    else:
-        for rid, weight in six.iteritems(reaction_weights):
-            if weight > 0:
-                y_neg = model.solver.variables['rh_' + rid + '_neg']
-                y_pos = model.solver.variables['rh_' + rid + '_pos']
-                y_variables.append([y_neg, y_pos])
-                y_weights.append(weight)
-            elif weight < 0:
-                x_variables.append(sympify('1') - model.solver.variables['rl_' + rid])
-                x_weights.append(abs(weight))
-
     lower_opt = prev_sol.objective_value - prev_sol.objective_value * obj_tol
-    rh_objective = [(y[0] + y[1]) * y_weights[idx] for idx, y in enumerate(y_variables)]
-    rl_objective = [x * x_weights[idx] for idx, x in enumerate(x_variables)]
-    opt_const = model.solver.interface.Constraint(Add(*rh_objective) + Add(*rl_objective), lb=lower_opt, name=name)
+    variables = []
+    weights = []
+    for rid, weight in reaction_weights.items():
+        if weight > 0:
+            variables.append(model.solver.variables['x_' + rid])
+            weights.append(weight)
+        elif weight < 0:
+            variables.append(sympify('1') - model.solver.variables['x_' + rid])
+            weights.append(abs(weight))
+    opt_const = model.solver.interface.Constraint(Add(*[x * w for x, w in zip(variables, weights)]), lb=lower_opt, name=name)
     return opt_const
 
 
@@ -71,14 +51,13 @@ def create_maxdist_objective(model, reaction_weights, prev_sol, prev_sol_bin, on
         for rid, weight in six.iteritems(reaction_weights):
             rid_loc = prev_sol.fluxes.index.get_loc(rid)
             if weight > 0:
-                y_neg = model.solver.variables['rh_' + rid + '_neg']
-                y_pos = model.solver.variables['rh_' + rid + '_pos']
+                x = model.solver.variables['x_' + rid]
                 if prev_sol_bin[rid_loc] == 1:
-                    expr += y_neg + y_pos
+                    expr += x
                 elif not only_ones:
-                    expr += 1 - (y_neg + y_pos)
+                    expr += 1 - x
             elif weight < 0:
-                x_rl = sympify('1') - model.solver.variables['rl_' + rid]
+                x_rl = sympify('1') - model.solver.variables['x_' + rid]
                 if prev_sol_bin[rid_loc] == 1:
                     expr += 1 - x_rl
                 elif not only_ones:
@@ -144,8 +123,8 @@ def maxdist(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['epsilon'
         with catch_warnings():
             filterwarnings('error')
             try:
-                with model:
-                    prev_sol = model.optimize()
+                # with model:
+                prev_sol = model.optimize()
                 prev_sol_bin = (np.abs(prev_sol.fluxes) >= thr-tol).values.astype(int)
                 all_solutions.append(prev_sol)
                 all_binary.append(prev_sol_bin)

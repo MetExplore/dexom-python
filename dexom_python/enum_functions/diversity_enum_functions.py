@@ -86,8 +86,20 @@ def diversity_enum(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['e
         with catch_warnings():
             filterwarnings('error')
             try:
-                with model:
-                    prev_sol = model.optimize()
+                # with model:
+                prev_sol = model.optimize()
+                primals = model.solver.primal_values
+                objval = 0
+                for r, w in reaction_weights.items():
+                    if w > 0:
+                        x = primals['x_'+r]
+                    elif w < 0:
+                        x = 1 - primals['x_' + r]
+                    else:
+                        x = 0
+                    objval += x
+                print(objval)
+                print(all_solutions[0].objective_value*(1-obj_tol))
                 prev_sol_bin = (np.abs(prev_sol.fluxes) >= thr-tol).values.astype(int)
                 all_solutions.append(prev_sol)
                 all_binary.append(prev_sol_bin)

@@ -24,49 +24,26 @@ def create_full_variable_single(model, rid, reaction_weights, epsilon, threshold
         model.solver.add(xf)
         model.solver.add(xr)
         xtot_def = model.solver.interface.Constraint(xtot - xf - xr, lb=0., ub=0., name='x_%s_def' % rid)
-        xf_upper = model.solver.interface.Constraint(
-            rxn.forward_variable - rxn.upper_bound * xf, ub=0., name='xr_%s_upper' % rid)
-        xr_upper = model.solver.interface.Constraint(
-            rxn.reverse_variable + rxn.lower_bound * xr, ub=0., name='xf_%s_upper' % rid)
         temp = threshold
         if rid in reaction_weights:
             if reaction_weights[rid] > 0.:
                 temp = epsilon
-        xf_lower = model.solver.interface.Constraint(
-            rxn.forward_variable - temp * xf, lb=0., name='xf_%s_lower' % rid)
-        xr_lower = model.solver.interface.Constraint(
-            rxn.reverse_variable - temp * xr, lb=0., name='xr_%s_lower' % rid)
+        up = model.solver.interface.Constraint(rxn.forward_variable - rxn.reverse_variable
+                                               - xf * temp - xr * rxn.lower_bound, lb=0., name='%s_lower' % rid)
+        lo = model.solver.interface.Constraint(rxn.forward_variable - rxn.reverse_variable
+                                               + xr * temp - xf * rxn.upper_bound, ub=0., name='%s_upper' % rid)
+        model.solver.add(up)
+        model.solver.add(lo)
         model.solver.add(xtot_def)
-        model.solver.add(xf_upper)
-        model.solver.add(xr_upper)
-        model.solver.add(xf_lower)
-        model.solver.add(xr_lower)
     return model
 
 
 def create_new_partial_variable_single(model, rid, epsilon, threshold, pos):
     # the variable definition is more precise than in the original iMAT implementation
     # this is done in order to avoid problems with enumeration methods, and doesn't affect the results of iMAT
-    # tol = model.tolerance*1000
-    if pos and 'rh_' + rid + '_pos' not in model.solver.variables:
+    if pos and 'x_' + rid not in model.solver.variables:
         rxn = model.reactions.get_by_id(rid)
         xtot = model.solver.interface.Variable('x_%s' % rid, type='binary')
-        xf = model.solver.interface.Variable('rh_%s_pos' % rid, type='binary')
-        xr = model.solver.interface.Variable('rh_%s_neg' % rid, type='binary')
-        model.solver.add(xtot)
-        model.solver.add(xf)
-        model.solver.add(xr)
-        xtot_def = model.solver.interface.Constraint(xtot - xf - xr, lb=0., ub=0., name='x_%s_def' % rid)
-        model.solver.add(xtot_def)
-        up = model.solver.interface.Constraint(rxn.forward_variable - rxn.reverse_variable
-                                               - xf * epsilon - xr * rxn.lower_bound, lb=0., name='test%s_lower' % rid)
-        lo = model.solver.interface.Constraint(rxn.forward_variable - rxn.reverse_variable
-                                               + xr * epsilon - xf * rxn.upper_bound, ub=0., name='test%s_upper' % rid)
-        model.solver.add(up)
-        model.solver.add(lo)
-    elif not pos and 'rl_' + rid not in model.solver.variables:
-        rxn = model.reactions.get_by_id(rid)
-        xtot = model.solver.interface.Variable('rl_%s' % rid, type='binary')
         xf = model.solver.interface.Variable('xf_%s' % rid, type='binary')
         xr = model.solver.interface.Variable('xr_%s' % rid, type='binary')
         model.solver.add(xtot)
@@ -75,9 +52,25 @@ def create_new_partial_variable_single(model, rid, epsilon, threshold, pos):
         xtot_def = model.solver.interface.Constraint(xtot - xf - xr, lb=0., ub=0., name='x_%s_def' % rid)
         model.solver.add(xtot_def)
         up = model.solver.interface.Constraint(rxn.forward_variable - rxn.reverse_variable
-                                               - xf * threshold - xr * rxn.lower_bound, lb=0., name='test%s_lower' % rid)
+                                               - xf * epsilon - xr * rxn.lower_bound, lb=0., name='%s_lower' % rid)
         lo = model.solver.interface.Constraint(rxn.forward_variable - rxn.reverse_variable
-                                               + xr * threshold - xf * rxn.upper_bound, ub=0., name='test%s_upper' % rid)
+                                               + xr * epsilon - xf * rxn.upper_bound, ub=0., name='%s_upper' % rid)
+        model.solver.add(up)
+        model.solver.add(lo)
+    elif not pos and 'x_' + rid not in model.solver.variables:
+        rxn = model.reactions.get_by_id(rid)
+        xtot = model.solver.interface.Variable('x_%s' % rid, type='binary')
+        xf = model.solver.interface.Variable('xf_%s' % rid, type='binary')
+        xr = model.solver.interface.Variable('xr_%s' % rid, type='binary')
+        model.solver.add(xtot)
+        model.solver.add(xf)
+        model.solver.add(xr)
+        xtot_def = model.solver.interface.Constraint(xtot - xf - xr, lb=0., ub=0., name='x_%s_def' % rid)
+        model.solver.add(xtot_def)
+        up = model.solver.interface.Constraint(rxn.forward_variable - rxn.reverse_variable
+                                               - xf * threshold - xr * rxn.lower_bound, lb=0., name='%s_lower' % rid)
+        lo = model.solver.interface.Constraint(rxn.forward_variable - rxn.reverse_variable
+                                               + xr * threshold - xf * rxn.upper_bound, ub=0., name='%s_upper' % rid)
         model.solver.add(up)
         model.solver.add(lo)
     return model
@@ -142,28 +135,18 @@ def imat(model, reaction_weights=None, epsilon=DEFAULT_VALUES['epsilon'], thresh
     try:
         if full:  # for the full_imat implementation
             model = create_full_variables(model, reaction_weights, epsilon, threshold)
-            for rid, weight in six.iteritems(reaction_weights):
-                if weight > 0 and rid in model.reactions:
-                    y_pos = model.solver.variables['xf_' + rid]
-                    y_neg = model.solver.variables['xr_' + rid]
-                    y_variables.append([y_neg, y_pos])
-                    y_weights.append(weight)
-                elif weight < 0 and rid in model.reactions:
-                    x = sympify('1') - model.solver.variables['x_' + rid]
-                    x_variables.append(x)
-                    x_weights.append(abs(weight))
         else:
             model = create_new_partial_variables(model, reaction_weights, epsilon, threshold)
-            for rid, weight in six.iteritems(reaction_weights):
-                if weight > 0 and rid in model.reactions:
-                    y_neg = model.solver.variables['rh_' + rid + '_neg']
-                    y_pos = model.solver.variables['rh_' + rid + '_pos']
-                    y_variables.append([y_neg, y_pos])
-                    y_weights.append(weight)
-                elif weight < 0 and rid in model.reactions:
-                    x = sympify('1') - model.solver.variables['rl_' + rid]
-                    x_variables.append(x)
-                    x_weights.append(abs(weight))
+        for rid, weight in six.iteritems(reaction_weights):
+            if weight > 0 and rid in model.reactions:
+                y_pos = model.solver.variables['xf_' + rid]
+                y_neg = model.solver.variables['xr_' + rid]
+                y_variables.append([y_neg, y_pos])
+                y_weights.append(weight)
+            elif weight < 0 and rid in model.reactions:
+                x = sympify('1') - model.solver.variables['x_' + rid]
+                x_variables.append(x)
+                x_weights.append(abs(weight))
         rh_objective = [(y[0] + y[1]) * y_weights[idx] for idx, y in enumerate(y_variables)]
         rl_objective = [x * x_weights[idx] for idx, x in enumerate(x_variables)]
         objective = model.solver.interface.Objective(Add(*rh_objective) + Add(*rl_objective), direction='max')
@@ -173,11 +156,11 @@ def imat(model, reaction_weights=None, epsilon=DEFAULT_VALUES['epsilon'], thresh
         with catch_warnings():
             filterwarnings('error')
             try:
-                with model:
-                    solution = model.optimize()
-                    t2 = time.perf_counter()
-                    print('%.2fs during optimize call' % (t2-t1))
-                    return solution
+                # with model:
+                solution = model.optimize()
+                t2 = time.perf_counter()
+                print('%.2fs during optimize call' % (t2-t1))
+                return solution
             except UserWarning as w:
                 resetwarnings()
                 if 'time_limit' in str(w):
