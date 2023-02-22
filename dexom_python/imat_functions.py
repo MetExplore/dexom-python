@@ -25,9 +25,8 @@ def create_full_variable_single(model, rid, reaction_weights, epsilon, threshold
         model.solver.add(xr)
         xtot_def = model.solver.interface.Constraint(xtot - xf - xr, lb=0., ub=0., name='x_%s_def' % rid)
         temp = threshold
-        if rid in reaction_weights:
-            if reaction_weights[rid] > 0.:
-                temp = epsilon
+        if reaction_weights.get(rid, 0.) > 0.:
+            temp = epsilon
         up = model.solver.interface.Constraint(rxn.forward_variable - rxn.reverse_variable
                                                - xf * temp - xr * rxn.lower_bound, lb=0., name='%s_lower' % rid)
         lo = model.solver.interface.Constraint(rxn.forward_variable - rxn.reverse_variable
@@ -136,6 +135,7 @@ def imat(model, reaction_weights=None, epsilon=DEFAULT_VALUES['epsilon'], thresh
         if full:  # for the full_imat implementation
             model = create_full_variables(model, reaction_weights, epsilon, threshold)
         else:
+            # model = create_full_variables(model, reaction_weights, epsilon, threshold)
             model = create_new_partial_variables(model, reaction_weights, epsilon, threshold)
         for rid, weight in six.iteritems(reaction_weights):
             if weight > 0 and rid in model.reactions:
@@ -160,6 +160,7 @@ def imat(model, reaction_weights=None, epsilon=DEFAULT_VALUES['epsilon'], thresh
                 solution = model.optimize()
                 t2 = time.perf_counter()
                 print('%.2fs during optimize call' % (t2-t1))
+
                 return solution
             except UserWarning as w:
                 resetwarnings()

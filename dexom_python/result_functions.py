@@ -61,8 +61,8 @@ def read_solution(filename, model=None, solution_index=0):
         if model is not None:
             fluxes.index = [rxn.id for rxn in model.reactions]
         else:
-            warn('A model is necessary for setting the reaction IDs in a binary solution. '
-                 'Disregard this warning if the columns of the binary solution are already reaction IDs')
+            print('A model is necessary for setting the reaction IDs in a binary solution. '
+                  'Disregard this message if the columns of the binary solution are already reaction IDs')
         sol_bin = np.array(fluxes.values)
         objective_value = -1.
         status = 'binary'

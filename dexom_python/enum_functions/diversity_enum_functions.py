@@ -68,7 +68,7 @@ def diversity_enum(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['e
         t0 = time.perf_counter()
         if icut:
             # adding the icut constraint to prevent the algorithm from finding duplicate solutions
-            const = create_icut_constraint(model, reaction_weights, thr, prev_sol, 'icut_'+str(idx), full)
+            const = create_icut_constraint(model, reaction_weights, thr, prev_sol, 'icut_'+str(idx), full=full)
             model.solver.add(const)
             icut_constraints.append(const)
         # randomly selecting reactions with nonzero weights for the distance maximization step

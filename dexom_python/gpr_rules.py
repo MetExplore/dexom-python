@@ -144,6 +144,7 @@ def apply_gpr(model, gene_weights, save=True, filename='reaction_weights', dupli
             reaction_weights.append(pd.Series(rw, name=str(condition)))
         return pd.concat(reaction_weights)
     elif isinstance(gene_weights, pd.Series):
+        gene_weights = gene_weights.loc[gene_weights.index.dropna()]
         for gene in set(gene_weights.index):
             if isinstance(gene_weights[gene], pd.Series):
                 vals = gene_weights.pop(gene)
@@ -204,7 +205,7 @@ def _main():
     args = parser.parse_args()
 
     model = read_model(args.model)
-    genes = pd.read_csv(args.gene_file).set_index(args.gene_ID)
+    genes = pd.read_csv(args.gene_file, sep=';|,|\t', engine='python').set_index(args.gene_ID)
     if args.gene_score is None:
         score_columns = list(genes.columns)
     else:
