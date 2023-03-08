@@ -125,7 +125,7 @@ def read_prev_sol(prev_sol_arg, model, rw, eps=DEFAULT_VALUES['epsilon'], thr=DE
         else:
             warn('Could not read previous solution at path %s, computing new starting solution' % prev_sol_arg)
     if not prev_sol_success:
-        prev_sol = imat(model, rw, epsilon=eps, threshold=eps)
+        prev_sol = imat(model, rw, epsilon=eps, threshold=thr)
     # if a binary solution was read, the optimal objective value must be calculated
     if prev_sol.objective_value < 0.:
         temp_sol = imat(model, rw, epsilon=eps, threshold=thr)

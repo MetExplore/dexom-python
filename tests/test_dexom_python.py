@@ -14,35 +14,37 @@ from dexom_python.model_functions import DEFAULT_VALUES as DV
 from unittest import mock
 
 
+# Define some global variables used across multiple tests
+
+
+GLOB_modelstring = str(pathlib.Path(__file__).parent.joinpath('model', 'example_r13m10.json'))
+GLOB_weightstring = str(pathlib.Path(__file__).parent.joinpath('model', 'example_r13m10_weights.csv'))
+GLOB_expressionstring = str(pathlib.Path(__file__).parent.joinpath('model', 'example_r13m10_expression.csv'))
+GLOB_expressiondfstring = str(pathlib.Path(__file__).parent.joinpath('model', 'example_r13m10_expression_gprtest.csv'))
+GLOB_imatstring = str(pathlib.Path(__file__).parent.joinpath('model', 'results', 'example_r13m10_imatsolution.csv'))
+GLOB_rxnsols = str(pathlib.Path(__file__).parent.joinpath('model', 'results', 'example_r13m10_rxnenum_solutions.csv'))
+
+
 @pytest.fixture()
 def model():
-    file = str(pathlib.Path(__file__).parent.joinpath('model', 'example_r13m10.json'))
-    return mf.read_model(modelfile=file)
-
-
-@pytest.fixture()
-def model_sbml():
-    file = str(pathlib.Path(__file__).parent.joinpath('model', 'example_r13m10.xml'))
-    return mf.read_model(modelfile=file)
+    return mf.read_model(modelfile=GLOB_modelstring)
 
 
 @pytest.fixture()
 def reaction_weights():
-    file = str(pathlib.Path(__file__).parent.joinpath('model', 'example_r13m10_weights.csv'))
-    return mf.load_reaction_weights(filename=file)
+    return mf.load_reaction_weights(filename=GLOB_weightstring)
 
 
 @pytest.fixture()
 def gene_weights():
-    genes = pd.read_csv(str(pathlib.Path(__file__).parent.joinpath('model', 'example_r13m10_expression.csv')))
+    genes = pd.read_csv(GLOB_expressionstring)
     genes.index = genes.pop('ID')
     return gr.expression2qualitative(genes=genes, save=False)
 
 
 @pytest.fixture()
 def imatsol(model, reaction_weights):
-    file = str(pathlib.Path(__file__).parent.joinpath('model', 'results', 'example_r13m10_imatsolution.csv'))
-    solution, binary = rf.read_solution(file)
+    solution, binary = rf.read_solution(GLOB_imatstring)
     return solution
 
 
@@ -53,13 +55,13 @@ def test_read_model_json(model):
     assert type(model) == cobra.Model
 
 
-def test_read_model_sbml(model_sbml):
-    assert type(model_sbml) == cobra.Model
+def test_read_model_sbml():
+    m = mf.read_model(modelfile=str(pathlib.Path(__file__).parent.joinpath('model', 'example_r13m10.xml')))
+    assert type(m) == cobra.Model
 
 
 def test_read_model_mat():
-    file = str(pathlib.Path(__file__).parent.joinpath('model', 'example_r13m10.mat'))
-    m = mf.read_model(modelfile=file)
+    m = mf.read_model(modelfile=str(pathlib.Path(__file__).parent.joinpath('model', 'example_r13m10.mat')))
     assert type(m) == cobra.Model
 
 
@@ -91,8 +93,7 @@ def test_save_reaction_weights(model):
             weights[r.id] = -1.
         else:
             weights[r.id] = 0.
-    file = str(pathlib.Path(__file__).parent.joinpath('model', 'example_r13m10_weights.csv'))
-    reaction_weights = mf.save_reaction_weights(reaction_weights=weights, filename=file)
+    reaction_weights = mf.save_reaction_weights(reaction_weights=weights, filename=GLOB_weightstring)
     assert np.isclose(reaction_weights.values, list(weights.values())).all()
 
 
@@ -174,8 +175,8 @@ def test_read_solution(imatsol):
 
 
 def test_write_solution(model, imatsol):
-    file = str(pathlib.Path(__file__).parent.joinpath('model', 'results', 'example_r13m10_imatsolution.csv'))
-    solution, binary = rf.write_solution(model=model, solution=imatsol, threshold=DV['threshold'], filename=file)
+    solution, binary = rf.write_solution(model=model, solution=imatsol, threshold=DV['threshold'],
+                                         filename=GLOB_imatstring)
     assert len(binary) == len(solution.fluxes)
 
 
@@ -198,12 +199,12 @@ def test_icut_full(model, reaction_weights, imatsol):
 
 
 def test_maxdist_partial(model, reaction_weights, imatsol):
-    maxdist_sol = enum.maxdist(model=model, reaction_weights=reaction_weights, prev_sol=imatsol, maxiter=4, full=False,)
+    maxdist_sol = enum.maxdist(model=model, reaction_weights=reaction_weights, prev_sol=imatsol, maxiter=4, full=False)
     assert np.isclose(maxdist_sol.objective_value, 4.) and len(maxdist_sol.solutions) == 3
 
 
 def test_maxdist_full(model, reaction_weights, imatsol):
-    maxdist_sol = enum.maxdist(model=model, reaction_weights=reaction_weights, prev_sol=imatsol, maxiter=4, full=True,)
+    maxdist_sol = enum.maxdist(model=model, reaction_weights=reaction_weights, prev_sol=imatsol, maxiter=4, full=True)
     assert np.isclose(maxdist_sol.objective_value, 4.) and len(maxdist_sol.solutions) == 3
 
 
@@ -220,14 +221,12 @@ def test_diversity_enum_full(model, reaction_weights, imatsol):
 
 
 def test_plot_pca():
-    file = str(pathlib.Path(__file__).parent.joinpath('model', 'results', 'example_r13m10_rxnenum_solutions.csv'))
-    pca = rf.plot_pca(file, save=False)
+    pca = rf.plot_pca(GLOB_rxnsols, save=False)
     assert np.shape(pca.components_) == (2, 13)
 
 
 def test_read_prev_sol_imat(model, reaction_weights):
-    file = str(pathlib.Path(__file__).parent.joinpath('model', 'results', 'example_r13m10_imatsolution.csv'))
-    sol, _ = enum.read_prev_sol(file, model, reaction_weights)
+    sol, _ = enum.read_prev_sol(GLOB_imatstring, model, reaction_weights)
     assert np.isclose(sol.objective_value, 4.)
 
 
@@ -238,112 +237,122 @@ def test_read_prev_sol_directory(model, reaction_weights):
 
 
 def test_read_prev_sol_binary(model, reaction_weights):
-    file = str(pathlib.Path(__file__).parent.joinpath('model', 'results', 'example_r13m10_rxnenum_solutions.csv'))
-    sol, _ = enum.read_prev_sol(file, model, reaction_weights)
+    sol, _ = enum.read_prev_sol(GLOB_rxnsols, model, reaction_weights)
     assert np.isclose(sol.objective_value, 4.)
 
 
 # Testing main functions
 
 @mock.patch('argparse.ArgumentParser.parse_args',
-            return_value=argparse.Namespace(model='model/example_r13m10.json', gene_ID='ID', gene_score='expr',
-                                            gene_file='model/example_r13m10_expression.csv', duplicates='remove',
+            return_value=argparse.Namespace(model=GLOB_modelstring, gene_ID='ID', gene_score='expr',
+                                            gene_file=GLOB_expressionstring, duplicates='remove',
                                             convert=True, threshold='0.25', null=0., significant='both',
-                                            output='model/example_r13m10_weights'))
+                                            output=str(pathlib.Path(__file__).parent.joinpath(
+                                                'model', 'example_r13m10_weights'))))
 def test_gpr_main(mock_args):
     res = gr._main()
     assert res is True
 
 
 @mock.patch('argparse.ArgumentParser.parse_args',
-            return_value=argparse.Namespace(model='model/example_r13m10.json', gene_ID='ID', gene_score=None,
-                                            gene_file='model/example_r13m10_expression_gprtest.csv', duplicates='remove',
+            return_value=argparse.Namespace(model=GLOB_modelstring, gene_ID='ID', gene_score=None,
+                                            gene_file=GLOB_expressiondfstring, duplicates='remove',
                                             convert=False, threshold='0.25', null=0., significant='both',
-                                            output='model/example_r13m10_weights'))
+                                            output=str(pathlib.Path(__file__).parent.joinpath(
+                                                'model', 'example_r13m10_weights'))))
 def test_gpr_main_dataframe(mock_args):
     res = gr._main()
     assert res is True
 
 
 @mock.patch('argparse.ArgumentParser.parse_args',
-            return_value=argparse.Namespace(model='model/example_r13m10.json', epsilon=DV['epsilon'],
-                                            reaction_weights='model/example_r13m10_weights.csv', tol=DV['tolerance'],
+            return_value=argparse.Namespace(model=GLOB_modelstring, epsilon=DV['epsilon'],
+                                            reaction_weights=GLOB_weightstring, tol=DV['tolerance'],
                                             threshold=DV['threshold'], timelimit=DV['timelimit'], mipgap=DV['mipgap'],
-                                            output='model/results/example_r13m10_imatsolution'))
+                                            output=str(pathlib.Path(__file__).parent.joinpath(
+                                                'model', 'results', 'example_r13m10_imatsolution'))))
 def test_imat_main(mock_args):
     res = im._main()
     assert res is True
 
 
 @mock.patch('argparse.ArgumentParser.parse_args',
-            return_value=argparse.Namespace(solutions='model/results/example_r13m10_rxnenum_solutions.csv',
-                                            rxn_solutions=None, out_path='model/results/example_r13m10_'))
+            return_value=argparse.Namespace(solutions=GLOB_rxnsols, rxn_solutions=None,
+                                            out_path=str(pathlib.Path(__file__).parent.joinpath(
+                                                'model', 'results', 'example_r13m10_'))))
 def test_result_functions_main(mock_args):
     res = rf._main()
     assert res is True
 
 
 @mock.patch('argparse.ArgumentParser.parse_args',
-            return_value=argparse.Namespace(model='model/example_r13m10.json', epsilon=DV['epsilon'],
-                                            reaction_weights='model/example_r13m10_weights.csv', tol=DV['tolerance'],
+            return_value=argparse.Namespace(model=GLOB_modelstring, epsilon=DV['epsilon'],
+                                            reaction_weights=GLOB_weightstring, tol=DV['tolerance'],
                                             threshold=DV['threshold'], timelimit=DV['timelimit'], mipgap=DV['mipgap'],
-                                            output='model/results/example_r13m10_rxnenum', obj_tol=DV['obj_tol'], save=False,
-                                            prev_sol='model/results/example_r13m10_imatsolution.csv', reaction_list=None,
-                                            range='_'))
+                                            obj_tol=DV['obj_tol'], save=False, prev_sol=GLOB_imatstring,
+                                            reaction_list=None, range='_',
+                                            output=str(pathlib.Path(__file__).parent.joinpath(
+                                                'model', 'results', 'example_r13m10_rxnenum'))))
 def test_rxnenum_main(mock_args):
     res = enum.rxn_enum_functions._main()
     assert res is True
 
 
 @mock.patch('argparse.ArgumentParser.parse_args',
-            return_value=argparse.Namespace(model='model/example_r13m10.json', epsilon=DV['epsilon'],
-                                            reaction_weights='model/example_r13m10_weights.csv', tol=DV['tolerance'],
+            return_value=argparse.Namespace(model=GLOB_modelstring, epsilon=DV['epsilon'],
+                                            reaction_weights=GLOB_weightstring, tol=DV['tolerance'],
                                             threshold=DV['threshold'], timelimit=DV['timelimit'], mipgap=DV['mipgap'],
-                                            output='model/results/example_r13m10_icut', obj_tol=DV['obj_tol'], save=False,
-                                            prev_sol='model/results/example_r13m10_imatsolution.csv', full=False,
-                                            maxiter=DV['maxiter']))
+                                            obj_tol=DV['obj_tol'], save=False, prev_sol=GLOB_imatstring, full=False,
+                                            maxiter=DV['maxiter'],
+                                            output=str(pathlib.Path(__file__).parent.joinpath(
+                                                'model', 'results', 'example_r13m10_icut'))))
 def test_icut_main(mock_args):
     res = enum.icut_functions._main()
     assert res is True
 
 
 @mock.patch('argparse.ArgumentParser.parse_args',
-            return_value=argparse.Namespace(model='model/example_r13m10.json', epsilon=DV['epsilon'],
-                                            reaction_weights='model/example_r13m10_weights.csv', tol=DV['tolerance'],
+            return_value=argparse.Namespace(model=GLOB_modelstring, epsilon=DV['epsilon'],
+                                            reaction_weights=GLOB_weightstring, tol=DV['tolerance'],
                                             threshold=DV['threshold'], timelimit=DV['timelimit'], mipgap=DV['mipgap'],
-                                            output='model/results/example_r13m10_maxdist', obj_tol=DV['obj_tol'], save=False,
-                                            prev_sol='model/results/example_r13m10_imatsolution.csv', noicut=False, full=False,
-                                            maxiter=DV['maxiter'], onlyones=False))
+                                            obj_tol=DV['obj_tol'], save=False, prev_sol=GLOB_imatstring, noicut=False,
+                                            full=False, maxiter=4, onlyones=False,
+                                            output=str(pathlib.Path(__file__).parent.joinpath(
+                                                'model', 'results', 'example_r13m10_maxdist'))))
 def test_maxdist_main(mock_args):
     res = enum.maxdist_functions._main()
     assert res is True
 
 
 @mock.patch('argparse.ArgumentParser.parse_args',
-            return_value=argparse.Namespace(model='model/example_r13m10.json', epsilon=DV['epsilon'],
-                                            reaction_weights='model/example_r13m10_weights.csv', tol=DV['tolerance'],
+            return_value=argparse.Namespace(model=GLOB_modelstring, epsilon=DV['epsilon'],
+                                            reaction_weights=GLOB_weightstring, tol=DV['tolerance'],
                                             threshold=DV['threshold'], timelimit=DV['timelimit'], mipgap=DV['mipgap'],
-                                            output='model/results/example_r13m10_divenum', obj_tol=DV['obj_tol'], save=False,
-                                            prev_sol='model/results/example_r13m10_imatsolution.csv', noicut=False, full=False,
-                                            maxiter=DV['maxiter'], dist_anneal=DV['dist_anneal'], startsol=1))
+                                            obj_tol=DV['obj_tol'], save=False, prev_sol=GLOB_imatstring, noicut=False,
+                                            full=False, maxiter=4, dist_anneal=DV['dist_anneal'],
+                                            startsol=1,
+                                            output=str(pathlib.Path(__file__).parent.joinpath(
+                                                'model', 'results', 'example_r13m10_divenum'))))
 def test_divenum_main(mock_args):
     res = enum.diversity_enum_functions._main()
     assert res is True
 
 
 @mock.patch('argparse.ArgumentParser.parse_args',
-            return_value=argparse.Namespace(solutions='model/results/example_r13m10_rxnenum_solutions.csv',
-                                            model='model/example_r13m10.json', sublist=None, subframe=None,
-                                            out_path='model/results/example_r13m10_'))
+            return_value=argparse.Namespace(solutions=GLOB_rxnsols,
+                                            model=GLOB_modelstring, sublist=None, subframe=None,
+                                            out_path=str(pathlib.Path(__file__).parent.joinpath(
+                                                'model', 'results', 'example_r13m10_'))))
 def test_pathway_main_json(mock_args):
     res = pe._main()
     assert res is True
 
 
 @mock.patch('argparse.ArgumentParser.parse_args',
-            return_value=argparse.Namespace(solutions='model/results/example_r13m10_rxnenum_solutions.csv',
-                                            model='model/example_r13m10.xml', sublist=None, subframe=None,
-                                            out_path='model/results/example_r13m10_'))
+            return_value=argparse.Namespace(solutions=GLOB_rxnsols,
+                                            model=GLOB_modelstring, sublist=None, subframe=None,
+                                            out_path=str(pathlib.Path(__file__).parent.joinpath(
+                                                'model', 'results', 'example_r13m10_'))))
 def test_pathway_main_sbml(mock_args):
     res = pe._main()
     assert res is True
