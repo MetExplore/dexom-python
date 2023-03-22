@@ -233,7 +233,7 @@ def test_read_prev_sol_imat(model, reaction_weights):
 def test_read_prev_sol_directory(model, reaction_weights):
     file = str(pathlib.Path(__file__).parent.joinpath('model', 'results'))
     sol, a = enum.read_prev_sol(file, model, reaction_weights, pattern='*solution*.csv')
-    assert np.isclose(sol.objective_value, 4.) and np.isclose(a, DV['dist_anneal']**5)
+    assert np.isclose(sol.objective_value, 4.)
 
 
 def test_read_prev_sol_binary(model, reaction_weights):

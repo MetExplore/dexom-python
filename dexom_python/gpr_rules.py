@@ -161,8 +161,8 @@ def apply_gpr(model, gene_weights, save=True, filename='reaction_weights', dupli
         if len(rxn.genes) > 0:
             gen_list = [g.id for g in rxn.genes]
             expr_split = rxn.gene_reaction_rule.replace('(', '( ').replace(')', ' )').split()
-            expr_split = ['g_' + re.sub(':|\.|-', '_', s) if s in gen_list else s for s in expr_split]
-            new_weights = {'g_' + re.sub(':|\.|-', '_', g): gene_weight_dict.get(g, null) for g in gen_list}
+            expr_split = ['g_' + re.sub(r':|\.|-', '_', s) if s in gen_list else s for s in expr_split]
+            new_weights = {'g_' + re.sub(r':|\.|-', '_', g): gene_weight_dict.get(g, null) for g in gen_list}
             expression = ' '.join(expr_split).replace(' or ', ' * ').replace(' and ', ' + ')
             weight = replace_MulMax_AddMin(sympify(expression)).subs(new_weights)
             reaction_weights[rxn.id] = weight
