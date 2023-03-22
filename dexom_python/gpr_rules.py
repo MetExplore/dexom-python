@@ -73,13 +73,9 @@ def expression2qualitative(genes, column_list=None, proportion=0.25, method='kee
             if col not in genes.columns:
                 raise KeyError('Column %s is not present in gene expression file' % col)
     if isinstance(proportion, float):
-        # lowthreshold = int(len(genes)*proportion)
-        # highthreshold = int(len(genes)*proportion/(proportion-1))
         lowthreshold = proportion
         highthreshold = 1-proportion
     else:
-        # lowthreshold = int(len(genes)*proportion[0])
-        # highthreshold = int(len(genes)*proportion[1])
         lowthreshold, highthreshold = proportion
     for col in column_list:
         if method == 'max':
@@ -92,9 +88,6 @@ def expression2qualitative(genes, column_list=None, proportion=0.25, method='kee
         genes[genes < genes.quantile(lowthreshold)] = -1.
         genes[(genes >= genes.quantile(lowthreshold)) & (genes < genes.quantile(highthreshold))] = 0.
         genes[genes >= genes.quantile(highthreshold)] = 1.
-        # genes[col].iloc[:lowthreshold] = -1.
-        # genes[col].iloc[lowthreshold:highthreshold] = 0.
-        # genes[col].iloc[highthreshold:] = 1.
         if significant_genes == 'high':
             print('applying expression2qualitative only on genes with highest expression')
             genes[col][genes == -1.] = 0.
@@ -119,7 +112,7 @@ def apply_gpr(model, gene_weights, save=True, filename='reaction_weights', dupli
     model: cobra.Model
         a cobrapy model
     gene_weights: dict or pandas.Series or pandas.DataFrame
-        a dictionary of pandas Series containing gene IDs & weights
+        a dictionary/pandas Series containing gene IDs as keys/index & weights as values
     save: bool
         if True, saves the reaction weights as a csv file
     filename: str
@@ -142,7 +135,9 @@ def apply_gpr(model, gene_weights, save=True, filename='reaction_weights', dupli
             rw = apply_gpr(model=model, gene_weights=gene_weights[condition], save=True,
                            filename=filename+'_'+str(condition), duplicates=duplicates, null=null)
             reaction_weights.append(pd.Series(rw, name=str(condition)))
-        return pd.concat(reaction_weights)
+        rw = pd.concat(reaction_weights, axis=1)
+        rw.to_csv(filename+'.csv', sep=';')
+        return rw
     elif isinstance(gene_weights, pd.Series):
         gene_weights = gene_weights.loc[gene_weights.index.dropna()]
         for gene in set(gene_weights.index):

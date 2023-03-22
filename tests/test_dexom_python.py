@@ -259,7 +259,7 @@ def test_gpr_main(mock_args):
                                             gene_file=GLOB_expressiondfstring, duplicates='remove',
                                             convert=False, threshold='0.25', null=0., significant='both',
                                             output=str(pathlib.Path(__file__).parent.joinpath(
-                                                'model', 'example_r13m10_weights'))))
+                                                'model', 'example_r13m10_weights_df'))))
 def test_gpr_main_dataframe(mock_args):
     res = gr._main()
     assert res is True
