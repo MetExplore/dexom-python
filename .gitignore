@@ -298,4 +298,4 @@ $RECYCLE.BIN/
 # folders and files used in development
 *env/
 dev_*/
-*.sh
+test.sh

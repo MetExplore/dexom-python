@@ -1,0 +1,27 @@
+parser.add_argument('-o', '--out_path', default='cluster/', help=')
+parser.add_argument('-m', '--model', default=None, help='Metabolic model in sbml, json, or matlab format')
+parser.add_argument('-l', '--reaction_list', default=None, help='list of reactions in the model')
+parser.add_argument('-p', '--prev_sol', default=None, help='starting solution')
+parser.add_argument('-c', '--cplex_path', help='path to the cplex solver',
+                    default='/home/mstingl/save/CPLEX_Studio1210/cplex/python/3.7/x86-64_linux')
+parser.add_argument('--obj_tol', type=float, default=DEFAULT_VALUES['obj_tol'],
+                    help='objective value tolerance, as a fraction of the original value')
+parser.add_argument('-n', '--filenums', type=int, default=100, help='number of parallel threads')
+parser.add_argument('-i', '--iterations', type=int, default=100, help='number of div-enum iterations per thread')
+parser.add_argument('--rxniters', type=int, default=5, help='number of rxn-enum iterations per thread')
+#parser.add_argument('-r', '--reaction_weights', default=None, help='Reaction weights in csv format (first row: reaction names, second row: weights)')
+
+
+approach: 1
+
+# 1: parallel rxn-enum & div-enum in each rule
+# 2: find recent solution, perform iteration (not too much in parallel!)
+# 3: rxn-enum -> concat -> div-enum
+# rxn: just perform rxn-enum
+# icut: just perform icut
+# max: just perform maxdist
+# div: just perform div-enum
+
+output_path: 'cluster/'
+# Folder to which the files are written. The folder will be created if not present
+
