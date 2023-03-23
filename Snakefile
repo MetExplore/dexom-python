@@ -2,28 +2,18 @@ include: "snakemake_utils.smk"
 
 rule end:
     input:
-        outpath+"cellspecific_model.xml"
-
-rule produce_cellspecific_model:
-    input:
-        outpath+"activation_frequency_reactions.csv"
-    output:
-        outpath+"cellspecific_model.xml"
-    log:
-        "logs/cluster_final_2.log"
-    shell:
-        "python utilities_cluster/cluster_final_2.py"
+        final_output
 
 rule concat_div_sols:
     input:
-        expand(cluspath+"div_enum_solutions_{condition}_{parallel}.csv", condition=get_conditions(), parallel=get_parallel())
+        expand(cluspath+"div_enum_{parallel}_solutions.csv", parallel=get_parallel())
     output:
         outpath+"all_DEXOM_solutions.csv",
         outpath+"activation_frequency_reactions.csv"
     log:
-        "logs/cluster_final_1.log"
+        "logs/solution_compilation.log"
     shell:
-        "python utilities_cluster/cluster_final_1.py"
+        "python cluster_utils/solution_compilation.py"
 
 rule div_enum:
     input:
@@ -62,7 +52,7 @@ rule rxn_enum:
     shell:
         "python utilities_cluster/cluster_rxn_enum.py -c {wildcards.condition} -p {wildcards.parallel} -r {params.rxn_range}"
 
-rule weights_imat:
+rule imat:
     input:
         doc['modelpath'],
         doc['expressionfile']
@@ -73,3 +63,9 @@ rule weights_imat:
         "logs/weights_imat_{condition}.log"
     shell:
         "python utilities_cluster/cluster_weights_imat.py -c {wildcards.condition}"
+
+rule approach_1:
+
+rule approach_2
+
+rule approach_3:

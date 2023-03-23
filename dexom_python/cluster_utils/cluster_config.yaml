@@ -1,16 +1,3 @@
-parser.add_argument('-o', '--out_path', default='cluster/', help=')
-parser.add_argument('-m', '--model', default=None, help='Metabolic model in sbml, json, or matlab format')
-parser.add_argument('-l', '--reaction_list', default=None, help='list of reactions in the model')
-parser.add_argument('-p', '--prev_sol', default=None, help='starting solution')
-parser.add_argument('-c', '--cplex_path', help='path to the cplex solver',
-                    default='/home/mstingl/save/CPLEX_Studio1210/cplex/python/3.7/x86-64_linux')
-parser.add_argument('--obj_tol', type=float, default=DEFAULT_VALUES['obj_tol'],
-                    help='objective value tolerance, as a fraction of the original value')
-parser.add_argument('-n', '--filenums', type=int, default=100, help='number of parallel threads')
-parser.add_argument('-i', '--iterations', type=int, default=100, help='number of div-enum iterations per thread')
-parser.add_argument('--rxniters', type=int, default=5, help='number of rxn-enum iterations per thread')
-#parser.add_argument('-r', '--reaction_weights', default=None, help='Reaction weights in csv format (first row: reaction names, second row: weights)')
-
 
 approach: 1
 
@@ -22,6 +9,30 @@ approach: 1
 # max: just perform maxdist
 # div: just perform div-enum
 
-output_path: 'cluster/'
+model: toy_models/small4M.json
+# path to a cobrapy-compatible model (sbml, matlab or json format)
+
+reaction_weights: toy_models/small4M_weights.csv
+# path to a reaction-weight csv file
+
+output_path: cluster/
 # Folder to which the files are written. The folder will be created if not present
+
+parallel_batches: 100
+# number of parallel batches to run
+
+enum_iterations: 100
+# number of enumeration iterations per batch
+
+rxn_iterations: 100
+# number of reaction-enumeration iterations per batch (ONLY for approach 1 & 3)
+
+cplex_path: /home/mstingl/save/CPLEX_Studio1210/cplex/python/3.7/x86-64_linux
+# path to the installation of the CPLEX solver
+
+previous_solution: false
+# an imat solution to be used as a starting point for enumeration, optional input
+
+reaction_list: false
+# list of reactions in the model, optional input for reaction-enumeration
 

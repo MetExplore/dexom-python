@@ -11,10 +11,11 @@ def _main():
     description = 'Compiles binary enumeration solutions from a given folder'
     parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('-s', '--sol_path', help='folder containing enumeration solutions')
-    parser.add_argument('-o', '--out_path', default='', help='name of the file which will be saved')
+    parser.add_argument('-o', '--out_path', default='', help='path to which the combined solutions will be saved')
     parser.add_argument('-p', '--pattern', default='*solutions.csv', help='naming pattern of the solution files')
     args = parser.parse_args()
     sols = combine_binary_solutions(sol_path=args.sol_path, solution_pattern=args.pattern, out_path=args.out_path)
+    sols.sum().set_axis(['frequency'], axis=1).to_csv(args.out_path+'activation_frequency_reactions.csv')
     return True
 
 

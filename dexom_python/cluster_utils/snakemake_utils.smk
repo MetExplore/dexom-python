@@ -30,3 +30,7 @@ outputs = {
 }
 
 final_output = outputs[a]
+
+
+def get_parallel():
+    return list(range(config['parallel_batches']))
