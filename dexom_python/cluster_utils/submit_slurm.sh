@@ -11,5 +11,5 @@ source env/bin/activate
 export PYTHONPATH=${PYTHONPATH}:"/home/mstingl/save/CPLEX_Studio1210/cplex/python/3.7/x86-64_linux"
 
 snakemake --forceall --dag | grep -v "Restricted*" | grep -v "No*" | dot -Tpdf > dag.pdf
-snakemake --cluster "python3 submit.py {dependencies}" --immediate-submit --notemp -j 500
+snakemake -s dexom_python/cluster_utils/Snakefile --cluster "python3 dexom_python/cluster_utils/submit.py {dependencies}" --immediate-submit --notemp -j 500
 

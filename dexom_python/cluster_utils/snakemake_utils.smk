@@ -20,21 +20,31 @@ else:
 a = config['approach']
 
 outputs = {
-    1: 'a_1.txt',
-    2: 'a_2.txt',
-    3: 'a_3.txt',
-    'rxn': 'rxn.txt',
-    'icut': 'icut.txt',
-    'max': 'max.txt',
-    'div': 'div.txt',
+    1: 'logs/a_1.txt',
+    2: 'logs/a_2.txt',
+    3: 'logs/a_3.txt',
+    'rxn': 'logs/rxn.txt',
+    'icut': 'logs/icut.txt',
+    'max': 'logs/max.txt',
+    'div': 'logs/div.txt',
 }
 
 final_output = outputs[a]
 
 if config['starting_solution']:
-    prevstring = '-p '+config['starting_solution']
+    prevsol = config['starting_solution']
 else:
-    prevstring = ''
+    prevsol = outpath + "imat_solution.csv"
+
+if config['reaction_list']:
+    rlstring = '-l '+config['reaction_list']
+else:
+    rlstring = ''
+
+if config['full']:
+    fullstring = '--full'
+else:
+    fullstring = ''
 
 
 def get_parallel():
