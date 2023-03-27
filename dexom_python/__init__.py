@@ -5,3 +5,4 @@ from dexom_python.pathway_enrichment import Fisher_subsystems, Fisher_groups, pl
 from dexom_python.imat_functions import imat
 import dexom_python.enum_functions
 import dexom_python.cluster_utils
+import dexom_python.default_parameter_values

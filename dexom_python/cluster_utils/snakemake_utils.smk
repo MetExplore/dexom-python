@@ -31,6 +31,11 @@ outputs = {
 
 final_output = outputs[a]
 
+if config['starting_solution']:
+    prevstring = '-p '+config['starting_solution']
+else:
+    prevstring = ''
+
 
 def get_parallel():
     return list(range(config['parallel_batches']))

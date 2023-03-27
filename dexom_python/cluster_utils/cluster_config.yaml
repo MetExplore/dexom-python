@@ -12,7 +12,7 @@ approach: 1
 model: toy_models/small4M.json
 # path to a cobrapy-compatible model (sbml, matlab or json format)
 
-reaction_weights: toy_models/small4M_weights.csv
+reaction-weights: toy_models/small4M_weights.csv
 # path to a reaction-weight csv file
 
 output_path: cluster/
@@ -29,10 +29,14 @@ rxn_iterations: 100
 
 cplex_path: /home/mstingl/save/CPLEX_Studio1210/cplex/python/3.7/x86-64_linux
 # path to the installation of the CPLEX solver
+# set to 'false' when not in use
 
-previous_solution: false
+starting_solution: false
 # an imat solution to be used as a starting point for enumeration, optional input
+# set to 'false' when not in use
 
 reaction_list: false
 # list of reactions in the model, optional input for reaction-enumeration
+# set to 'false' when not in use
+
 

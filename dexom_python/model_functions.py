@@ -7,20 +7,7 @@ from cobra.io import load_json_model, read_sbml_model, load_matlab_model
 from cobra.flux_analysis import find_blocked_reactions
 from warnings import warn
 from cobra.exceptions import SolverNotFound
-
-
-DEFAULT_VALUES = {  # these are the default values used for all the functions in the dexom_python package
-    'solver': 'cplex',
-    'timelimit': 600,
-    'mipgap': 1e-3,
-    'tolerance': 1e-7,
-    'verbosity': 1,
-    'epsilon': 3e-4,
-    'threshold': 2e-4,
-    'obj_tol': 1e-3,
-    'maxiter': 10,
-    'dist_anneal': 0.95,
-}
+from dexom_python.default_parameter_values import DEFAULT_VALUES
 
 
 def read_model(modelfile, solver='cplex'):
