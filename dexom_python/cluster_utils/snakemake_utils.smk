@@ -4,7 +4,7 @@ import os
 
 # read configuration from YAML files
 yaml_reader = yaml.YAML(typ='safe')
-with open('cluster_config.yaml', 'r') as file:
+with open('dexom_python/cluster_utils/cluster_config.yaml', 'r') as file:
     temp = file.read()
 config = yaml_reader.load(temp)
 
@@ -15,7 +15,6 @@ if config['output_path']:
         outpath += '/'
 else:
     outpath = ''
-
 
 a = config['approach']
 

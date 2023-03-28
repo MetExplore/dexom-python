@@ -100,7 +100,8 @@ def combine_binary_solutions(sol_path, solution_pattern='*solutions*.csv', out_p
     fullsol = pd.concat(sollist, ignore_index=True)
     uniquesol = fullsol.drop_duplicates()
     print('There are %i unique solutions and %i duplicates.' % (len(uniquesol), len(fullsol) - len(uniquesol)))
-    uniquesol.to_csv(out_path+'combined_solutions.csv')
+    fullsol.to_csv(out_path + 'combined_solutions.csv')
+    uniquesol.to_csv(out_path + 'unique_solutions.csv')
     return uniquesol
 
 

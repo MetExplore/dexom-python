@@ -64,10 +64,10 @@ def rxn_enum(model, reaction_weights, prev_sol=None, rxn_list=None, eps=DEFAULT_
     unique_solutions_binary = [prev_sol_bin]
     all_reactions = []  # for each solution, save which reaction was activated/inactived by the algorithm
     unique_reactions = []
-    if save:  # when saving each individual solution, ensure that the out_path is a directory
-        os.makedirs(out_path, exist_ok=True)
-        if out_path[-1] not in ('\\', '/'):
-            out_path += os.sep
+    # if save:  # when saving each individual solution, ensure that the out_path is a directory
+    #     os.makedirs(out_path, exist_ok=True)
+    #     if out_path[-1] not in ('\\', '/'):
+    #         out_path += os.sep
     if rxn_list is None:
         rxns = list(model.reactions)
         rxn_list = [r.id for r in rxns]

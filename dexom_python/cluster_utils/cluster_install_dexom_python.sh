@@ -17,5 +17,6 @@ source env/bin/activate
 pip install --upgrade pip
 pip install poetry
 poetry install
+pip install snakemake
 
 echo "installation complete"

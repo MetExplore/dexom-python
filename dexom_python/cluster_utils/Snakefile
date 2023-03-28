@@ -1,4 +1,7 @@
-include: "dexom_python/cluster_utils/snakemake_utils.smk"
+include: "snakemake_utils.smk"
+
+wildcard_constraints:
+    parallel = "\d+"
 
 rule end:
     input:
@@ -6,30 +9,36 @@ rule end:
 
 rule approach_1:
     input:
-        expand(cluspath+"div_enum_{parallel}_solutions.csv", parallel=get_parallel())
+        expand(outpath+"div_enum_a1_{parallel}_solutions.csv", parallel=get_parallel())
     output:
+        outpath+"unique_solutions.csv",
+        outpath+"activation_frequency_reactions.csv",
         outputs[1]
+    run:
+        shell("python dexom_python/cluster_utils/solution_compilation.py -s %s -o %s -p %s" % (outpath, outpath, '"*solutions.csv"'))
+        shell("touch %s" % outputs[1])
 
 rule approach_1_batch:
     input:
+        config['model'],
+        config['reaction_weights'],
         prevsol
     output:
-        outpath + "div_enum_{parallel}_solutions.csv"
+        outpath + "div_enum_a1_{parallel}_solutions.csv"
     params:
-        rxn_range = lambda w: str(clus['enum_iterations']*int(w.parallel)) + '_' + str(clus['enum_iterations']*(int(w.parallel)+1))
-        dist_anneal = lambda w: (1 - 1 / (clus['batch_num'] * 2 * (clus['batch_div_sols'] / 10))) ** int(w.parallel)
-    shell:
-        "python dexom_python/enum_functions/rxn_enum_functions.py -m %s -r %s -r {params.rxn_range} -o %srxn_enum_{wildcards.parallel} -p %s %s --save" %
-        (config['model'], config['reaction-weights'], outpath, prevsol, rlstring),
-        "python dexom_python/enum_functions/diversity_enum_functions.py -m %s -r %s -a {params.dist_anneal} -o %sdiv_enum_{wildcards.parallel} -p %srxn_enum_{wildcards.parallel}_solution_0.csv %s" %
-        (config['model'], config['reaction-weights'], outpath, prevsol, fullstring)
+        rxn_range = lambda w: str(config['rxn_iterations']*int(w.parallel)) + '_' + str(config['rxn_iterations']*(int(w.parallel)+1)),
+        dist_anneal = lambda w: (1 - 1 / (config['parallel_batches'] * 2 * (config['enum_iterations'] / 10))) ** int(w.parallel)
+    run:
+        shell("python dexom_python/enum_functions/rxn_enum_functions.py -m %s -r %s --range {params.rxn_range} -o %srxn_enum_a1_{wildcards.parallel} -p %s %s --save" %
+        (config['model'], config['reaction_weights'], outpath, prevsol, rlstring))
+        shell("python dexom_python/enum_functions/diversity_enum_functions.py -m %s -r %s -a {params.dist_anneal} -i %s -o %sdiv_enum_a1_{wildcards.parallel} -p %srxn_enum_a1_{wildcards.parallel}_solution_1.csv %s" %
+        (config['model'], config['reaction_weights'], config['enum_iterations'], outpath, outpath, fullstring))
 
 rule approach_2:
     input:
         prevsol
     output:
         outputs[2]
-
 
 rule approach_3:
     input:
@@ -41,7 +50,7 @@ rule concat_solutions:
     input:
         #### DEFINE input!
     output:
-        outpath+"all_DEXOM_solutions.csv",
+        outpath+"combined_solutions.csv",
         outpath+"activation_frequency_reactions.csv"
     log:
         "logs/solution_compilation.log"
@@ -51,58 +60,58 @@ rule concat_solutions:
 rule div_enum:
     input:
         config['model'],
-        config['reaction_weights']
+        config['reaction_weights'],
+        prevsol
     output:
         outpath+"div_enum_{parallel}_solutions.csv"
-        outputs["div"]
     params:
-        dist_anneal = lambda w: (1 - 1 / (clus['batch_num'] * 2 * (clus['batch_div_sols'] / 10))) ** int(w.parallel)
+        dist_anneal = lambda w: (1 - 1 / (config['parallel_batches'] * 2 * (config['enum_iterations'] / 10))) ** int(w.parallel)
     log:
         "logs/div_enum_{parallel}.log"
     shell:
         "python dexom_python/enum_functions/diversity_enum_functions.py -m %s -r %s -a {params.dist_anneal} -o %sdiv_enum_{wildcards.parallel} -p %s %s" %
-        (config['model'], config['reaction-weights'], outpath, prevsol, fullstring)
+        (config['model'], config['reaction_weights'], outpath, prevsol, fullstring)
 
 rule rxn_enum:
     input:
         config['model'],
-        config['reaction_weights']
+        config['reaction_weights'],
+        prevsol
     output:
         outpath+"rxn_enum_{parallel}_solutions.csv"
     params:
-        rxn_range = lambda w: str(clus['enum_iterations']*int(w.parallel)) + '_' + str(clus['enum_iterations']*(int(w.parallel)+1))
+        rxn_range = lambda w: str(config['enum_iterations']*int(w.parallel)) + '_' + str(config['enum_iterations']*(int(w.parallel)+1))
     log:
         "logs/rxn_enum_{parallel}.log"
-        outputs["rxn"]
     shell:
-        "python dexom_python/enum_functions/rxn_enum_functions.py -m %s -r %s -r {params.rxn_range} -o %srxn_enum_{wildcards.parallel} -p %s %s" %
-        (config['model'], config['reaction-weights'], outpath, prevsol, rlstring)
+        "python dexom_python/enum_functions/rxn_enum_functions.py -m %s -r %s --range {params.rxn_range} -o %srxn_enum_{wildcards.parallel} -p %s %s" %
+        (config['model'], config['reaction_weights'], outpath, prevsol, rlstring)
 
 rule icut_enum:
     input:
         config['model'],
-        config['reaction_weights']
+        config['reaction_weights'],
+        prevsol
     output:
         outpath+"icut_enum_{parallel}_solutions.csv"
-        outputs["icut"]
     log:
         "logs/icut_enum_{parallel}.log"
     shell:
         "python dexom_python/enum_functions/icut_functions.py -m %s -r %s -r {params.rxn_range} -o %sicut_enum_{wildcards.parallel} -p %s %s" %
-        (config['model'], config['reaction-weights'], outpath, prevsol, fullstring)
+        (config['model'], config['reaction_weights'], outpath, prevsol, fullstring)
 
 rule maxdist_enum:
     input:
         config['model'],
-        config['reaction_weights']
+        config['reaction_weights'],
+        prevsol
     output:
         outpath+"maxdist_enum_{parallel}_solutions.csv"
-        outputs["max"]
     log:
         "logs/maxdist_enum_{parallel}.log"
     shell:
         "python dexom_python/enum_functions/maxdist_functions.py -m %s -r %s -r {params.rxn_range} -o %smaxdist_enum_{wildcards.parallel} -p %s %s" %
-        (config['model'], config['reaction-weights'], outpath, prevsol, fullstring)
+        (config['model'], config['reaction_weights'], outpath, prevsol, fullstring)
 
 rule imat:
     input:
@@ -114,4 +123,4 @@ rule imat:
         "logs/imat.log"
     shell:
         "python dexom_python/imat_functions.py -m %s -r %s -o %simat_solution" %
-        (config['model'], config['reaction-weights'], outpath)
+        (config['model'], config['reaction_weights'], outpath)

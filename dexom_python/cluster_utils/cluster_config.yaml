@@ -12,19 +12,19 @@ approach: 1
 model: toy_models/small4M.json
 # path to a cobrapy-compatible model (sbml, matlab or json format)
 
-reaction-weights: toy_models/small4M_weights.csv
+reaction_weights: toy_models/small4M_weights.csv
 # path to a reaction-weight csv file
 
-output_path: cluster/
+output_path: cluster_small4M/
 # Folder to which the files are written. The folder will be created if not present
 
-parallel_batches: 100
+parallel_batches: 5
 # number of parallel batches to run
 
-enum_iterations: 100
+enum_iterations: 5
 # number of enumeration iterations per batch
 
-rxn_iterations: 100
+rxn_iterations: 2
 #ONLY for approach 1 & approach 3: number of reaction-enumeration iterations per batch
 
 starting_solution: false
@@ -39,3 +39,9 @@ reaction_list: false
 full: false
 # determines whether or not to use the full-DEXOM implementation.
 # This implementation requires much longer runtimes, but takes into account all reactions of the model
+
+cores: 4
+# number of cores to assign for each job
+memory: 64
+# allocated memory per job in gigabytes
+time: 00:10:00

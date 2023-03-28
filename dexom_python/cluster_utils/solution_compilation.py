@@ -15,7 +15,7 @@ def _main():
     parser.add_argument('-p', '--pattern', default='*solutions.csv', help='naming pattern of the solution files')
     args = parser.parse_args()
     sols = combine_binary_solutions(sol_path=args.sol_path, solution_pattern=args.pattern, out_path=args.out_path)
-    sols.sum().set_axis(['frequency'], axis=1).to_csv(args.out_path+'activation_frequency_reactions.csv')
+    sols.sum()._set_name('frequency').to_csv(args.out_path+'activation_frequency_reactions.csv')
     return True
 
 
