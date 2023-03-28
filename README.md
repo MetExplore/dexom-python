@@ -148,6 +148,14 @@ The file `all_dexom_sols.csv` contains all unique solutions enumerated with DEXO
 The file `output.txt` contains the average computation time per iteration and the proportion of duplicate solutions.  
 The `.png` files contain boxplots of the pathway enrichment tests as well as a 2D PCA plot of the binary solution vectors.
 
+## Snakemake workflow
+
+The `cluster_utils` folder contains a Snakefile which can be used to launch several workflows, as well as a `submit` script with which these workflows can be submitted on a slurm computation cluster.  
+
+Note that if you want to use the `submit_slurm.sh` script, you must insert the path to your solver installation (preferably CPLEX).  
+
+
+
 ### Cell-specific reconstruction
 
 A more complete example of how to use DEXOM-python as a part of a cell-specific network reconstruction pipeline, including a snakemake workflow adapted for cluster usage, can be found here: https://forgemia.inra.fr/metexplore/cbm/ocmmed
