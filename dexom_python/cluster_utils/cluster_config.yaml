@@ -1,5 +1,5 @@
 
-approach: 1
+approach: 3
 
 # 1: each batch runs some rxn-enum iterations, then some div-enum iterations
 # 2: find recent solution in provided directory, perform 1 iteration per batch (not too much in parallel!)

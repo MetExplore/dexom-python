@@ -64,7 +64,7 @@ rule approach_3:
         outpath+"all_activation_frequency_reactions.csv",
         outputs[3]
     run:
-        shell("python dexom_python/cluster_utils/solution_compilation.py -s %s -o %s -p %s" % (outpath, outpath, '"*enum*solutions.csv"'))
+        shell("python dexom_python/cluster_utils/solution_compilation.py -s %s -o %s -p %s" % (outpath, outpath+"all_", '"*enum*solutions.csv"'))
         shell("touch %s" % outputs[3])
 
 rule approach_3_div:
@@ -88,8 +88,7 @@ rule approach_3_concat_rxn:
         expand(outpath+"rxn_enum_a3_{parallel}_solutions.csv", parallel=get_parallel())
     output:
         outpath+"reaction_unique_solutions.csv",
-        outpath+"reaction_activation_frequency_reactions.csv",
-        outputs[3]
+        outpath+"reaction_activation_frequency_reactions.csv"
     shell:
         "python dexom_python/cluster_utils/solution_compilation.py -s %s -o %s -p %s" % (outpath, outpath+"reaction_", '"rxn*solutions.csv"')
 
