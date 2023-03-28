@@ -45,7 +45,7 @@ def create_enum_variables(model, reaction_weights, eps=DEFAULT_VALUES['epsilon']
     return model
 
 
-def get_recent_solution_and_iteration(dirpath, startsol_num, solution_pattern='*solution_*.csv'):
+def get_recent_solution_and_iteration(dirpath, startsol_num, solution_pattern='*solution*.csv'):
     """
     This functions fetches a solution from a given directory. The solutions are ordered by creation time, and one
     solution is picked using an exponential distribution (meaning that the most recent solution has the highest
@@ -100,7 +100,6 @@ def combine_binary_solutions(sol_path, solution_pattern='*solutions*.csv', out_p
     fullsol = pd.concat(sollist, ignore_index=True)
     uniquesol = fullsol.drop_duplicates()
     print('There are %i unique solutions and %i duplicates.' % (len(uniquesol), len(fullsol) - len(uniquesol)))
-    fullsol.to_csv(out_path + 'combined_solutions.csv')
     uniquesol.to_csv(out_path + 'unique_solutions.csv')
     return uniquesol
 

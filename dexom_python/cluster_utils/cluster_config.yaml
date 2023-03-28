@@ -1,13 +1,13 @@
 
 approach: 1
 
-# 1: parallel rxn-enum & div-enum in each rule
-# 2: find recent solution, perform iteration (not too much in parallel!)
+# 1: each batch runs some rxn-enum iterations, then some div-enum iterations
+# 2: find recent solution in provided directory, perform 1 iteration per batch (not too much in parallel!)
 # 3: rxn-enum -> concat -> div-enum
-# rxn: just perform rxn-enum
-# icut: just perform icut
-# max: just perform maxdist
-# div: just perform div-enum
+# rxn: just perform reaction-enumeration
+# icut: just perform integer-cut
+# maxdist: just perform maxdist
+# div: just perform diversity-enumeration
 
 model: toy_models/small4M.json
 # path to a cobrapy-compatible model (sbml, matlab or json format)
@@ -23,12 +23,14 @@ parallel_batches: 5
 
 enum_iterations: 5
 # number of enumeration iterations per batch
+# this parameter is ignored for approach 2
 
 rxn_iterations: 2
 #ONLY for approach 1 & approach 3: number of reaction-enumeration iterations per batch
 
 starting_solution: false
 # an imat solution to be used as a starting point for enumeration, optional input
+# this parameter is ignored for approach 2, place starting solutions in the output_path
 # set to 'false' when not in use
 
 reaction_list: false
@@ -44,4 +46,4 @@ cores: 4
 # number of cores to assign for each job
 memory: 64
 # allocated memory per job in gigabytes
-time: 00:10:00
+time: 00:30:00
