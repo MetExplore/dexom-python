@@ -1,6 +1,5 @@
 import ruamel.yaml as yaml
 import os
-from pathlib import Path
 
 # read configuration from YAML files
 yaml_reader = yaml.YAML(typ='safe')
@@ -19,9 +18,8 @@ else:
 a = config['approach']
 
 outputs = {
-    1: 'logs/a_1.txt',
-    2: 'logs/a_2.txt',
-    3: 'logs/a_3.txt',
+    'grouped': 'logs/grouped.txt',
+    'separate': 'logs/separate.txt',
     'rxn': 'logs/rxn.txt',
     'icut': 'logs/icut.txt',
     'maxdist': 'logs/max.txt',
@@ -48,8 +46,3 @@ else:
 
 def get_parallel():
     return list(range(config['parallel_batches']))
-
-
-if a == 2:
-    paths = Path(outpath).glob('*solution*.csv')
-    startsol_num = len(paths)

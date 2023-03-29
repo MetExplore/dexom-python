@@ -45,7 +45,7 @@ def create_enum_variables(model, reaction_weights, eps=DEFAULT_VALUES['epsilon']
     return model
 
 
-def get_recent_solution_and_iteration(dirpath, startsol_num, solution_pattern='*solution*.csv'):
+def get_recent_solution_and_iteration(dirpath, startsol_num=1, solution_pattern='*solution*.csv'):
     """
     This functions fetches a solution from a given directory. The solutions are ordered by creation time, and one
     solution is picked using an exponential distribution (meaning that the most recent solution has the highest
@@ -111,20 +111,18 @@ def read_prev_sol(prev_sol_arg, model, rw, eps=DEFAULT_VALUES['epsilon'], thr=DE
         prev_sol_path = Path(prev_sol_arg)
         if prev_sol_path.is_file():
             prev_sol, prev_bin = read_solution(prev_sol_arg, model=model, solution_index=startsol)
-            model = create_enum_variables(model, rw, eps=eps, thr=thr, full=full)
             prev_sol_success = True
         elif prev_sol_path.is_dir():
             try:
                 prev_sol, i = get_recent_solution_and_iteration(prev_sol_arg, startsol_num=startsol,
                                                                 solution_pattern=pattern)
                 a = a ** i
-                model = create_enum_variables(model, rw, eps=eps, thr=thr, full=full)
                 prev_sol_success = True
             except IndexError:
                 warn('Could not find any solutions in directory %s, computing new starting solution' % prev_sol_arg)
         else:
             warn('Could not read previous solution at path %s, computing new starting solution' % prev_sol_arg)
-    if not prev_sol_success:
+    if prev_sol_success is False:
         prev_sol = imat(model, rw, epsilon=eps, threshold=thr)
     # if a binary solution was read, the optimal objective value must be calculated
     if prev_sol.objective_value < 0.:

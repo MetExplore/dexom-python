@@ -57,7 +57,8 @@ def read_solution(filename, model=None, solution_index=0):
             objective_value = float(reader[-2].split()[-1])
             status = reader[-1].split()[-1]
     if binary:
-        fluxes = pd.read_csv(filename, index_col=0).iloc[solution_index]
+        df = pd.read_csv(filename, index_col=0)
+        fluxes = df.iloc[solution_index % (len(df)-1)]
         if model is not None:
             fluxes.index = [rxn.id for rxn in model.reactions]
         else:

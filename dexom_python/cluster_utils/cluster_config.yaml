@@ -1,13 +1,12 @@
 
-approach: 3
+approach: separate
 
-# 1: each batch runs some rxn-enum iterations, then some div-enum iterations
-# 2: find recent solution in provided directory, perform 1 iteration per batch (not too much in parallel!)
-# 3: rxn-enum -> concat -> div-enum
 # rxn: just perform reaction-enumeration
 # icut: just perform integer-cut
 # maxdist: just perform maxdist
 # div: just perform diversity-enumeration
+# grouped: Each batch contains some rxn-enum iterations, then some div-enum iterations, solutions are concatenated at the end
+# separate: (RECOMMENDED) Batches of rxn-enum, then the rxn-enum solutions are concatenated, then batches of div-enum
 
 model: toy_models/small4M.json
 # path to a cobrapy-compatible model (sbml, matlab or json format)
@@ -18,19 +17,17 @@ reaction_weights: toy_models/small4M_weights.csv
 output_path: cluster_small4M/
 # Folder to which the files are written. The folder will be created if not present
 
-parallel_batches: 5
+parallel_batches: 10
 # number of parallel batches to run
 
-enum_iterations: 5
+enum_iterations: 10
 # number of enumeration iterations per batch
-# this parameter is ignored for approach 2
 
-rxn_iterations: 2
-#ONLY for approach 1 & approach 3: number of reaction-enumeration iterations per batch
+rxn_iterations: 10
+#ONLY for grouped & separate: number of reaction-enumeration iterations per batch
 
 starting_solution: false
 # an imat solution to be used as a starting point for enumeration, optional input
-# this parameter is ignored for approach 2, place starting solutions in the output_path
 # set to 'false' when not in use
 
 reaction_list: false
@@ -42,8 +39,14 @@ full: false
 # determines whether or not to use the full-DEXOM implementation.
 # This implementation requires much longer runtimes, but takes into account all reactions of the model
 
-cores: 4
+
+# below are some cluster parameters which are used in the submit_slurm.sh script
+# Note that if the number of cores or allocated time is too low, the jobs may be terminated due to hitting the timelimit
+# However, using a larger number of cores & time than necessary usually increases the queue waiting time
+
+cores: 8
 # number of cores to assign for each job
-memory: 64
-# allocated memory per job in gigabytes
 time: 00:30:00
+# maximum runtime per job
+memory: 64
+# allocated memory per job in gigabytes. Should not be reduced if handling large datasets and/or models
