@@ -31,7 +31,7 @@ rule grouped_batch:
     run:
         shell("python dexom_python/enum_functions/rxn_enum_functions.py -m %s -r %s --range {params.rxn_range} -o %srxn_enum_g_{wildcards.parallel} -p %s %s" %
         (config['model'], config['reaction_weights'], outpath, prevsol, rlstring))
-        shell("python dexom_python/enum_functions/diversity_enum_functions.py -m %s -r %s -a {params.dist_anneal} -i %s -o %sdiv_enum_g_{wildcards.parallel} -p %srxn_enum_g_{wildcards.parallel}_solutions.csv %s -s -1" %
+        shell("python dexom_python/enum_functions/diversity_enum_functions.py -m %s -r %s -a {params.dist_anneal} -i %s -o %sdiv_enum_g_{wildcards.parallel} -p %srxn_enum_g_{wildcards.parallel}_fluxes.csv %s -s -1" %
         (config['model'], config['reaction_weights'], config['enum_iterations'], outpath, outpath, fullstring))
 
 rule separate:
@@ -61,7 +61,7 @@ rule separate_div:
     log:
         "logs/rxn_enum_{parallel}.log"
     shell:
-        "python dexom_python/enum_functions/diversity_enum_functions.py -m %s -r %s -a {params.dist_anneal} -i %s -o %sdiv_enum_s_{wildcards.parallel} -p %sreaction_unique_solutions.csv -s {wildcards.parallel} %s" %
+        "python dexom_python/enum_functions/diversity_enum_functions.py -m %s -r %s -a {params.dist_anneal} -i %s -o %sdiv_enum_s_{wildcards.parallel} -p %sreaction_unique_fluxes.csv -s {wildcards.parallel} %s" %
         (config['model'], config['reaction_weights'], config['enum_iterations'], outpath, outpath, fullstring)
 
 rule separate_concat_rxn:

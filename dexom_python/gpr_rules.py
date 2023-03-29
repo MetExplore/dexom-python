@@ -2,7 +2,6 @@ import re
 import argparse
 import numpy as np
 import pandas as pd
-from warnings import warn
 from symengine import sympify, Add, Mul, Max, Min, Pow, Symbol
 from dexom_python.model_functions import read_model, save_reaction_weights
 pd.options.mode.chained_assignment = None
@@ -77,23 +76,31 @@ def expression2qualitative(genes, column_list=None, proportion=0.25, method='kee
         highthreshold = 1-proportion
     else:
         lowthreshold, highthreshold = proportion
+    print(genes)
     for col in column_list:
+        genecol = genes[col].copy()
+        newgenes = genes[col].copy()
         if method == 'max':
-            for x in set(genes.index):
-                genes[col][x] = genes[col][x].max()
+            for x in set(newgenes.index):
+                newgenes[x] = newgenes[x].max()
         elif method == 'mean':
-            for x in set(genes.index):
-                genes[col][x] = genes[col][x].mean()
-        genes.sort_values(col, inplace=True)
-        genes[genes < genes.quantile(lowthreshold)] = -1.
-        genes[(genes >= genes.quantile(lowthreshold)) & (genes < genes.quantile(highthreshold))] = 0.
-        genes[genes >= genes.quantile(highthreshold)] = 1.
+            for x in set(newgenes.index):
+                newgenes[x] = newgenes[x].mean()
+        newgenes.sort_values(inplace=True)
+        genecol.sort_values(inplace=True)
+        print(newgenes)
+        newgenes[genecol < genecol.quantile(lowthreshold)] = -1.
+        newgenes[(genecol >= genecol.quantile(lowthreshold)) & (genecol < genecol.quantile(highthreshold))] = 0.
+        newgenes[genecol >= genecol.quantile(highthreshold)] = 1.
+        print(newgenes)
         if significant_genes == 'high':
             print('applying expression2qualitative only on genes with highest expression')
-            genes[col][genes == -1.] = 0.
+            newgenes[newgenes == -1.] = 0.
         elif significant_genes == 'low':
             print('applying expression2qualitative only on genes with lowest expression')
-            genes[col][genes == 1.] = 0.
+            newgenes[newgenes == 1.] = 0.
+        genes[col] = newgenes
+    print(genes)
     for x in genes.index:
         if isinstance(x, float):
             genes.index = genes.index.astype(int)
@@ -205,6 +212,7 @@ def _main():
         score_columns = list(genes.columns)
     else:
         score_columns = args.gene_score.split(',')
+    print(score_columns)
 
     if args.convert:
         proportion = args.threshold.split('_')
@@ -218,6 +226,7 @@ def _main():
             proportion = (float(proportion[0]), float(proportion[1]))
         else:
             ValueError('The threshold argument was provided in an incorrect format.')
+        print(proportion)
         genes = expression2qualitative(genes=genes, column_list=score_columns, proportion=proportion, method='keep',
                                        significant_genes=args.significant, save=True,
                                        outpath=args.output+'_qual_geneweights')

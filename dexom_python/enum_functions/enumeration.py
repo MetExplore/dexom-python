@@ -7,7 +7,7 @@ from warnings import warn
 from scipy.spatial.distance import pdist, squareform
 from dexom_python.result_functions import read_solution
 from dexom_python.imat_functions import create_new_partial_variable_single, create_full_variable_single
-from dexom_python.model_functions import DEFAULT_VALUES
+from dexom_python.default_parameter_values import DEFAULT_VALUES
 from dexom_python.imat_functions import imat
 
 
@@ -54,7 +54,7 @@ def get_recent_solution_and_iteration(dirpath, startsol_num=1, solution_pattern=
     Parameters
     ----------
     dirpath: str
-        a directory containing imat or enumeration solutions
+        a directory containing imat solutions
     startsol_num: int
         the number of starting solutions present in the directory
     solution_pattern: str
@@ -76,7 +76,7 @@ def get_recent_solution_and_iteration(dirpath, startsol_num=1, solution_pattern=
     return solution, iteration
 
 
-def combine_binary_solutions(sol_path, solution_pattern='*solutions*.csv', out_path=''):
+def combine_binary_solutions_and_fluxes(sol_path, solution_pattern='*solutions*.csv', out_path=''):
     """
     Combines several binary solution files into one
 
@@ -99,18 +99,26 @@ def combine_binary_solutions(sol_path, solution_pattern='*solutions*.csv', out_p
         sollist.append(pd.read_csv(sol, index_col=0))
     fullsol = pd.concat(sollist, ignore_index=True)
     uniquesol = fullsol.drop_duplicates()
+    fluxes = Path(sol_path).glob(solution_pattern.replace('solutions', 'fluxes'))
+    fluxlist = []
+    for flux in fluxes:
+        fluxlist.append(pd.read_csv(flux, index_col=0))
+    fullflux = pd.concat(fluxlist, ignore_index=True)
+    uniqueflux = fullflux.loc[uniquesol.index]
     print('There are %i unique solutions and %i duplicates.' % (len(uniquesol), len(fullsol) - len(uniquesol)))
     uniquesol.to_csv(out_path + 'unique_solutions.csv')
+    uniqueflux.to_csv(out_path + 'unique_fluxes.csv')
     return uniquesol
 
 
 def read_prev_sol(prev_sol_arg, model, rw, eps=DEFAULT_VALUES['epsilon'], thr=DEFAULT_VALUES['threshold'],
-                  a=DEFAULT_VALUES['dist_anneal'], startsol=1, full=False, pattern='*solution_*.csv'):
+                  a=DEFAULT_VALUES['dist_anneal'], startsol=1, pattern='*solution_*.csv'):
     prev_sol_success = False
     if prev_sol_arg is not None:
         prev_sol_path = Path(prev_sol_arg)
         if prev_sol_path.is_file():
-            prev_sol, prev_bin = read_solution(prev_sol_arg, model=model, solution_index=startsol)
+            prev_sol, prev_bin = read_solution(prev_sol_arg, model=model, reaction_weights=rw, solution_index=startsol,
+                                               eps=eps, thr=thr)
             prev_sol_success = True
         elif prev_sol_path.is_dir():
             try:
@@ -124,7 +132,7 @@ def read_prev_sol(prev_sol_arg, model, rw, eps=DEFAULT_VALUES['epsilon'], thr=DE
             warn('Could not read previous solution at path %s, computing new starting solution' % prev_sol_arg)
     if prev_sol_success is False:
         prev_sol = imat(model, rw, epsilon=eps, threshold=thr)
-    # if a binary solution was read, the optimal objective value must be calculated
+    # if a flux solution was read, the optimal objective value must be calculated
     if prev_sol.objective_value < 0.:
         temp_sol = imat(model, rw, epsilon=eps, threshold=thr)
         prev_sol.objective_value = temp_sol.objective_value

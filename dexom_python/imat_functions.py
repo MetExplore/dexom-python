@@ -5,8 +5,9 @@ from symengine import Add, sympify
 from numpy import abs
 from warnings import catch_warnings, filterwarnings, resetwarnings
 from cobra.exceptions import OptimizationError
-from dexom_python.model_functions import read_model, check_model_options, load_reaction_weights, DEFAULT_VALUES, check_threshold_tolerance
+from dexom_python.model_functions import read_model, check_model_options, load_reaction_weights, check_threshold_tolerance
 from dexom_python.result_functions import write_solution
+from dexom_python.default_parameter_values import DEFAULT_VALUES
 
 
 class ImatException(Exception):

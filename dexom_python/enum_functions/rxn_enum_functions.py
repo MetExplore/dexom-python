@@ -1,12 +1,12 @@
 import argparse
-import os
 import pandas as pd
 import numpy as np
 from dexom_python.imat_functions import imat, ImatException
-from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options, DEFAULT_VALUES, check_threshold_tolerance
+from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options, check_threshold_tolerance
 from dexom_python.result_functions import write_solution
 from dexom_python.enum_functions.enumeration import create_enum_variables, read_prev_sol
 from warnings import warn
+from dexom_python.default_parameter_values import DEFAULT_VALUES
 
 
 class RxnEnumSolution(object):
@@ -64,10 +64,6 @@ def rxn_enum(model, reaction_weights, prev_sol=None, rxn_list=None, eps=DEFAULT_
     unique_solutions_binary = [prev_sol_bin]
     all_reactions = []  # for each solution, save which reaction was activated/inactived by the algorithm
     unique_reactions = []
-    # if save:  # when saving each individual solution, ensure that the out_path is a directory
-    #     os.makedirs(out_path, exist_ok=True)
-    #     if out_path[-1] not in ('\\', '/'):
-    #         out_path += os.sep
     if rxn_list is None:
         rxns = list(model.reactions)
         rxn_list = [r.id for r in rxns]
@@ -231,6 +227,8 @@ def _main():
     uniques = pd.DataFrame(solution.unique_binary)
     uniques.columns = [r.id for r in model.reactions]
     uniques.to_csv(args.output + '_solutions.csv')
+    fluxes = pd.concat([s.fluxes for s in solution.unique_solutions], axis=1).T.reset_index().drop('index', axis=1)
+    fluxes.to_csv(args.output + '_fluxes.csv')
     return True
 
 

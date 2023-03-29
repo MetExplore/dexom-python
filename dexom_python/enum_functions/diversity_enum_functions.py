@@ -7,10 +7,11 @@ from warnings import catch_warnings, filterwarnings, resetwarnings, warn
 from cobra.exceptions import OptimizationError
 from dexom_python.imat_functions import imat
 from dexom_python.result_functions import write_solution
-from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options, DEFAULT_VALUES, check_threshold_tolerance
+from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options, check_threshold_tolerance
 from dexom_python.enum_functions.enumeration import EnumSolution, create_enum_variables, read_prev_sol
 from dexom_python.enum_functions.icut_functions import create_icut_constraint
 from dexom_python.enum_functions.maxdist_functions import create_maxdist_constraint, create_maxdist_objective
+from dexom_python.default_parameter_values import DEFAULT_VALUES
 
 
 def diversity_enum(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['epsilon'], thr=DEFAULT_VALUES['threshold'],
@@ -176,8 +177,7 @@ def _main():
     icut = False if args.noicut else True
     prev_sol, dist_anneal = read_prev_sol(prev_sol_arg=args.prev_sol, model=model, rw=reaction_weights,
                                           eps=args.epsilon, thr=args.threshold, a=args.dist_anneal,
-                                          startsol=args.startsol, full=args.full)
-
+                                          startsol=args.startsol)
     dex_sol, dex_res = diversity_enum(model=model, reaction_weights=reaction_weights, prev_sol=prev_sol,
                                       thr=args.threshold, maxiter=args.maxiter, obj_tol=args.obj_tol,
                                       dist_anneal=dist_anneal, out_path=args.output, icut=icut, full=args.full,
@@ -185,6 +185,8 @@ def _main():
     dex_res.to_csv(args.output + '_results.csv')
     sol = pd.DataFrame(dex_sol.binary, columns=[r.id for r in model.reactions])
     sol.to_csv(args.output + '_solutions.csv')
+    fluxes = pd.concat([s.fluxes for s in dex_sol.solutions], axis=1).T.reset_index().drop('index', axis=1)
+    fluxes.to_csv(args.output + '_fluxes.csv')
     return True
 
 

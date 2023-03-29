@@ -8,8 +8,9 @@ from warnings import warn, catch_warnings, filterwarnings, resetwarnings
 from cobra.exceptions import OptimizationError
 from dexom_python.enum_functions.icut_functions import create_icut_constraint
 from dexom_python.imat_functions import imat
-from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options, DEFAULT_VALUES, check_threshold_tolerance
+from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options, check_threshold_tolerance
 from dexom_python.enum_functions.enumeration import EnumSolution, create_enum_variables, read_prev_sol
+from dexom_python.default_parameter_values import DEFAULT_VALUES
 
 
 def create_maxdist_constraint(model, reaction_weights, prev_sol, obj_tol, name='maxdist_optimality', full=False):
@@ -192,7 +193,7 @@ def _main():
     if args.reaction_weights is not None:
         reaction_weights = load_reaction_weights(args.reaction_weights)
     prev_sol, _ = read_prev_sol(prev_sol_arg=args.prev_sol, model=model, rw=reaction_weights, eps=args.epsilon,
-                                thr=args.threshold, full=args.full)
+                                thr=args.threshold)
     icut = False if args.noicut else True
     maxdist_sol = maxdist(model=model, reaction_weights=reaction_weights, prev_sol=prev_sol, eps=args.epsilon,
                           thr=args.threshold, obj_tol=args.obj_tol, maxiter=args.maxiter, icut=icut, full=args.full,
@@ -200,6 +201,8 @@ def _main():
     sol = pd.DataFrame(maxdist_sol.binary)
     sol.columns = [r.id for r in model.reactions]
     sol.to_csv(args.output+'_solutions.csv')
+    fluxes = pd.concat([s.fluxes for s in maxdist_sol.solutions], axis=1).T.reset_index().drop('index', axis=1)
+    fluxes.to_csv(args.output + '_fluxes.csv')
     return True
 
 
