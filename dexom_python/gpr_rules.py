@@ -199,7 +199,7 @@ def _main():
     parser.add_argument('-n', '--null', type=float, default=0.,
                         help='value assigned to reactions/genes with no associated information')
     parser.add_argument('--convert', action='store_true', help='converts gene expression to qualitative weights')
-    parser.add_argument('-t', '--threshold', default='0.25_0.75',
+    parser.add_argument('-q', '--quantiles', default='0.25_0.75',
                         help='proportion of genes that are lowly/highly expressed (only used if --convert is selected)')
     parser.add_argument('-s', '--significant', default='both',
                         help='which genes have significant expression (either "high", "low" or "both", '
@@ -215,7 +215,7 @@ def _main():
     print(score_columns)
 
     if args.convert:
-        proportion = args.threshold.split('_')
+        proportion = args.quantiles.split('_')
         if len(proportion) == 1:
             proportion = float(proportion[0])
         elif proportion[0] == '':
@@ -225,7 +225,7 @@ def _main():
         elif len(proportion) == 2:
             proportion = (float(proportion[0]), float(proportion[1]))
         else:
-            ValueError('The threshold argument was provided in an incorrect format.')
+            ValueError('The quantiles argument was provided in an incorrect format.')
         print(proportion)
         genes = expression2qualitative(genes=genes, column_list=score_columns, proportion=proportion, method='keep',
                                        significant_genes=args.significant, save=True,
