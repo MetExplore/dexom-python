@@ -12,6 +12,12 @@ CHANGELOG
 Versions 0.x
 -------------
 
+0.6:
+~~~~
+| Implement snakemake workflow
+| Export fluxes in addition to enumeration solutions
+| Major bugfixes in gpr_rules functions
+
 0.5:
 ~~~~
 | expand and refactor functions for cluster usage
