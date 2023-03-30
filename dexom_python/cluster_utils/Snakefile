@@ -11,11 +11,11 @@ rule grouped:
     input:
         expand(outpath+"div_enum_g_{parallel}_solutions.csv", parallel=get_parallel())
     output:
-        outpath+"unique_solutions.csv",
-        outpath+"activation_frequency_reactions.csv",
+        outpath+"all_unique_solutions.csv",
+        outpath+"all_activation_frequency_reactions.csv",
         outputs['grouped']
     run:
-        shell("python dexom_python/cluster_utils/solution_compilation.py -s %s -o %s -p %s" % (outpath, outpath, '"*solutions.csv"'))
+        shell("python dexom_python/cluster_utils/solution_compilation.py -s %s -o %s -p %s" % (outpath, outpath+"all_", '"*solutions.csv"'))
         shell("touch %s" % outputs['grouped'])
 
 rule grouped_batch:

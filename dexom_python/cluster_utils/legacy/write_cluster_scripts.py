@@ -247,7 +247,7 @@ def _main():
     parser.add_argument('-l', '--reaction_list', default=None, help='list of reactions in the model')
     parser.add_argument('-p', '--prev_sol', default=None, help='starting solution')
     parser.add_argument('-c', '--cplex_path', help='path to the cplex solver',
-                        default='/home/mstingl/save/CPLEX_Studio1210/cplex/python/3.7/x86-64_linux')
+                        default='/path/to/solver/CPLEX_Studio1210/cplex/python/3.7/x86-64_linux')
     parser.add_argument('--obj_tol', type=float, default=DEFAULT_VALUES['obj_tol'],
                         help='objective value tolerance, as a fraction of the original value')
     parser.add_argument('-n', '--filenums', type=int, default=100, help='number of parallel threads')

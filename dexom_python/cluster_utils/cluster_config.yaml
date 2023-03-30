@@ -44,9 +44,9 @@ full: false
 # Note that if the number of cores or allocated time is too low, the jobs may be terminated due to hitting the timelimit
 # However, using a larger number of cores & time than necessary usually increases the queue waiting time
 
-cores: 8
+cores: 24
 # number of cores to assign for each job
-time: 00:30:00
+time: 01:00:00
 # maximum runtime per job
 memory: 64
 # allocated memory per job in gigabytes. Should not be reduced if handling large datasets and/or models

@@ -209,7 +209,9 @@ def plot_pca(solution_path, rxn_enum_solutions=None, save=True, save_name=''):
     plt.title('PCA of enumeration solutions', fontsize=20)
     if rxn_enum_solutions is not None:
         plt.scatter(x2, y2, color='g', label='rxn-enum solutions')
-    plt.scatter(x, y, color='b', label='div-enum solutions')
+        plt.scatter(x, y, color='b', label='div-enum solutions')
+    else:
+        plt.scatter(x, y, color='b', label='enumeration solutions')
     plt.scatter(x[0], y[0], color='r', label='iMAT solution')
     plt.legend(fontsize='large')
     if save:

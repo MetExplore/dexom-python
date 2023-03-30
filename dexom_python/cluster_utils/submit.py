@@ -21,7 +21,7 @@ cmdline.append(slurm_args)
 dependencies = list(sys.argv[1:-1])
 if dependencies:
     cmdline.append("--dependency")
-    dependencies = [ x for x in dependencies if x.isdigit() ]
+    dependencies = [x for x in dependencies if x.isdigit()]
     cmdline.append("afterok:" + ",".join(dependencies))
 
 jobscript = sys.argv[-1]
