@@ -15,6 +15,9 @@ mem_gb = clus['memory']
 threads = clus['cores']
 runtime = clus['time']
 
+if clus['suppress_slurmfiles']:
+    cmdline.append('--output=/dev/null --error=/dev/null')
+
 slurm_args = f" --mem {mem_gb}G -c {threads} -t {runtime}"
 cmdline.append(slurm_args)
 

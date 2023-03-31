@@ -34,7 +34,6 @@ reaction_list: false
 # list of reactions in the model, optional input for reaction-enumeration
 # set to 'false' when not in use
 
-
 full: false
 # determines whether or not to use the full-DEXOM implementation.
 # This implementation requires much longer runtimes, but takes into account all reactions of the model
@@ -50,3 +49,8 @@ time: 01:00:00
 # maximum runtime per job
 memory: 64
 # allocated memory per job in gigabytes. Should not be reduced if handling large datasets and/or models
+
+suppress_slurmfiles: false
+# when set to "true", suppresses the slurm output files in the format "slurm-[jobID].out"
+# this is useful to avoid cluttering the cluster folder with many redundant output files
+# but if an error occurs the error message won't appear in the logs.
