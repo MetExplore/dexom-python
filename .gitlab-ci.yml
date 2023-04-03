@@ -45,6 +45,18 @@ test:
         coverage_format: cobertura
         path: coverage.xml
 
+build:
+  stage: build
+  script:
+    - pip install poetry
+    - poetry build
+    - poetry publish
+  only:
+    refs:
+      - master
+    variables:
+      - $CI_COMMIT_MESSAGE =~ /#build/
+
 #run:
 #  script:
 #    - python setup.py bdist_wheel
@@ -55,9 +67,6 @@ test:
 #    paths:
 #      - dist/*.whl
 
-#doc_update:
-#    script:
-#        - pandoc -o docs/readme.rst -f markdown -t rst README.md
 #pages:
 #  script:
 #    - pip install sphinx sphinx-rtd-theme
