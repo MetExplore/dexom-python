@@ -35,7 +35,7 @@ test:
   script:
      - pip install pytest
      - pytest tests/
-     - pytest --cov=dexom_python tests/
+     - pytest --cov dexom_python tests/
 #    - python setup.py test
 #    - pip install tox flake8  # you can also use tox
 #    - tox -e py36,flake8
