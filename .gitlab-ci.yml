@@ -33,8 +33,8 @@ before_script:
 
 test:
   script:
-     - pytest tests/
-     - pytest --cov=dexom_python tests/
+     - python -m pytest tests/
+     - python -m pytest --cov=dexom_python tests/
 #    - python setup.py test
 #    - pip install tox flake8  # you can also use tox
 #    - tox -e py36,flake8
@@ -64,7 +64,7 @@ test:
 #  rules:
 #    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
-deploy:
-  stage: deploy
-  script: echo "Define your deployment script!"
-  environment: production
+#deploy:
+#  stage: deploy
+#  script: echo "Define your deployment script!"
+#  environment: production
