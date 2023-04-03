@@ -25,14 +25,14 @@ cache:
 
 before_script:
   - python --version  # For debugging
-  - pip install virtualenv
-  - virtualenv venv
+  - pip install --upgrade pip
+  - python -m venv venv
   - source venv/bin/activate
+  - pip install -e .
 
 
 test:
   script:
-     - pip install pytest
      - pytest tests/
      - pytest --cov=dexom_python tests/
 #    - python setup.py test
