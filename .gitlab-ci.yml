@@ -33,6 +33,7 @@ before_script:
 
 test:
   script:
+     - pip install pytest
      - python -m pytest tests/
      - python -m pytest --cov=dexom_python tests/
 #    - python setup.py test
