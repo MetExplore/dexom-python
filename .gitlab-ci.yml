@@ -25,9 +25,9 @@ cache:
 
 before_script:
   - python --version  # For debugging
-  - pip install --upgrade pip
   - python -m venv venv
   - source venv/bin/activate
+  - pip install --upgrade pip
   - pip install -e .
 
 
