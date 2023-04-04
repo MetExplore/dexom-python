@@ -1,10 +1,7 @@
-# This file is a template, and might need editing before it works on your project.
-# To contribute improvements to CI/CD templates, please follow the Development guide at:
-# https://docs.gitlab.com/ee/development/cicd/templates.html
-# This specific template is located at:
+# This file is based on the following template:
 # https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Python.gitlab-ci.yml
 
-# Official language image. Look for the different tagged releases at:
+# Python image found here:
 # https://hub.docker.com/r/library/python/tags/
 image: python:3.7.4
 
@@ -45,37 +42,14 @@ test:
         coverage_format: cobertura
         path: coverage.xml
 
-#build_and_publish:
-#  stage: build
-#  script:
-#    - pip install poetry
-#    - poetry config pypi-token.pypi ${CI_JOB_TOKEN} TWINE_USERNAME=gitlab-ci-token http-basic.foo ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi dist/*
-#    - poetry build
-#    - poetry publish
-#  only:
-#    refs:
-#      - master
-#    variables:
-#      - $CI_COMMIT_MESSAGE =~ /#release/
-#  artifacts:
-#    paths:
-#      - dist/*.whl
-#      - dist/*.tar.gz
 
-
-
-run:
+build_and_publish:
+  stage: publish
   script:
     - pip install poetry
     - poetry build
-#    - poetry config repositories.gitlab "${CI_API_V4_URL}/projects/$CI_PROJECT_ID/packages/pypi"
-#    - poetry config http-basic.gitlab gitlab-ci-token "$CI_JOB_TOKEN"
-#    - poetry publish --repository gitlab
     - poetry config pypi-token.pypi $PYPI_TOKEN
     - poetry publish
-#    - pip install build twine
-#    - python -m build
-#    - TWINE_PASSWORD=${CI_JOB_TOKEN} TWINE_USERNAME=gitlab-ci-token python -m twine upload --repository-url ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi dist/*
   artifacts:
     paths:
       - dist/*
@@ -84,15 +58,3 @@ run:
 #        - master
       variables:
         - $CI_COMMIT_MESSAGE =~ /#release/
-
-#pages:
-#  script:
-#    - pip install sphinx sphinx-rtd-theme
-#    - cd doc
-#    - make html
-#    - mv build/html/ ../public/
-#  artifacts:
-#    paths:
-#      - public
-#  rules:
-#    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
