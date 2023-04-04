@@ -21,8 +21,6 @@ outputs = {
     'grouped': 'logs/grouped.txt',
     'separate': 'logs/separate.txt',
     'rxn': 'logs/rxn.txt',
-    'icut': 'logs/icut.txt',
-    'maxdist': 'logs/max.txt',
     'div': 'logs/div.txt',
 }
 

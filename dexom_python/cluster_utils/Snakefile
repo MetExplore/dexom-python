@@ -132,32 +132,6 @@ rule rxn_enum:
         "python dexom_python/enum_functions/rxn_enum_functions.py -m %s -r %s --range {params.rxn_range} -o %srxn_enum_{wildcards.parallel} -p %s %s" %
         (config['model'], config['reaction_weights'], outpath, prevsol, rlstring)
 
-rule icut_enum:
-    input:
-        config['model'],
-        config['reaction_weights'],
-        prevsol
-    output:
-        outpath+"icut_enum_{parallel}_solutions.csv"
-    log:
-        "logs/icut_enum_{parallel}.log"
-    shell:
-        "python dexom_python/enum_functions/icut_functions.py -m %s -r %s -r {params.rxn_range} -o %sicut_enum_{wildcards.parallel} -p %s %s" %
-        (config['model'], config['reaction_weights'], outpath, prevsol, fullstring)
-
-rule maxdist_enum:
-    input:
-        config['model'],
-        config['reaction_weights'],
-        prevsol
-    output:
-        outpath+"maxdist_enum_{parallel}_solutions.csv"
-    log:
-        "logs/maxdist_enum_{parallel}.log"
-    shell:
-        "python dexom_python/enum_functions/maxdist_functions.py -m %s -r %s -r {params.rxn_range} -o %smaxdist_enum_{wildcards.parallel} -p %s %s" %
-        (config['model'], config['reaction_weights'], outpath, prevsol, fullstring)
-
 rule imat:
     input:
         config['model'],

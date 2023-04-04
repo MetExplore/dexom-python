@@ -2,8 +2,6 @@
 approach: separate
 
 # rxn: just perform reaction-enumeration
-# icut: just perform integer-cut
-# maxdist: just perform maxdist
 # div: just perform diversity-enumeration
 # grouped: Each batch contains some rxn-enum iterations, then some div-enum iterations, solutions are concatenated at the end
 # separate: (RECOMMENDED) Batches of rxn-enum, then the rxn-enum solutions are concatenated, then batches of div-enum
@@ -12,18 +10,23 @@ model: toy_models/small4M.json
 # path to a cobrapy-compatible model (sbml, matlab or json format)
 
 reaction_weights: toy_models/small4M_weights.csv
-# path to a reaction-weight csv file
+# path to a reaction-weight csv file with the following 2 columns (other columns are ignored):
+# - one columns called "reactions" which contains reaction IDs as present in the model
+# - one column called "weights" which contains a number
+# if you have a file with gene scores, the conversion into reaction-weights can be performed with dexom_python/gpr_rules.py
+# see documentation here: https://dexom-python.readthedocs.io/en/stable/dexom_python.html#module-dexom_python.gpr_rules
+# or see the commandline options by calling "python dexom_python/gpr_rules.py -h"
 
 output_path: cluster_small4M/
 # Folder to which the files are written. The folder will be created if not present
 
-parallel_batches: 10
+parallel_batches: 5
 # number of parallel batches to run
 
-enum_iterations: 10
+enum_iterations: 5
 # number of enumeration iterations per batch
 
-rxn_iterations: 10
+rxn_iterations: 5
 #ONLY for grouped & separate: number of reaction-enumeration iterations per batch
 
 starting_solution: false
@@ -35,7 +38,7 @@ reaction_list: false
 # set to 'false' when not in use
 
 full: false
-# determines whether or not to use the full-DEXOM implementation.
+# determines whether to use the full-DEXOM implementation.
 # This implementation requires much longer runtimes, but takes into account all reactions of the model
 
 
