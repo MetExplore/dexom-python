@@ -5,7 +5,8 @@ wildcard_constraints:
 
 rule end:
     input:
-        final_output
+        final_output,
+        outpath+"all_unique_solutions.csv"
 
 rule grouped:
     input:
@@ -92,8 +93,8 @@ rule concat_solutions:
     input:
         expand(outpath+str(config['approach'])+"_enum_{parallel}_solutions.csv", parallel=get_parallel())
     output:
-        outpath+"unique_solutions.csv",
-        outpath+"activation_frequency_reactions.csv",
+        outpath+"all_unique_solutions.csv",
+        outpath+"all_activation_frequency_reactions.csv",
         outputs[config['approach']]
     log:
         "logs/solution_compilation.log"

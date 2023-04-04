@@ -37,7 +37,8 @@ def check_model_options(model, timelimit=DEFAULT_VALUES['timelimit'], feasibilit
     model.solver.configuration.verbosity = verbosity
     model.solver.configuration.presolve = True
     if hasattr(optlang, 'cplex_interface'):
-        model.solver.problem.parameters.mip.tolerances.mipgap.set(mipgaptol)
+        if isinstance(model.solver, optlang.cplex_interface.Model):
+            model.solver.problem.parameters.mip.tolerances.mipgap.set(mipgaptol)
     else:
         warn('setting the MIP gap tolerance is only available with the cplex solver')
     return model
