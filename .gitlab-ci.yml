@@ -44,7 +44,7 @@ test:
 
 
 build_and_publish:
-  stage: publish
+  stage: deploy
   script:
     - pip install poetry
     - poetry build
