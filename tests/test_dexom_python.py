@@ -16,9 +16,6 @@ from unittest import mock
 
 # Define some global variables used across multiple tests
 
-print(cobra.__version__)
-
-
 GLOB_modelstring = str(pathlib.Path(__file__).parent.joinpath('model', 'example_r13m10.json'))
 GLOB_weightstring = str(pathlib.Path(__file__).parent.joinpath('model', 'example_r13m10_weights.csv'))
 GLOB_expressionstring = str(pathlib.Path(__file__).parent.joinpath('model', 'example_r13m10_expression.csv'))
