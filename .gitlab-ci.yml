@@ -71,8 +71,8 @@ run:
     paths:
       - dist/*
   only:
-      refs:
-        - master
+#      refs:
+#        - master
       variables:
         - $CI_COMMIT_MESSAGE =~ /#release/
 
