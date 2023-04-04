@@ -1,5 +1,6 @@
 import ruamel.yaml as yaml
 import os
+import dexom_python as dp
 
 # read configuration from YAML files
 yaml_reader = yaml.YAML(typ='safe')
@@ -18,10 +19,10 @@ else:
 a = config['approach']
 
 outputs = {
-    'grouped': 'logs/grouped.txt',
-    'separate': 'logs/separate.txt',
-    'rxn': 'logs/rxn.txt',
-    'div': 'logs/div.txt',
+    'grouped': outpath + 'grouped.txt',
+    'separate': outpath + 'separate.txt',
+    'rxn': outpath + 'rxn.txt',
+    'div': outpath + 'div.txt',
 }
 
 final_output = outputs[a]
@@ -33,8 +34,12 @@ else:
 
 if config['reaction_list']:
     rlstring = '-l '+config['reaction_list']
-else:
+elif a == 'div':
     rlstring = ''
+else:
+    m = dp.read_model(config['model'])
+    dp.model_functions.get_all_reactions_from_model(m, save=True, shuffle=True, out_path=outpath)
+    rlstring = '-l ' + outpath + m.id + '_reactions_shuffled.csv'
 
 if config['full']:
     fullstring = '--full'

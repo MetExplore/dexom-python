@@ -5,8 +5,7 @@ wildcard_constraints:
 
 rule end:
     input:
-        final_output,
-        outpath+"all_unique_solutions.csv"
+        final_output
 
 rule grouped:
     input:
@@ -40,13 +39,13 @@ rule separate:
         expand(outpath+"rxn_enum_s_{parallel}_solutions.csv", parallel=get_parallel()),
         expand(outpath+"div_enum_s_{parallel}_solutions.csv", parallel=get_parallel())
     output:
-        outpath+"diversity_unique_solutions.csv",
-        outpath+"diversity_activation_frequency_reactions.csv",
+        outpath+"diversity-enum_unique_solutions.csv",
+        outpath+"diversity-enum_activation_frequency_reactions.csv",
         outpath+"all_unique_solutions.csv",
         outpath+"all_activation_frequency_reactions.csv",
         outputs['separate']
     run:
-        shell("python dexom_python/cluster_utils/solution_compilation.py -s %s -o %s -p %s" % (outpath, outpath+"diversity_", '"div_enum*solutions.csv"'))
+        shell("python dexom_python/cluster_utils/solution_compilation.py -s %s -o %s -p %s" % (outpath, outpath+"diversity-enum_", '"div_enum*solutions.csv"'))
         shell("python dexom_python/cluster_utils/solution_compilation.py -s %s -o %s -p %s" % (outpath, outpath+"all_", '"*enum*solutions.csv"'))
         shell("touch %s" % outputs['separate'])
 
@@ -54,25 +53,23 @@ rule separate_div:
     input:
         config['model'],
         config['reaction_weights'],
-        outpath+"reaction_unique_solutions.csv"
+        outpath+"reaction-enum_unique_solutions.csv"
     output:
         outpath+"div_enum_s_{parallel}_solutions.csv"
     params:
         dist_anneal = lambda w: (1 - 1 / (config['parallel_batches'] * 2 * (config['enum_iterations'] / 10))) ** int(w.parallel),
-    log:
-        "logs/rxn_enum_{parallel}.log"
     shell:
-        "python dexom_python/enum_functions/diversity_enum_functions.py -m %s -r %s -a {params.dist_anneal} -i %s -o %sdiv_enum_s_{wildcards.parallel} -p %sreaction_unique_fluxes.csv -s {wildcards.parallel} %s" %
+        "python dexom_python/enum_functions/diversity_enum_functions.py -m %s -r %s -a {params.dist_anneal} -i %s -o %sdiv_enum_s_{wildcards.parallel} -p %sreaction-enum_unique_fluxes.csv -s {wildcards.parallel} %s" %
         (config['model'], config['reaction_weights'], config['enum_iterations'], outpath, outpath, fullstring)
 
 rule separate_concat_rxn:
     input:
         expand(outpath+"rxn_enum_s_{parallel}_solutions.csv", parallel=get_parallel())
     output:
-        outpath+"reaction_unique_solutions.csv",
-        outpath+"reaction_activation_frequency_reactions.csv"
+        outpath+"reaction-enum_unique_solutions.csv",
+        outpath+"reaction-enum_activation_frequency_reactions.csv"
     shell:
-        "python dexom_python/cluster_utils/solution_compilation.py -s %s -o %s -p %s" % (outpath, outpath+"reaction_", '"rxn*solutions.csv"')
+        "python dexom_python/cluster_utils/solution_compilation.py -s %s -o %s -p %s" % (outpath, outpath+"reaction-enum_", '"rxn*solutions.csv"')
 
 rule separate_rxn:
     input:
@@ -83,8 +80,6 @@ rule separate_rxn:
         outpath+"rxn_enum_s_{parallel}_solutions.csv"
     params:
         rxn_range = lambda w: str(config['rxn_iterations']*int(w.parallel)) + '_' + str(config['rxn_iterations']*(int(w.parallel)+1))
-    log:
-        "logs/rxn_enum_{parallel}.log"
     shell:
         "python dexom_python/enum_functions/rxn_enum_functions.py -m %s -r %s --range {params.rxn_range} -o %srxn_enum_s_{wildcards.parallel} -p %s %s" %
         (config['model'], config['reaction_weights'], outpath, prevsol, rlstring)
@@ -96,8 +91,6 @@ rule concat_solutions:
         outpath+"all_unique_solutions.csv",
         outpath+"all_activation_frequency_reactions.csv",
         outputs[config['approach']]
-    log:
-        "logs/solution_compilation.log"
     run:
         shell("python dexom_python/cluster_utils/solution_compilation.py -s %s -o %s -p %s" % (outpath, outpath, '"*solutions.csv"'))
         shell("touch %s" % outputs[config['approach']])
@@ -111,8 +104,6 @@ rule div_enum:
         outpath+"div_enum_{parallel}_solutions.csv"
     params:
         dist_anneal = lambda w: (1 - 1 / (config['parallel_batches'] * 2 * (config['enum_iterations'] / 10))) ** int(w.parallel)
-    log:
-        "logs/div_enum_{parallel}.log"
     shell:
         "python dexom_python/enum_functions/diversity_enum_functions.py -m %s -r %s -a {params.dist_anneal} -o %sdiv_enum_{wildcards.parallel} -p %s %s" %
         (config['model'], config['reaction_weights'], outpath, prevsol, fullstring)
@@ -126,8 +117,6 @@ rule rxn_enum:
         outpath+"rxn_enum_{parallel}_solutions.csv"
     params:
         rxn_range = lambda w: str(config['enum_iterations']*int(w.parallel)) + '_' + str(config['enum_iterations']*(int(w.parallel)+1))
-    log:
-        "logs/rxn_enum_{parallel}.log"
     shell:
         "python dexom_python/enum_functions/rxn_enum_functions.py -m %s -r %s --range {params.rxn_range} -o %srxn_enum_{wildcards.parallel} -p %s %s" %
         (config['model'], config['reaction_weights'], outpath, prevsol, rlstring)
@@ -138,8 +127,6 @@ rule imat:
         config['reaction_weights']
     output:
         outpath+"imat_solution.csv"
-    log:
-        "logs/imat.log"
     shell:
         "python dexom_python/imat_functions.py -m %s -r %s -o %simat_solution" %
         (config['model'], config['reaction_weights'], outpath)

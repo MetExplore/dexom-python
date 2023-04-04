@@ -35,6 +35,7 @@ starting_solution: false
 
 reaction_list: false
 # list of reactions in the model, optional input for reaction-enumeration
+# if absent, a shuffled list of reactions will be created at "output_path/modelID_reactions_shuffled.csv"
 # set to 'false' when not in use
 
 full: false
