@@ -172,7 +172,7 @@ def _main():
     Use --help to see commandline parameters
     """
     description = 'Performs the reaction-enumeration algorithm on a specified list of reactions'
-    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
+    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-m', '--model', help='Metabolic model in sbml, matlab, or json format')
     parser.add_argument('-l', '--reaction_list', default=None, help='csv list of reactions to enumerate - if empty, '
                                                                     'will use all reactions in the model')

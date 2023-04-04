@@ -155,7 +155,7 @@ def _main():
     Use --help to see commandline parameters
     """
     description = 'Performs pathway enrichment analysis using a hypergeometric test (Fischer exact test)'
-    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
+    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-s', '--solutions', help='csv file containing enumeration solutions')
     parser.add_argument('-m', '--model', default=None, help='Metabolic model in sbml, json, or matlab format, '
                                                             'required if subframe & sublist are absent')

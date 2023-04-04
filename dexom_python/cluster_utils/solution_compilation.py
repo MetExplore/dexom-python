@@ -9,7 +9,7 @@ def _main():
     Use --help to see commandline parameters
     """
     description = 'Compiles binary enumeration solutions from a given folder'
-    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
+    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-s', '--sol_path', help='folder containing enumeration solutions')
     parser.add_argument('-o', '--out_path', default='', help='path to which the combined solutions will be saved')
     parser.add_argument('-p', '--pattern', default='*solutions.csv', help='naming pattern of the solution files')

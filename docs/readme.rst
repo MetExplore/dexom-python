@@ -146,8 +146,8 @@ name: ``diversity_enum``)
 | - ``icut``: if True, an integer-cut constraint will be applied to
   prevent this enumeration to produce duplicate solutions
 
-Parallelized DEXOM
-------------------
+Parallelized DEXOM for computation clusters
+-------------------------------------------
 
 The folder ``dexom_python/cluster_utils/`` contains batch scripts which
 can be used for running dexom_python functions on a slurm cluster, as
@@ -184,6 +184,8 @@ diversity-enumeration) on a toy model.
 | Note that if you want to modify the advanced parameters for DEXOM,
   such as the solver tolerance and threshold values, you must to so in
   the ``dexom_python/default_parameter_values.py`` file.
+
+This workflow uses a reaction-weights file as an input. The
 
 | The following scripts provide some tools to visualize & analyze DEXOM
   results:

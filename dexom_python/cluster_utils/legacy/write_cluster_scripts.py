@@ -238,7 +238,7 @@ def _main():
                   'for most parameters. This also assumes that you have a virtual environment called env in your' \
                   'project directory'
 
-    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
+    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-o', '--out_path', default='cluster/', help='Folder to which the files are written. '
                                                                      'The folder will be created if not present')
     parser.add_argument('-m', '--model', default=None, help='Metabolic model in sbml, json, or matlab format')

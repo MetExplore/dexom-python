@@ -139,7 +139,7 @@ def _main():
     Use --help to see commandline parameters
     """
     description = 'Performs the integer-cut enumeration algorithm'
-    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
+    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-m', '--model', help='Metabolic model in sbml, matlab, or json format')
     parser.add_argument('-r', '--reaction_weights', default=None,
                         help='Reaction weights in csv format (first row: reaction names, second row: weights)')

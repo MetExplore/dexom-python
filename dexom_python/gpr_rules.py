@@ -188,14 +188,16 @@ def _main():
     Use --help to see commandline parameters
     """
     description = 'Applies GPR rules to transform gene weights into reaction weights'
-    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
+    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-m', '--model', help='GEM in json, sbml or matlab format')
     parser.add_argument('-g', '--gene_file', help='csv file containing gene identifiers and scores')
     parser.add_argument('-o', '--output', default='reaction_weights',
                         help='Path to which the reaction_weights .csv file is saved')
     parser.add_argument('--gene_ID', default='ID', help='column containing the gene identifiers')
     parser.add_argument('--gene_score', default=None, help='columns containing the gene scores, comma-separated')
-    parser.add_argument('-d', '--duplicates', default='remove', help='column containing the gene scores')
+    parser.add_argument('-d', '--duplicates', default='remove',
+                        help='behavior for genes with conflicting expression values. '
+                             'Accepted values: "remove", "max", "min", "mean", "median"')
     parser.add_argument('-n', '--null', type=float, default=0.,
                         help='value assigned to reactions/genes with no associated information')
     parser.add_argument('--convert', action='store_true', help='converts gene expression to qualitative weights')

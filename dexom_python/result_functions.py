@@ -226,7 +226,7 @@ def _main():
     Use --help to see commandline parameters
     """
     description = 'Plots a 2-dimensional PCA of enumeration solutions and saves as png'
-    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
+    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-s', '--solutions', help='csv file containing diversity-enumeration solutions')
     parser.add_argument('-r', '--rxn_solutions', default=None,
                         help='(optional) csv file containing diversity-enumeration solutions')

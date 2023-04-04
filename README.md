@@ -8,13 +8,14 @@ This is a python implementation of DEXOM (Diversity-based enumeration of optimal
 The original project, which was developped in MATLAB, can be found here: https://github.com/MetExplore/dexom  
 Parts of the imat code were taken from the driven package for data-driven constraint-based analysis: https://github.com/opencobra/driven
 
-API documentation is available here: https://dexom-python.readthedocs.io/en/stable/
-
 The package can be installed using pip: `pip install dexom-python`
 
 You can also clone the git repository with `git clone https://forgemia.inra.fr/metexplore/cbm/dexom-python` and then install dependencies with `poetry install` or `pip install -e .` 
 
 To view changes between versions, see [changelog](docs/changelog.rst)
+
+API documentation is available here: https://dexom-python.readthedocs.io/en/stable/  
+All of the commandline scripts can be called with the `-h` option to display help messages.
 
 ## Requirements
 - Python 3.7 - 3.9
@@ -86,7 +87,7 @@ As previously explained, the full-DEXOM implementation defines binary indicator 
 maxdist and div-enum also have one additional parameter:  
 - `icut`: if True, an integer-cut constraint will be applied to prevent this enumeration to produce duplicate solutions
 
-## Parallelized DEXOM
+## Parallelized DEXOM for computation clusters
 The folder `dexom_python/cluster_utils/` contains batch scripts which can be used for running dexom_python functions on a slurm cluster, as well as a snakemake workflow which can be used to launch enumeration functions in multiple jobs.
 
 The script `cluster_install_dexom_python.sh` contains the necessary commands for cloning the dexom-python git repository, setting up a python virtual environement and installing all required dependencies.  
@@ -101,7 +102,9 @@ If you run this command without modifying any parameters, it will execute a shor
 
 The main parameters of the snakemake workflow can be found in the file `cluster_config.yaml`.  
 Here you can define the inputs & outputs, as well as the number of parallel batches and iterations per batch.  
-Note that if you want to modify the advanced parameters for DEXOM, such as the solver tolerance and threshold values, you must to so in the `dexom_python/default_parameter_values.py` file.
+Note that if you want to modify the advanced parameters for DEXOM, such as the solver tolerance and threshold values, you must to so in the `dexom_python/default_parameter_values.py` file.  
+
+This workflow uses a reaction-weights file as an input. The 
 
 The following scripts provide some tools to visualize & analyze DEXOM results:  
 - `pathway_enrichment.py` can be used to perform a pathway enrichment analysis using a one-sided hypergeometric test  

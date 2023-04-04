@@ -196,7 +196,7 @@ def _main():
     Use --help to see commandline parameters
     """
     description = 'Performs the modified iMAT algorithm with reaction weights'
-    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
+    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-m', '--model', help='Metabolic model in sbml, json, or matlab format')
     parser.add_argument('-r', '--reaction_weights', default={},
                         help='Reaction weights in csv format with column names: (reactions, weights)')

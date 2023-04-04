@@ -161,7 +161,7 @@ def _main():
     Use --help to see commandline parameters
     """
     description = 'Compiles and analyzes results from parallel DEXOM'
-    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
+    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-i', '--in_path', default='', help='Path in which the cluster results were saved')
     parser.add_argument('-o', '--out_path', default='', help='Path in which to save compiled results')
     parser.add_argument('-n', '--filenums', type=int, default=100, help='number of parallel threads')
