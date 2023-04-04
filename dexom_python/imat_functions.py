@@ -197,8 +197,9 @@ def _main():
     """
     description = 'Performs the modified iMAT algorithm with reaction weights'
     parser = argparse.ArgumentParser(description=description, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('-m', '--model', help='Metabolic model in sbml, json, or matlab format')
-    parser.add_argument('-r', '--reaction_weights', default={},
+    parser.add_argument('-m', '--model', default=argparse.SUPPRESS,
+                        help='Metabolic model in sbml, json, or matlab format')
+    parser.add_argument('-r', '--reaction_weights', default=argparse.SUPPRESS,
                         help='Reaction weights in csv format with column names: (reactions, weights)')
     parser.add_argument('-e', '--epsilon', type=float, default=DEFAULT_VALUES['epsilon'],
                         help='Activation threshold for highly expressed reactions')

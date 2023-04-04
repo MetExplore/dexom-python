@@ -189,8 +189,9 @@ def _main():
     """
     description = 'Applies GPR rules to transform gene weights into reaction weights'
     parser = argparse.ArgumentParser(description=description, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('-m', '--model', help='GEM in json, sbml or matlab format')
-    parser.add_argument('-g', '--gene_file', help='csv file containing gene identifiers and scores')
+    parser.add_argument('-m', '--model', help='GEM in json, sbml or matlab format', default=argparse.SUPPRESS)
+    parser.add_argument('-g', '--gene_file', help='csv file containing gene identifiers and scores',
+                        default=argparse.SUPPRESS)
     parser.add_argument('-o', '--output', default='reaction_weights',
                         help='Path to which the reaction_weights .csv file is saved')
     parser.add_argument('--gene_ID', default='ID', help='column containing the gene identifiers')

@@ -173,13 +173,14 @@ def _main():
     """
     description = 'Performs the reaction-enumeration algorithm on a specified list of reactions'
     parser = argparse.ArgumentParser(description=description, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('-m', '--model', help='Metabolic model in sbml, matlab, or json format')
+    parser.add_argument('-m', '--model', default=argparse.SUPPRESS,
+                        help='Metabolic model in sbml, matlab, or json format')
+    parser.add_argument('-r', '--reaction_weights', default=argparse.SUPPRESS,
+                        help='Reaction weights in csv format (first row: reaction names, second row: weights)')
     parser.add_argument('-l', '--reaction_list', default=None, help='csv list of reactions to enumerate - if empty, '
                                                                     'will use all reactions in the model')
     parser.add_argument('--range', default='_',
                         help='range of reactions to use from the list, in the format "integer_integer", 0-indexed')
-    parser.add_argument('-r', '--reaction_weights', default=None,
-                        help='Reaction weights in csv format (first row: reaction names, second row: weights)')
     parser.add_argument('-p', '--prev_sol', default=None, help='initial imat solution in .txt format')
     parser.add_argument('-e', '--epsilon', type=float, default=DEFAULT_VALUES['epsilon'],
                         help='Activation threshold for highly expressed reactions')

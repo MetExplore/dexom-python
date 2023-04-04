@@ -167,8 +167,9 @@ def _main():
     """
     description = 'Performs the distance-maximization enumeration algorithm'
     parser = argparse.ArgumentParser(description=description, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('-m', '--model', help='Metabolic model in sbml, matlab, or json format')
-    parser.add_argument('-r', '--reaction_weights', default=None,
+    parser.add_argument('-m', '--model', default=argparse.SUPPRESS,
+                        help='Metabolic model in sbml, matlab, or json format')
+    parser.add_argument('-r', '--reaction_weights', default=argparse.SUPPRESS,
                         help='Reaction weights in csv format (first row: reaction names, second row: weights)')
     parser.add_argument('-p', '--prev_sol', default=[], help='starting solution or directory of recent solutions')
     parser.add_argument('-e', '--epsilon', type=float, default=DEFAULT_VALUES['epsilon'],

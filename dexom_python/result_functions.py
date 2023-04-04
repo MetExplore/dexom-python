@@ -227,9 +227,9 @@ def _main():
     """
     description = 'Plots a 2-dimensional PCA of enumeration solutions and saves as png'
     parser = argparse.ArgumentParser(description=description, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('-s', '--solutions', help='csv file containing diversity-enumeration solutions')
+    parser.add_argument('-s', '--solutions', default=argparse.SUPPRESS, help='csv file of enumeration solutions')
     parser.add_argument('-r', '--rxn_solutions', default=None,
-                        help='(optional) csv file containing diversity-enumeration solutions')
+                        help='(optional) csv file containing reaction-enumeration solutions')
     parser.add_argument('-o', '--out_path', default='', help='name of the file which will be saved')
     args = parser.parse_args()
 

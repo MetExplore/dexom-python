@@ -156,7 +156,8 @@ def _main():
     """
     description = 'Performs pathway enrichment analysis using a hypergeometric test (Fischer exact test)'
     parser = argparse.ArgumentParser(description=description, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('-s', '--solutions', help='csv file containing enumeration solutions')
+    parser.add_argument('-s', '--solutions', default=argparse.SUPPRESS,
+                        help='csv file containing enumeration solutions')
     parser.add_argument('-m', '--model', default=None, help='Metabolic model in sbml, json, or matlab format, '
                                                             'required if subframe & sublist are absent')
     parser.add_argument('--sublist', default=None, help='List of all pathways/subsystems in the model')
