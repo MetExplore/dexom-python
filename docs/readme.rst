@@ -12,17 +12,19 @@ DEXOM in python
   data-driven constraint-based analysis:
   https://github.com/opencobra/driven
 
-API documentation is available here:
-https://dexom-python.readthedocs.io/en/stable/
-
 The package can be installed using pip: ``pip install dexom-python``
 
-You can also clone the git repository with
-``git clone https://forgemia.inra.fr/metexplore/cbm/dexom-python`` and
-then install dependencies with ``poetry install`` or
-``pip install -e .``
+| You can also clone the git repository with
+  ``git clone https://forgemia.inra.fr/metexplore/cbm/dexom-python``
+| Then install dependencies with ``poetry install`` (if poetry is
+  already installed in your python environment) or ``pip install -e .``
 
 To view changes between versions, see `changelog <docs/changelog.rst>`__
+
+| API documentation is available here:
+  https://dexom-python.readthedocs.io/en/stable/
+| All of the commandline scripts can be called with the ``-h`` option to
+  display help messages.
 
 Requirements
 ------------
@@ -45,15 +47,16 @@ in, you can access the download for “ILOG CPLEX Optimization Studio” -
 download version 12.10 or higher of the appropriate installer for your
 operating system - install the solver
 
-| You must then update the PYTHONPATH environment variable by adding the
-  directory containing the ``setup.py`` file appropriate for your OS and
-  python version
+| You must then update the environment variable named PYTHONPATH (in
+  Linux) or Path (in Windows) by adding the directory containing the
+  ``setup.py`` file appropriate for your OS and python version
 | Alternatively, run
   ``python "C:\Program Files\IBM\ILOG\CPLEX_Studio1210\python\setup.py" install``
-  and/or ``pip install cplex==12.10``
+  and/or ``pip install cplex==12.10`` (with the appropriate CPLEX
+  version number)
 
-Functions
----------
+Available functions
+-------------------
 
 These are the different functions which are available for
 context-specific metabolic subnetwork extraction
@@ -199,8 +202,8 @@ can be found in ``dexom_python/cluster_utils/legacy``. However, it is
 strongly recommended to use the snakemake workflow, which is more
 reliable and can be adapted more easily for different applications.*
 
-Examples
---------
+Example scripts
+---------------
 
 Toy models
 ~~~~~~~~~~
