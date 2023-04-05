@@ -6,7 +6,7 @@ from pathlib import Path
 from cobra.io import load_json_model, read_sbml_model, load_matlab_model
 from cobra.flux_analysis import find_blocked_reactions
 from warnings import warn
-from cobra.exceptions import SolverNotFound
+from cobra.exceptions import SolverNotFound, OptimizationError
 from dexom_python.default_parameter_values import DEFAULT_VALUES
 
 
@@ -57,6 +57,25 @@ def check_threshold_tolerance(model, epsilon, threshold):
                          'Minimum epsilon value: %s'
                          % (str(epsilon), str(threshold), str(model.tolerance), str(threshold + limit)))
     return 0
+
+
+def check_constraint_primal_values(model):
+    for c in model.constraints:
+        if c.ub is None:
+            if c.primal < c.lb - model.tolerance:
+                print('Invalid constraint value for %s: (lb, primal, ub) = (%s, %s, %s)'
+                      % (c.name, str(c.lb), str(c.primal), str(c.ub)))
+                raise OptimizationError('Invalid constraint value for %s ' % c.name)
+        elif c.lb is None:
+            if c.primal > c.ub + model.tolerance:
+                print('Invalid constraint value for %s: (lb, primal, ub) = (%s, %s, %s)'
+                      % (c.name, str(c.lb), str(c.primal), str(c.ub)))
+                raise OptimizationError('Invalid constraint value for  %s ' % c.name)
+        elif c.primal > c.ub + model.tolerance or c.primal < c.lb - model.tolerance:
+            print('Invalid constraint value for %s: (lb, primal, ub) = (%s, %s, %s)'
+                  % (c.name, str(c.lb), str(c.primal), str(c.ub)))
+            raise OptimizationError('Invalid constraint value for  %s ' % c.name)
+    return True
 
 
 def get_all_reactions_from_model(model, save=True, shuffle=True, out_path=''):

@@ -183,39 +183,39 @@ def test_write_solution(model, imatsol):
 
 def test_rxn_enum(model, reaction_weights, imatsol):
     rxn_sol = enum.rxn_enum(model=model, reaction_weights=reaction_weights, prev_sol=imatsol)
-    assert np.isclose(rxn_sol.objective_value, 4.) and len(rxn_sol.all_solutions) >= 3
+    assert np.isclose(rxn_sol.objective_value, 4.) and len(rxn_sol.unique_solutions) == 3
 
 
 def test_icut_partial(model, reaction_weights, imatsol):
     icut_sol = enum.icut(model=model, reaction_weights=reaction_weights, prev_sol=imatsol, maxiter=10, full=False)
-    assert np.isclose(icut_sol.objective_value, 4.) and len(icut_sol.solutions) >= 3
+    assert np.isclose(icut_sol.objective_value, 4.) and len(icut_sol.solutions) == 3
 
 
 def test_icut_full(model, reaction_weights, imatsol):
     icut_sol = enum.icut(model=model, reaction_weights=reaction_weights, prev_sol=imatsol, maxiter=10, full=True)
-    assert np.isclose(icut_sol.objective_value, 4.) and len(icut_sol.solutions) >= 3
+    assert np.isclose(icut_sol.objective_value, 4.) and len(icut_sol.solutions) == 3
 
 
 def test_maxdist_partial(model, reaction_weights, imatsol):
     maxdist_sol = enum.maxdist(model=model, reaction_weights=reaction_weights, prev_sol=imatsol, maxiter=4, full=False)
-    assert np.isclose(maxdist_sol.objective_value, 4.) and len(maxdist_sol.solutions) >= 3
+    assert np.isclose(maxdist_sol.objective_value, 4.) and len(maxdist_sol.solutions) == 3
 
 
 def test_maxdist_full(model, reaction_weights, imatsol):
     maxdist_sol = enum.maxdist(model=model, reaction_weights=reaction_weights, prev_sol=imatsol, maxiter=4, full=True)
-    assert np.isclose(maxdist_sol.objective_value, 4.) and len(maxdist_sol.solutions) >= 3
+    assert np.isclose(maxdist_sol.objective_value, 4.) and len(maxdist_sol.solutions) == 3
 
 
 def test_diversity_enum_partial(model, reaction_weights, imatsol):
     div_enum_sol, div_enum_res = enum.diversity_enum(model=model, reaction_weights=reaction_weights, prev_sol=imatsol,
                                                      maxiter=4, full=False)
-    assert np.isclose(div_enum_sol.objective_value, 4.) and len(div_enum_sol.solutions) >= 3
+    assert np.isclose(div_enum_sol.objective_value, 4.) and len(div_enum_sol.solutions) == 3
 
 
 def test_diversity_enum_full(model, reaction_weights, imatsol):
     div_enum_sol, div_enum_res = enum.diversity_enum(model=model, reaction_weights=reaction_weights, prev_sol=imatsol,
                                                      maxiter=4, full=True)
-    assert np.isclose(div_enum_sol.objective_value, 4.) and len(div_enum_sol.solutions) >= 3
+    assert np.isclose(div_enum_sol.objective_value, 4.) and len(div_enum_sol.solutions) == 3
 
 
 def test_plot_pca():

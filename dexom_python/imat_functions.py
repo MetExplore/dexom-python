@@ -1,11 +1,12 @@
 import six
 import argparse
 import time
+import optlang
 from symengine import Add, sympify
 from numpy import abs
 from warnings import catch_warnings, filterwarnings, resetwarnings
 from cobra.exceptions import OptimizationError
-from dexom_python.model_functions import read_model, check_model_options, load_reaction_weights, check_threshold_tolerance
+from dexom_python.model_functions import read_model, check_model_options, load_reaction_weights, check_threshold_tolerance, check_constraint_primal_values
 from dexom_python.result_functions import write_solution
 from dexom_python.default_parameter_values import DEFAULT_VALUES
 
@@ -161,7 +162,9 @@ def imat(model, reaction_weights=None, epsilon=DEFAULT_VALUES['epsilon'], thresh
                 solution = model.optimize()
                 t2 = time.perf_counter()
                 print('%.2fs during optimize call' % (t2-t1))
-
+                if isinstance(model.solver, optlang.glpk_interface.Model):
+                    # during reaction-enumeration, GLPK sometimes returns invalid solutions
+                    check_constraint_primal_values(model)
                 return solution
             except UserWarning as w:
                 resetwarnings()

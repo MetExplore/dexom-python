@@ -76,7 +76,6 @@ def expression2qualitative(genes, column_list=None, proportion=0.25, method='kee
         highthreshold = 1-proportion
     else:
         lowthreshold, highthreshold = proportion
-    print(genes)
     for col in column_list:
         genecol = genes[col].copy()
         newgenes = genes[col].copy()
@@ -88,11 +87,9 @@ def expression2qualitative(genes, column_list=None, proportion=0.25, method='kee
                 newgenes[x] = newgenes[x].mean()
         newgenes.sort_values(inplace=True)
         genecol.sort_values(inplace=True)
-        print(newgenes)
         newgenes[genecol < genecol.quantile(lowthreshold)] = -1.
         newgenes[(genecol >= genecol.quantile(lowthreshold)) & (genecol < genecol.quantile(highthreshold))] = 0.
         newgenes[genecol >= genecol.quantile(highthreshold)] = 1.
-        print(newgenes)
         if significant_genes == 'high':
             print('applying expression2qualitative only on genes with highest expression')
             newgenes[newgenes == -1.] = 0.
@@ -100,7 +97,6 @@ def expression2qualitative(genes, column_list=None, proportion=0.25, method='kee
             print('applying expression2qualitative only on genes with lowest expression')
             newgenes[newgenes == 1.] = 0.
         genes[col] = newgenes
-    print(genes)
     for x in genes.index:
         if isinstance(x, float):
             genes.index = genes.index.astype(int)

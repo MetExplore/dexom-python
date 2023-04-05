@@ -6,3 +6,4 @@ from dexom_python.imat_functions import imat
 import dexom_python.enum_functions
 import dexom_python.cluster_utils
 import dexom_python.default_parameter_values
+import dexom_python.toy_models
