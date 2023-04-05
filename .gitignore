@@ -295,8 +295,6 @@ $RECYCLE.BIN/
 
 # End of https://www.toptal.com/developers/gitignore/api/windows,linux,pycharm,python
 
-/tests/model/results/
-
 # folders and files used in development
 *env/
 dev_*/

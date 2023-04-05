@@ -1,0 +1,14 @@
+,ID,subsystem
+0,EX_a,Exchange
+1,EX_b,Exchange
+2,EX_e,Exchange
+3,EX_g,Exchange
+4,EX_h,Exchange
+5,EX_i,Exchange
+6,EX_j,Exchange
+7,R_a_f,sidepath
+8,R_ab_cd,mainpath
+9,R_ef_gh,sidepath
+10,R_f_i,sidepath
+11,R_cj_i,mainpath
+12,R_d_j,mainpath
