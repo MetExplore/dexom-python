@@ -31,8 +31,8 @@ def replace_MulMax_AddMin(expression):
             # return expression.func(*replaced_args)
 
 
-def expression2qualitative(genes, column_list=None, proportion=0.25, method='keep', significant_genes='both',
-                           save=True, outpath='geneweights'):
+def expression2qualitative(genes, column_list=None, proportion=0.25, significant_genes='both', save=True,
+                           outpath='geneweights'):
     """
     Transforms gene expression values/ gene scores into qualitative gene weights
 
@@ -44,8 +44,6 @@ def expression2qualitative(genes, column_list=None, proportion=0.25, method='kee
         column indexes containing gene expression values to be transformed. If empty, all columns will be transformed
     proportion: tuple or float
         proportion of genes to be used for determining low and high gene expression
-    method: str
-        one of "max", "mean" or "keep". chooses how to deal with genes containing multiple conflicting expression values
     significant_genes: str
         one of "high", "low" or "both". chooses whether the conversion is applied only for the genes with
         highest expression, lowest epxression, or both
@@ -62,7 +60,7 @@ def expression2qualitative(genes, column_list=None, proportion=0.25, method='kee
     if isinstance(genes, pd.Series):
         genes = pd.DataFrame(genes)
         column_list = list(genes.columns)
-    genes = genes[genes.index == genes.index]  # eliminates NaN values in index
+    genes = genes.reset_index().dropna()
     if column_list is None:
         column_list = list(genes.columns)
     elif len(column_list) == 0:
@@ -79,12 +77,6 @@ def expression2qualitative(genes, column_list=None, proportion=0.25, method='kee
     for col in column_list:
         genecol = genes[col].copy()
         newgenes = genes[col].copy()
-        if method == 'max':
-            for x in set(newgenes.index):
-                newgenes[x] = newgenes[x].max()
-        elif method == 'mean':
-            for x in set(newgenes.index):
-                newgenes[x] = newgenes[x].mean()
         newgenes.sort_values(inplace=True)
         genecol.sort_values(inplace=True)
         newgenes[genecol < genecol.quantile(lowthreshold)] = -1.
@@ -97,6 +89,7 @@ def expression2qualitative(genes, column_list=None, proportion=0.25, method='kee
             print('applying expression2qualitative only on genes with lowest expression')
             newgenes[newgenes == 1.] = 0.
         genes[col] = newgenes
+    genes.set_index(genes.columns[0], inplace=True)
     for x in genes.index:
         if isinstance(x, float):
             genes.index = genes.index.astype(int)
@@ -226,7 +219,7 @@ def _main():
         else:
             ValueError('The quantiles argument was provided in an incorrect format.')
         print(proportion)
-        genes = expression2qualitative(genes=genes, column_list=score_columns, proportion=proportion, method='keep',
+        genes = expression2qualitative(genes=genes, column_list=score_columns, proportion=proportion,
                                        significant_genes=args.significant, save=True,
                                        outpath=args.output+'_qual_geneweights')
     if len(score_columns) == 1:
