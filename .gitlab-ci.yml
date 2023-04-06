@@ -53,8 +53,6 @@ build_and_publish:
   artifacts:
     paths:
       - dist/*
-  only:
-#      refs:
-#        - master
-      variables:
-        - $CI_COMMIT_MESSAGE =~ /#release/
+  rules:
+    - if: $CI_COMMIT_TAG
+
