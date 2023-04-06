@@ -60,7 +60,6 @@ def expression2qualitative(genes, column_list=None, proportion=0.25, significant
     if isinstance(genes, pd.Series):
         genes = pd.DataFrame(genes)
         column_list = list(genes.columns)
-    genes = genes.reset_index().dropna()
     if column_list is None:
         column_list = list(genes.columns)
     elif len(column_list) == 0:
@@ -74,11 +73,13 @@ def expression2qualitative(genes, column_list=None, proportion=0.25, significant
         highthreshold = 1-proportion
     else:
         lowthreshold, highthreshold = proportion
+    genes = genes.reset_index().dropna()
     for col in column_list:
         genecol = genes[col].copy()
         newgenes = genes[col].copy()
         newgenes.sort_values(inplace=True)
         genecol.sort_values(inplace=True)
+        print(genecol)
         newgenes[genecol < genecol.quantile(lowthreshold)] = -1.
         newgenes[(genecol >= genecol.quantile(lowthreshold)) & (genecol < genecol.quantile(highthreshold))] = 0.
         newgenes[genecol >= genecol.quantile(highthreshold)] = 1.
