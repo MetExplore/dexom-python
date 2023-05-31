@@ -2,7 +2,7 @@ import re
 import argparse
 import numpy as np
 import pandas as pd
-from symengine import sympify, Add, Mul, Max, Min, Pow, Symbol
+from symengine import sympify, Add, Mul, Max, Min, Pow
 from dexom_python.model_functions import read_model, save_reaction_weights
 pd.options.mode.chained_assignment = None
 
@@ -79,7 +79,6 @@ def expression2qualitative(genes, column_list=None, proportion=0.25, significant
         newgenes = genes[col].copy()
         newgenes.sort_values(inplace=True)
         genecol.sort_values(inplace=True)
-        print(genecol)
         newgenes[genecol < genecol.quantile(lowthreshold)] = -1.
         newgenes[(genecol >= genecol.quantile(lowthreshold)) & (genecol < genecol.quantile(highthreshold))] = 0.
         newgenes[genecol >= genecol.quantile(highthreshold)] = 1.
@@ -158,8 +157,8 @@ def apply_gpr(model, gene_weights, save=True, filename='reaction_weights', dupli
         if len(rxn.genes) > 0:
             gen_list = [g.id for g in rxn.genes]
             expr_split = rxn.gene_reaction_rule.replace('(', '( ').replace(')', ' )').split()
-            expr_split = ['g_' + re.sub(r':|\.|-', '_', s) if s in gen_list else s for s in expr_split]
-            new_weights = {'g_' + re.sub(r':|\.|-', '_', g): gene_weight_dict.get(g, null) for g in gen_list}
+            expr_split = ['g_' + re.sub(r'[:.,;/-]', '_', s) if s in gen_list else s for s in expr_split]
+            new_weights = {'g_' + re.sub(r'[:.,;/-]', '_', g): gene_weight_dict.get(g, null) for g in gen_list}
             expression = ' '.join(expr_split).replace(' or ', ' * ').replace(' and ', ' + ')
             weight = replace_MulMax_AddMin(sympify(expression)).subs(new_weights)
             reaction_weights[rxn.id] = weight
@@ -205,7 +204,6 @@ def _main():
         score_columns = list(genes.columns)
     else:
         score_columns = args.gene_score.split(',')
-    print(score_columns)
 
     if args.convert:
         proportion = args.quantiles.split('_')
@@ -219,7 +217,6 @@ def _main():
             proportion = (float(proportion[0]), float(proportion[1]))
         else:
             ValueError('The quantiles argument was provided in an incorrect format.')
-        print(proportion)
         genes = expression2qualitative(genes=genes, column_list=score_columns, proportion=proportion,
                                        significant_genes=args.significant, save=True,
                                        outpath=args.output+'_qual_geneweights')
