@@ -180,7 +180,6 @@ def test_write_solution(model, imatsol):
 
 # Testing enumeration functions
 
-
 def test_rxn_enum(model, reaction_weights, imatsol):
     rxn_sol = enum.rxn_enum(model=model, reaction_weights=reaction_weights, prev_sol=imatsol)
     assert np.isclose(rxn_sol.objective_value, 4.) and len(rxn_sol.unique_solutions) == 3
@@ -218,6 +217,9 @@ def test_diversity_enum_full(model, reaction_weights, imatsol):
     assert np.isclose(div_enum_sol.objective_value, 4.) and len(div_enum_sol.solutions) == 3
 
 
+# Testing enumeration helper functions
+
+
 def test_plot_pca():
     pca = rf.plot_pca(GLOB_rxnsols, save=False)
     assert np.shape(pca.components_) == (2, 13)
@@ -237,6 +239,20 @@ def test_read_prev_sol_directory(model, reaction_weights):
 def test_read_prev_sol_binary(model, reaction_weights):
     sol, _ = enum.read_prev_sol(GLOB_rxnsols, model, reaction_weights)
     assert np.isclose(sol.objective_value, 4.)
+
+
+def test_check_reaction_weights():
+    try:
+        enum.enumeration.check_reaction_weights({})
+        raised1 = False
+    except ValueError:
+        raised1 = True
+    try:
+        enum.enumeration.check_reaction_weights({'a': 0, 'b': 0})
+        raised2 = False
+    except ValueError:
+        raised2 = True
+    assert raised1 and raised2
 
 
 # Testing main functions
