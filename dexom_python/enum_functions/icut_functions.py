@@ -8,7 +8,7 @@ from warnings import warn, catch_warnings, filterwarnings, resetwarnings
 from cobra.exceptions import OptimizationError
 from dexom_python.imat_functions import imat
 from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options, check_threshold_tolerance
-from dexom_python.enum_functions.enumeration import EnumSolution, create_enum_variables, read_prev_sol
+from dexom_python.enum_functions.enumeration import EnumSolution, create_enum_variables, read_prev_sol, check_reaction_weights
 from dexom_python.default_parameter_values import DEFAULT_VALUES
 
 
@@ -38,9 +38,12 @@ def create_icut_constraint(model, reaction_weights, threshold, prev_sol, name, f
                     var_vals.append(-x)
         expr = sum(var_vals)
     constraint = model.solver.interface.Constraint(expr, ub=newbound, name=name)
-    if expr.evalf() == 1:
-        print('No reactions were found in reaction_weights when attempting to create an icut constraint')
-        constraint = None
+    # if isinstance(expr, int):
+    #     print('No reactions were found in reaction_weights when attempting to create an icut constraint')
+    #     constraint = None
+    # elif expr.evalf() == 1:
+    #     print('This should not be reached')
+    #     constraint = None
     return constraint
 
 
@@ -72,6 +75,7 @@ def icut(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['epsilon'], 
         In the case of integer-cut, all_solutions and unique_solutions are identical
     """
     check_threshold_tolerance(model=model, epsilon=eps, threshold=thr)
+    check_reaction_weights(reaction_weights)
     if prev_sol is None:
         prev_sol = imat(model, reaction_weights, epsilon=eps, threshold=thr, full=full)
     else:
