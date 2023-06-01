@@ -4,7 +4,7 @@ import numpy as np
 from dexom_python.imat_functions import imat, ImatException
 from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options, check_threshold_tolerance
 from dexom_python.result_functions import write_solution
-from dexom_python.enum_functions.enumeration import create_enum_variables, read_prev_sol
+from dexom_python.enum_functions.enumeration import create_enum_variables, read_prev_sol, check_reaction_weights
 from warnings import warn
 from dexom_python.default_parameter_values import DEFAULT_VALUES
 
@@ -50,6 +50,7 @@ def rxn_enum(model, reaction_weights, prev_sol=None, rxn_list=None, eps=DEFAULT_
     solution: RxnEnumSolution object
     """
     check_threshold_tolerance(model=model, epsilon=eps, threshold=thr)
+    check_reaction_weights(reaction_weights)
     if prev_sol is None:
         prev_sol = imat(model, reaction_weights, epsilon=eps, threshold=thr, full=False)
     else:

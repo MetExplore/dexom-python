@@ -188,3 +188,20 @@ def analyze_div_enum_results(result_path, solution_path, out_path):
     fig = res['selected reactions'].plot().get_figure()
     fig.savefig(out_path + '_selected_reactions.png')
     return sol.T
+
+
+def check_reaction_weights(rw):
+    """
+    This function raises a TypeError if the reaction-weight object is not a dictionary
+    or a ValueError if the dictionary contains no nonzero values.
+
+    Parameters
+    ----------
+    rw: dict
+    """
+    if isinstance(rw, dict):
+        df = pd.Series(rw, dtype=float)
+        if len(df) == 0 or (df.max() == df.min() == 0.):
+            raise ValueError('reaction_weight dictionary contains no non-zero entries')
+    else:
+        raise TypeError('reaction_weight is not a dictionary')

@@ -8,15 +8,16 @@ from cobra.exceptions import OptimizationError
 from dexom_python.imat_functions import imat
 from dexom_python.result_functions import write_solution
 from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options, check_threshold_tolerance
-from dexom_python.enum_functions.enumeration import EnumSolution, create_enum_variables, read_prev_sol
+from dexom_python.enum_functions.enumeration import EnumSolution, create_enum_variables, read_prev_sol, check_reaction_weights
 from dexom_python.enum_functions.icut_functions import create_icut_constraint
 from dexom_python.enum_functions.maxdist_functions import create_maxdist_constraint, create_maxdist_objective
 from dexom_python.default_parameter_values import DEFAULT_VALUES
 
 
-def diversity_enum(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['epsilon'], thr=DEFAULT_VALUES['threshold'],
-                   obj_tol=DEFAULT_VALUES['obj_tol'], maxiter=DEFAULT_VALUES['maxiter'],
-                   dist_anneal=DEFAULT_VALUES['dist_anneal'], out_path='enum_dexom', icut=True, full=False, save=False):
+def diversity_enum(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['epsilon'],
+                   thr=DEFAULT_VALUES['threshold'], obj_tol=DEFAULT_VALUES['obj_tol'],
+                   maxiter=DEFAULT_VALUES['maxiter'], dist_anneal=DEFAULT_VALUES['dist_anneal'],
+                   out_path='enum_dexom', icut=True, full=False, save=False):
     """
     diversity-based enumeration
 
@@ -51,6 +52,7 @@ def diversity_enum(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['e
     stats: a pandas.DataFrame containing the number of selected reactions and runtime of each iteration
     """
     check_threshold_tolerance(model=model, epsilon=eps, threshold=thr)
+    check_reaction_weights(reaction_weights)
     if prev_sol is None:
         prev_sol = imat(model, reaction_weights, epsilon=eps, threshold=thr, full=full)
     else:
