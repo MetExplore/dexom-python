@@ -20,7 +20,7 @@ API documentation is available here: https://dexom-python.readthedocs.io/en/stab
 All of the commandline scripts can be called with the `-h` option to display help messages.
 
 ## Requirements
-- Python 3.7 - 3.9
+- Python 3.7 - 3.10
 - CPLEX 12.10 - 22.10
 
 ### Installing CPLEX
