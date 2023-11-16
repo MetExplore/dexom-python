@@ -23,6 +23,7 @@ outputs = {
     'separate': outpath + 'separate.txt',
     'rxn': outpath + 'rxn.txt',
     'div': outpath + 'div.txt',
+    'permutation': outpath + 'perm.txt'
 }
 
 final_output = outputs[a]

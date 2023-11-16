@@ -7,6 +7,28 @@ rule end:
     input:
         final_output
 
+rule permutation:
+    input:
+        expand(outpath+"perms_{parallel}_solutions.csv", parallel=get_parallel())
+    output:
+        outpath+'all_perms_unique_solutions.csv'
+        outpath+"all_perms_activation_frequency_reactions.csv",
+        outputs['permutation']
+    run:
+        shell("python dexom_python/cluster_utils/solution_compilation.py -s %s -o %s -p %s" % (outpath, outpath+"all_perms_", '"*solutions.csv"'))
+        shell("touch %s" % outputs['permutation'])
+
+rule perm:
+    input:
+        config['model'],
+        config['gene_file'],
+        config['gene_index']
+    output:
+        outpath+"perms_{parallel}_solutions.csv"
+    run:
+        shell("python dexom_python/enum_functions/permutation_functions.py -m %s -g %s -a {params.dist_anneal} -n %s -o %sperms_{wildcards.parallel} -i %s" %
+        (config['model'], config['gene_file'], config['enum_iterations'], outpath, str(config['gene_index']))
+
 rule grouped:
     input:
         expand(outpath+"div_enum_g_{parallel}_solutions.csv", parallel=get_parallel())

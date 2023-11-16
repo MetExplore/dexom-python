@@ -5,6 +5,7 @@ approach: separate
 # div: just perform diversity-enumeration
 # grouped: Each batch contains some rxn-enum iterations, then some div-enum iterations, solutions are concatenated at the end
 # separate: (RECOMMENDED) Batches of rxn-enum, then the rxn-enum solutions are concatenated, then batches of div-enum
+# permutation: perform imat on multiple random permutations of the gene expression set
 
 model: toy_models/small4M.json
 # path to a cobrapy-compatible model (sbml, matlab or json format)
@@ -58,3 +59,17 @@ suppress_slurmfiles: false
 # when set to "true", suppresses the slurm output files in the format "slurm-[jobID].out"
 # this is useful to avoid cluttering the cluster folder with many redundant output files
 # but if an error occurs the error message won't appear in the logs.
+
+
+# below are some parameters which are only used for the "permutation" mode.
+
+gene_file: false
+# a csv file with gene expression data, containing the following columns:
+# - the first column contains unique gene IDs
+# - the second column contains gene expression values
+
+gene_index: false
+# if the gene IDs in gene_file do not match the gene identifiers used in the metabolic model, use this input
+# This csv file should contain the following columns:
+# - the first column contains gene IDs which map onto the metabolic network
+# - the second column contains gene IDs from the gene_file
