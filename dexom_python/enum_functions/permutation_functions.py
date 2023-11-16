@@ -9,17 +9,28 @@ from dexom_python.default_parameter_values import DEFAULT_VALUES
 
 def permute_genelabels(model, allgenes, geneindex, nperms=100, error_tol=10):
     """
+    This function performs a permutation test in which the labels of gene expression values are randomly shuffled,
+    and then an iMAT solution is computed with the new geneweights.
 
     Parameters
     ----------
-    model
-    allgenes
-    geneindex
-    nperm
+    model: cobra.Model
+        a cobrapy model
+    allgenes: pandas.Series
+        index = gene IDs and values = expression values
+    geneindex: pandas.Series
+        index = model gene IDs and values = allgenes gene IDs
+    nperms: int
+        number of permutations to perform
+    error_tol: int
+        maximum number of consecutive failed iterations before interrupting thr program
 
     Returns
     -------
-
+    perm_solutions: list of imat solutions
+    perm_binary: pandas.Dataframe of binary solutions
+    perm_recs: pandas.Dataframe of reaction-weights
+    perm_genes: pandas.Dataframe of permuted gene expression values
     """
     rng = np.random.default_rng()
     geneweights = geneindex.replace(allgenes)
@@ -55,47 +66,47 @@ def permute_genelabels(model, allgenes, geneindex, nperms=100, error_tol=10):
     return perm_solutions, perm_binary, perm_recs, perm_genes
 
 
-def main():
-    def _main():
-        """
-        This function is called when you run this script from the commandline.
-        It performs the modified iMAT algorithm with reaction weights.
-        Use --help to see commandline parameters
-        """
-        description = 'Performs the modified iMAT algorithm with reaction weights'
-        parser = argparse.ArgumentParser(description=description,
-                                         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-        parser.add_argument('-m', '--model', default=argparse.SUPPRESS,
-                            help='Metabolic model in sbml, json, or matlab format')
-        parser.add_argument('-g', '--gene_file', default=argparse.SUPPRESS,
-                            help='csv file with gene IDs in the first column & gene expression values in the second')
-        parser.add_argument('-n', '--npermutations', type=int, default=100, help='Number of permutations to perform')
-        parser.add_argument('-i', '--gene_index', default=None,
-                            help='Define this parameter if your genefile uses different gene IDs than the model. '
-                                 'csv file in which the first column contains gene IDs from the metabolic model, '
-                                 'and the second column contains gene IDs from the genefile.')
-        parser.add_argument('-o', '--output', default='perms', help='Path of the output file, without file format')
-        parser.add_argument('-e', '--error_tol', type=int, default=10,
-                            help='Maximum number of consecutive failed iterations before interrupting the program')
-        args = parser.parse_args()
-        model = dp.read_model(args.model)
-        model = dp.check_model_options(model)
+def _main():
+    """
+    This function is called when you run this script from the commandline.
+    It performs the permutation test.
+    Use --help to see commandline parameters
+    """
+    description = 'Performs the modified iMAT algorithm with reaction weights'
+    parser = argparse.ArgumentParser(description=description,
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('-m', '--model', default=argparse.SUPPRESS,
+                        help='Metabolic model in sbml, json, or matlab format')
+    parser.add_argument('-g', '--gene_file', default=argparse.SUPPRESS,
+                        help='csv file with gene IDs in the first column & gene expression values in the second')
+    parser.add_argument('-n', '--npermutations', type=int, default=100, help='Number of permutations to perform')
+    parser.add_argument('-i', '--gene_index', default=None,
+                        help='Define this parameter if your genefile uses different gene IDs than the model. '
+                             'csv file in which the first column contains gene IDs from the metabolic model, '
+                             'and the second column contains gene IDs from the genefile.')
+    parser.add_argument('-o', '--output', default='perms', help='Path of the output file, without file format')
+    parser.add_argument('-e', '--error_tol', type=int, default=10,
+                        help='Maximum number of consecutive failed iterations before interrupting the program')
+    args = parser.parse_args()
+    model = dp.read_model(args.model)
+    model = dp.check_model_options(model)
 
-        gwfile = pd.read_csv(args.gene_file, sep=';|,|\t', engine='python')
-        allgenes = gwfile[gwfile.columns[0]]
+    gwfile = pd.read_csv(args.gene_file, sep=';|,|\t', engine='python')
+    allgenes = gwfile[gwfile.columns[0]]
 
-        if args.gene_index is not None:
-            gifile = pd.read_csv(args.gene_index, sep=';|,|\t', engine='python')
-            geneindex = gifile[gifile.columns[0]]
-        else:
-            geneindex = pd.Series(allgenes.index, index=allgenes.index)
+    if args.gene_index is not None:
+        gifile = pd.read_csv(args.gene_index, sep=';|,|\t', engine='python')
+        geneindex = gifile[gifile.columns[0]]
+    else:
+        geneindex = pd.Series(allgenes.index, index=allgenes.index)
 
-        n = args.npermutations
+    n = args.npermutations
+    e = args.error_tol
 
-        sols, bins, recs, genes = permute_genelabels(model=model, allgenes=allgenes, geneindex=geneindex, nperms=n)
-
-        return True
+    sols, bins, recs, genes = permute_genelabels(model=model, allgenes=allgenes, geneindex=geneindex, nperms=n,
+                                                 error_tol=e)
+    return True
 
 
 if __name__ == '__main__':
-    main()
+    _main()
