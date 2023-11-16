@@ -105,6 +105,10 @@ def _main():
 
     sols, bins, recs, genes = permute_genelabels(model=model, allgenes=allgenes, geneindex=geneindex, nperms=n,
                                                  error_tol=e)
+    bins.to_csv(args.output + '_binary.csv')
+    recs.to_csv(args.output + '_reactionweights.csv')
+    genes.to_csv(args.output + '_geneweights.csv')
+
     return True
 
 
