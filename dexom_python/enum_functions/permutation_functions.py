@@ -23,7 +23,7 @@ def permute_genelabels(model, allgenes, geneindex, nperms=DEFAULT_VALUES['maxite
     nperms: int
         number of permutations to perform
     error_tol: int
-        maximum number of consecutive failed iterations before interrupting thr program
+        maximum number of consecutive failed iterations before interrupting the program
 
     Returns
     -------
@@ -33,7 +33,8 @@ def permute_genelabels(model, allgenes, geneindex, nperms=DEFAULT_VALUES['maxite
     perm_genes: pandas.Dataframe of permuted gene expression values
     """
     rng = np.random.default_rng()
-    geneweights = geneindex.replace(allgenes)
+    # geneweights = geneindex.replace(allgenes)
+    geneweights = geneindex.map(allgenes).dropna()
 
     reaction_weights = apply_gpr(model=model, gene_weights=geneweights, save=False)
     perm_genes = pd.DataFrame(index=geneweights.index, dtype=float)
@@ -45,8 +46,11 @@ def permute_genelabels(model, allgenes, geneindex, nperms=DEFAULT_VALUES['maxite
     consecutive_errors = 0
     while i < nperms and consecutive_errors < error_tol:
         rng.shuffle(allgenes.values)
-        gw = geneindex.replace(allgenes)
+        # gw = geneindex.replace(allgenes)
+        gw = geneindex.map(allgenes).dropna()
         reaction_weights = apply_gpr(model=model, gene_weights=gw, save=False)
+        if len(pd.concat([perm_recs, pd.Series(reaction_weights)], axis=1).T.drop_duplicates()) <= i:
+            continue
         try:
             solution = dp.imat(model, reaction_weights)
             thr = DEFAULT_VALUES['threshold']
@@ -59,9 +63,11 @@ def permute_genelabels(model, allgenes, geneindex, nperms=DEFAULT_VALUES['maxite
             i += 1
             consecutive_errors = 0
         except ImatException:
-            print("imat in iteration %i failed" % (i+1))
+            print('imat in iteration %i failed' % (i+1))
             consecutive_errors += 1
-
+    if consecutive_errors >= error_tol:
+        print('Permutations aborted due to too many consecutive failed iterations. '
+              'The results of the %i successful iterations will be returned now.' % len(perm_solutions))
     perm_binary = pd.DataFrame(perm_binary, columns=[r.id for r in model.reactions])
     return perm_solutions, perm_binary, perm_recs, perm_genes
 
