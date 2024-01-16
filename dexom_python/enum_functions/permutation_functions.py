@@ -50,7 +50,7 @@ def permute_genelabels(model, allgenes, geneindex, nperms=DEFAULT_VALUES['maxite
         gw = geneindex.map(allgenes).dropna()
         reaction_weights = apply_gpr(model=model, gene_weights=gw, save=False)
         if len(pd.concat([perm_recs, pd.Series(reaction_weights)], axis=1).T.drop_duplicates()) <= i:
-            continue
+            continue  # if the same reaction weights were already generated in a previous loop, skip this iteration
         try:
             solution = dp.imat(model, reaction_weights)
             thr = DEFAULT_VALUES['threshold']
