@@ -7,7 +7,7 @@ from dexom_python.gpr_rules import apply_gpr
 from dexom_python.default_parameter_values import DEFAULT_VALUES
 
 
-def permute_genelabels(model, allgenes, geneindex, nperms=DEFAULT_VALUES['maxiter'], error_tol=DEFAULT_VALUES['maxiter']):
+def permute_genelabels(model, allgenes, geneindex=None, nperms=DEFAULT_VALUES['maxiter'], error_tol=DEFAULT_VALUES['maxiter']):
     """
     This function performs a permutation test in which the labels of gene expression values are randomly shuffled,
     and then an iMAT solution is computed with the new geneweights.
@@ -18,7 +18,7 @@ def permute_genelabels(model, allgenes, geneindex, nperms=DEFAULT_VALUES['maxite
         a cobrapy model
     allgenes: pandas.Series
         index = gene IDs and values = expression values
-    geneindex: pandas.Series
+    geneindex: pandas.Series or None
         index = model gene IDs and values = allgenes gene IDs
     nperms: int
         number of permutations to perform
@@ -34,7 +34,10 @@ def permute_genelabels(model, allgenes, geneindex, nperms=DEFAULT_VALUES['maxite
     """
     rng = np.random.default_rng()
     # geneweights = geneindex.replace(allgenes)
-    geneweights = geneindex.map(allgenes).dropna()
+    if geneindex is not None:
+        geneweights = geneindex.map(allgenes).dropna()
+    else:
+        geneweights = allgenes.dropna()
 
     reaction_weights = apply_gpr(model=model, gene_weights=geneweights, save=False)
     perm_genes = pd.DataFrame(index=geneweights.index, dtype=float)
@@ -44,12 +47,18 @@ def permute_genelabels(model, allgenes, geneindex, nperms=DEFAULT_VALUES['maxite
 
     i = 0
     consecutive_errors = 0
+    perm_genes['start'] = geneweights.values
+    perm_recs['start'] = reaction_weights.values()
     while i < nperms and consecutive_errors < error_tol:
         rng.shuffle(allgenes.values)
         # gw = geneindex.replace(allgenes)
-        gw = geneindex.map(allgenes).dropna()
+        if geneindex is not None:
+            gw = geneindex.map(allgenes).dropna()
+        else:
+            gw = allgenes.dropna()
         reaction_weights = apply_gpr(model=model, gene_weights=gw, save=False)
         if len(pd.concat([perm_recs, pd.Series(reaction_weights)], axis=1).T.drop_duplicates()) <= i:
+            # if (perm_recs == pd.Series(reaction_weights)).all(axis=1).sum()>0:
             continue  # if the same reaction weights were already generated in a previous loop, skip this iteration
         try:
             solution = dp.imat(model, reaction_weights)
@@ -69,7 +78,7 @@ def permute_genelabels(model, allgenes, geneindex, nperms=DEFAULT_VALUES['maxite
         print('Permutations aborted due to too many consecutive failed iterations. '
               'The results of the %i successful iterations will be returned now.' % len(perm_solutions))
     perm_binary = pd.DataFrame(perm_binary, columns=[r.id for r in model.reactions])
-    return perm_solutions, perm_binary, perm_recs, perm_genes
+    return perm_solutions, perm_binary, perm_recs.drop('start', axis=1), perm_genes.drop('start', axis=1)
 
 
 def _main():
