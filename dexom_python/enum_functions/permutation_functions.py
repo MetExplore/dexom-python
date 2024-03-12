@@ -40,15 +40,13 @@ def permute_genelabels(model, allgenes, geneindex=None, nperms=DEFAULT_VALUES['m
         geneweights = allgenes.dropna()
 
     reaction_weights = apply_gpr(model=model, gene_weights=geneweights, save=False)
-    perm_genes = pd.DataFrame(index=geneweights.index, dtype=float)
-    perm_recs = pd.DataFrame(index=reaction_weights.keys(), dtype=float)
+    perm_genes = [geneweights.values]
+    perm_recs = [reaction_weights.values()]
     perm_solutions = []
     perm_binary = []
 
     i = 0
     consecutive_errors = 0
-    perm_genes['start'] = geneweights.values
-    perm_recs['start'] = reaction_weights.values()
     while i < nperms and consecutive_errors < error_tol:
         rng.shuffle(allgenes.values)
         # gw = geneindex.replace(allgenes)
@@ -57,7 +55,8 @@ def permute_genelabels(model, allgenes, geneindex=None, nperms=DEFAULT_VALUES['m
         else:
             gw = allgenes.dropna()
         reaction_weights = apply_gpr(model=model, gene_weights=gw, save=False)
-        if len(pd.concat([perm_recs, pd.Series(reaction_weights)], axis=1).T.drop_duplicates()) <= i:
+        if reaction_weights in perm_recs:
+            # if len(pd.concat([perm_recs, pd.Series(reaction_weights)], axis=1).T.drop_duplicates()) <= i:
             # if (perm_recs == pd.Series(reaction_weights)).all(axis=1).sum()>0:
             continue  # if the same reaction weights were already generated in a previous loop, skip this iteration
         try:
@@ -65,8 +64,8 @@ def permute_genelabels(model, allgenes, geneindex=None, nperms=DEFAULT_VALUES['m
             thr = DEFAULT_VALUES['threshold']
             tol = DEFAULT_VALUES['tolerance']
             solution_binary = (np.abs(solution.fluxes) >= thr - tol).values.astype(int)
-            perm_genes[str(i)] = gw.values
-            perm_recs[str(i)] = reaction_weights.values()
+            perm_genes.append(gw.values)
+            perm_recs.append(reaction_weights.values())
             perm_solutions.append(solution)
             perm_binary.append(solution_binary)
             i += 1
@@ -77,6 +76,8 @@ def permute_genelabels(model, allgenes, geneindex=None, nperms=DEFAULT_VALUES['m
     if consecutive_errors >= error_tol:
         print('Permutations aborted due to too many consecutive failed iterations. '
               'The results of the %i successful iterations will be returned now.' % len(perm_solutions))
+    perm_genes = pd.DataFrame(perm_genes, columns=geneweights.index).T
+    perm_recs = pd.DataFrame(perm_recs, columns=reaction_weights.keys()).T
     perm_binary = pd.DataFrame(perm_binary, columns=[r.id for r in model.reactions])
     return perm_solutions, perm_binary, perm_recs.drop('start', axis=1), perm_genes.drop('start', axis=1)
 
