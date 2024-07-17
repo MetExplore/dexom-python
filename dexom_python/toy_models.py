@@ -181,6 +181,7 @@ def dagNet(num_layers, num_metabolites_per_layer, export=False, solver='cplex'):
     create_reaction(model, 'R_out', {'MetSINK': -1.}, lower_bound=1.)
     # create reaction weights
     # for this simple example, all reactions are lowly expressed
+    # when that is the case, number_of_optimal_solutions == num_metabolites_per_layer ** (num_layers)
     reaction_weights = {}
     for rec in model.reactions:
         reaction_weights[rec.name] = -1.
