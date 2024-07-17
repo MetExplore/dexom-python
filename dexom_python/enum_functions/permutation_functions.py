@@ -48,6 +48,7 @@ def permute_genelabels(model, allgenes, geneindex=None, nperms=DEFAULT_VALUES['m
     i = 0
     consecutive_errors = 0
     while i < nperms and consecutive_errors < error_tol:
+        print('starting iteration %i' % (i + 1))
         rng.shuffle(allgenes.values)
         # gw = geneindex.replace(allgenes)
         if geneindex is not None:
