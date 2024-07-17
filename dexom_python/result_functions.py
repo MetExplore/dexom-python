@@ -204,8 +204,8 @@ def plot_pca(solution_path, rxn_enum_solutions=None, save=True, save_name=''):
     fig, ax = plt.subplots(figsize=(10, 10))
     plt.xticks(fontsize=12)
     plt.yticks(fontsize=14)
-    plt.xlabel('Principal Component 1', fontsize=20)
-    plt.ylabel('Principal Component 2', fontsize=20)
+    plt.xlabel(f'Principal Component 1 (explained variance: {np.around(pca.explained_variance_ratio_[0], 1)}%)', fontsize=20)
+    plt.ylabel(f'Principal Component 2 (explained variance: {np.around(pca.explained_variance_ratio_[1], 1)}%)', fontsize=20)
     plt.title('PCA of enumeration solutions', fontsize=20)
     if rxn_enum_solutions is not None:
         plt.scatter(x2, y2, color='g', label='rxn-enum solutions')
