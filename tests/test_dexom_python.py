@@ -255,6 +255,15 @@ def test_check_reaction_weights():
     assert raised1 and raised2
 
 
+# Testing permutation
+
+
+def test_permute_genelabels(model, gene_weights):
+    perm_sol, perm_bin, perm_recs, perm_genes = enum.permute_genelabels(model=model, allgenes=gene_weights['expr'],
+                                                                        nperms=4)
+    assert len(perm_sol) == 4 and len(perm_bin) == 4 and perm_recs.shape == (13, 4) and perm_genes.shape == (13, 4)
+
+
 # Testing main functions
 
 @mock.patch('argparse.ArgumentParser.parse_args',
@@ -369,4 +378,13 @@ def test_pathway_main_json(mock_args):
                                                 'model', 'results', 'example_r13m10_'))))
 def test_pathway_main_sbml(mock_args):
     res = pe._main()
+    assert res is True
+
+
+@mock.patch('argparse.ArgumentParser.parse_args',
+            return_value=argparse.Namespace(model=GLOB_modelstring, gene_file=GLOB_expressionstring, npermutations=4,
+                                            gene_index='false', output=str(pathlib.Path(__file__).parent.joinpath(
+                                                'model', 'results', 'example_r13m10_perms_'))), error_tol=10)
+def test_permutation_main(mock_args):
+    res = enum.permutation_functions._main()
     assert res is True

@@ -89,7 +89,8 @@ def _main():
     It performs the permutation test.
     Use --help to see commandline parameters
     """
-    description = 'Performs the modified iMAT algorithm with reaction weights'
+    description = ('Performs gene label permutation. In each loop the gene expression values are randomly shuffled '
+                   'before computing an iMAT solution')
     parser = argparse.ArgumentParser(description=description,
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-m', '--model', default=argparse.SUPPRESS,
@@ -109,7 +110,7 @@ def _main():
     model = dp.read_model(args.model)
     model = dp.check_model_options(model)
 
-    gwfile = pd.read_csv(args.gene_file, sep=';|,|\t', engine='python')
+    gwfile = pd.read_csv(args.gene_file, sep=';|,|\t', engine='python', index_col=0)
     allgenes = gwfile[gwfile.columns[0]]
 
     if args.gene_index.lower() == 'false':
