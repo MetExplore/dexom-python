@@ -43,6 +43,14 @@ diversity\_enum_functions module
    :undoc-members:
    :show-inheritance:
 
+permutation\_functions module
+----------------------------------------------------
+
+.. automodule:: dexom_python.enum_functions.permutation_functions
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Module contents
 ---------------
 

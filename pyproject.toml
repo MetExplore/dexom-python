@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "dexom_python"
-version = "1.0.2"
+version = "1.1"
 description = "DEXOM implementation in python using cobrapy"
 authors = ["Maximilian Stingl <maximilian.stingl@inrae.fr>"]
 license = "GPL-3.0"
