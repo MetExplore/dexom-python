@@ -1,4 +1,3 @@
-import six
 import argparse
 import time
 import optlang
@@ -139,7 +138,7 @@ def imat(model, reaction_weights=None, epsilon=DEFAULT_VALUES['epsilon'], thresh
         else:
             # model = create_full_variables(model, reaction_weights, epsilon, threshold)
             model = create_new_partial_variables(model, reaction_weights, epsilon, threshold)
-        for rid, weight in six.iteritems(reaction_weights):
+        for rid, weight in reaction_weights.items():
             if weight > 0 and rid in model.reactions:
                 y_pos = model.solver.variables['xf_' + rid]
                 y_neg = model.solver.variables['xr_' + rid]

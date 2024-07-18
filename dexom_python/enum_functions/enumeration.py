@@ -199,9 +199,9 @@ def check_reaction_weights(rw):
     ----------
     rw: dict
     """
-    if isinstance(rw, dict):
+    if isinstance(rw, dict) or isinstance(rw, pd.Series):
         df = pd.Series(rw, dtype=float)
         if len(df) == 0 or (df.max() == df.min() == 0.):
             raise ValueError('reaction_weight dictionary contains no non-zero entries')
     else:
-        raise TypeError('reaction_weight is not a dictionary')
+        raise TypeError('reaction_weight is not a dictionary or pandas Series')

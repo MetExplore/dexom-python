@@ -1,5 +1,4 @@
 import argparse
-import six
 import time
 import numpy as np
 import pandas as pd
@@ -77,7 +76,7 @@ def diversity_enum(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['e
         # randomly selecting reactions with nonzero weights for the distance maximization step
         tempweights = {}
         i = 0
-        for rid, weight in six.iteritems(reaction_weights):
+        for rid, weight in reaction_weights.items():
             if np.random.random() > dist_anneal**idx and weight != 0:
                 tempweights[rid] = weight
                 i += 1

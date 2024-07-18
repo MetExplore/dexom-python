@@ -1,5 +1,4 @@
 import argparse
-import six
 import time
 import numpy as np
 import pandas as pd
@@ -28,7 +27,7 @@ def create_icut_constraint(model, reaction_weights, threshold, prev_sol, name, f
     else:
         newbound = -1
         var_vals = []
-        for rid, weight in six.iteritems(reaction_weights):
+        for rid, weight in reaction_weights.items():
             if weight != 0.:
                 x = model.solver.variables['x_' + rid]
                 if np.abs(prev_sol.fluxes[rid]) >= (threshold-tol):

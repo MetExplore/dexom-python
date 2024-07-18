@@ -1,5 +1,4 @@
 import argparse
-import six
 import time
 import pandas as pd
 import numpy as np
@@ -21,13 +20,17 @@ def create_maxdist_constraint(model, reaction_weights, prev_sol, obj_tol, name='
     lower_opt = prev_sol.objective_value - prev_sol.objective_value * obj_tol
     variables = []
     weights = []
-    for rid, weight in reaction_weights.items():
-        if weight > 0:
-            variables.append(model.solver.variables['x_' + rid])
-            weights.append(weight)
-        elif weight < 0:
-            variables.append(sympify('1') - model.solver.variables['x_' + rid])
-            weights.append(abs(weight))
+    try:
+        for rid, weight in reaction_weights.items():
+            if weight > 0:
+                variables.append(model.solver.variables['x_' + rid])
+                weights.append(weight)
+            elif weight < 0:
+                variables.append(sympify('1') - model.solver.variables['x_' + rid])
+                weights.append(abs(weight))
+    except KeyError as e:
+        raise Exception('Searching for the reaction_weights in the model raised a KeyError, verify that all indexes '
+                        'from reaction_weights are present in the model and spelled correctly') from e
     opt_const = model.solver.interface.Constraint(Add(*[x * w for x, w in zip(variables, weights)]), lb=lower_opt, name=name)
     return opt_const
 
@@ -49,7 +52,7 @@ def create_maxdist_objective(model, reaction_weights, prev_sol, prev_sol_bin, on
             elif not only_ones:
                 expr += 1 - x
     else:
-        for rid, weight in six.iteritems(reaction_weights):
+        for rid, weight in reaction_weights.items():
             rid_loc = prev_sol.fluxes.index.get_loc(rid)
             if weight > 0:
                 x = model.solver.variables['x_' + rid]
