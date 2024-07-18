@@ -1,25 +1,13 @@
 import optlang
 import pandas as pd
 import numpy as np
+import cobra
 from pathlib import Path
 from cobra.io import load_json_model, read_sbml_model, load_matlab_model
 from cobra.flux_analysis import find_blocked_reactions
 from warnings import warn
-from cobra.exceptions import SolverNotFound
-
-
-DEFAULT_VALUES = {  # these are the default values used for all the functions in the dexom_python package
-    'solver': 'cplex',
-    'timelimit': None,
-    'mipgap': 1e-3,
-    'tolerance': 1e-7,
-    'verbosity': 1,
-    'epsilon': 1e-4,
-    'threshold': 1e-4,
-    'obj_tol': 1e-3,
-    'maxiter': 10,
-    'dist_anneal': 0.95,
-}
+from cobra.exceptions import SolverNotFound, OptimizationError
+from dexom_python.default_parameter_values import DEFAULT_VALUES
 
 
 def read_model(modelfile, solver='cplex'):
@@ -34,25 +22,60 @@ def read_model(modelfile, solver='cplex'):
     elif fileformat == '':
         warn('Wrong model path')
     else:
-        warn('Only SBML, JSON, and Matlab formats are supported for the models')
+        raise TypeError('Only SBML, JSON, and Matlab formats are supported for the models')
     try:
         model.solver = solver
     except SolverNotFound:
-        warn('The solver: %s is not available or not properly installed' % solver)
+        warn('The solver: %s is not available or not properly installed\n' % solver)
     return model
 
 
-def check_model_options(model, timelimit=None, feasibility=DEFAULT_VALUES['tolerance'],
-                        mipgaptol=DEFAULT_VALUES['mipgap'], verbosity=1):
+def check_model_options(model, timelimit=DEFAULT_VALUES['timelimit'], feasibility=DEFAULT_VALUES['tolerance'],
+                        mipgaptol=DEFAULT_VALUES['mipgap'], verbosity=DEFAULT_VALUES['verbosity']):
     model.solver.configuration.timeout = timelimit
     model.tolerance = feasibility
     model.solver.configuration.verbosity = verbosity
     model.solver.configuration.presolve = True
     if hasattr(optlang, 'cplex_interface'):
-        model.solver.problem.parameters.mip.tolerances.mipgap.set(mipgaptol)
+        if isinstance(model.solver, optlang.cplex_interface.Model):
+            model.solver.problem.parameters.mip.tolerances.mipgap.set(mipgaptol)
     else:
         warn('setting the MIP gap tolerance is only available with the cplex solver')
     return model
+
+
+def check_threshold_tolerance(model, epsilon, threshold):
+    cobra_config = cobra.Configuration()
+    limit = model.tolerance * max(abs(cobra_config.upper_bound), abs(cobra_config.lower_bound))
+    if threshold < 2*limit:
+        raise ValueError('The threshold parameter value is too low compared to the current model tolerance. '
+                         'Current threshold value: %s. Current tolerance value:%s. Minimum threshold value: %s'
+                         % (str(threshold), str(model.tolerance), str(2*limit)))
+    if epsilon < np.around(threshold + limit, 10):
+        raise ValueError('The epsilon parameter value is too low compared to the current threshold and model tolerance.'
+                         ' Current epsilon value: %s. Current threshold value: %s. Current tolerance value:%s. '
+                         'Minimum epsilon value: %s'
+                         % (str(epsilon), str(threshold), str(model.tolerance), str(threshold + limit)))
+    return 0
+
+
+def check_constraint_primal_values(model):
+    for c in model.constraints:
+        if c.ub is None:
+            if c.primal < c.lb - model.tolerance:
+                print('Invalid constraint value for %s: (lb, primal, ub) = (%s, %s, %s)'
+                      % (c.name, str(c.lb), str(c.primal), str(c.ub)))
+                raise OptimizationError('Invalid constraint value for %s ' % c.name)
+        elif c.lb is None:
+            if c.primal > c.ub + model.tolerance:
+                print('Invalid constraint value for %s: (lb, primal, ub) = (%s, %s, %s)'
+                      % (c.name, str(c.lb), str(c.primal), str(c.ub)))
+                raise OptimizationError('Invalid constraint value for  %s ' % c.name)
+        elif c.primal > c.ub + model.tolerance or c.primal < c.lb - model.tolerance:
+            print('Invalid constraint value for %s: (lb, primal, ub) = (%s, %s, %s)'
+                  % (c.name, str(c.lb), str(c.primal), str(c.ub)))
+            raise OptimizationError('Invalid constraint value for  %s ' % c.name)
+    return True
 
 
 def get_all_reactions_from_model(model, save=True, shuffle=True, out_path=''):
@@ -121,6 +144,7 @@ def get_subsystems_from_model(model, save=True, out_path=''):
             sub_list.append(rxn.subsystem)
     if sub_list[-1] == '':
         sub_list.pop()
+    sub_list.sort()
     rxn_sub = pd.DataFrame.from_dict(rxn_sub, orient='index', columns=['ID', 'subsystem'])
     if save:
         rxn_sub.to_csv(out_path+model.id+'_reactions_subsystems.csv')

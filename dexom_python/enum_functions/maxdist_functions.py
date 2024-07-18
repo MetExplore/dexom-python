@@ -1,16 +1,15 @@
 import argparse
-import six
 import time
 import pandas as pd
 import numpy as np
-from pathlib import Path
-from warnings import warn
 from symengine import Add, sympify
+from warnings import warn, catch_warnings, filterwarnings, resetwarnings
+from cobra.exceptions import OptimizationError
 from dexom_python.enum_functions.icut_functions import create_icut_constraint
 from dexom_python.imat_functions import imat
-from dexom_python.result_functions import read_solution
-from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options, DEFAULT_VALUES
-from dexom_python.enum_functions.enumeration import EnumSolution, get_recent_solution_and_iteration, create_enum_variables
+from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options, check_threshold_tolerance
+from dexom_python.enum_functions.enumeration import EnumSolution, create_enum_variables, read_prev_sol, check_reaction_weights
+from dexom_python.default_parameter_values import DEFAULT_VALUES
 
 
 def create_maxdist_constraint(model, reaction_weights, prev_sol, obj_tol, name='maxdist_optimality', full=False):
@@ -18,37 +17,21 @@ def create_maxdist_constraint(model, reaction_weights, prev_sol, obj_tol, name='
     Creates the optimality constraint for the maxdist algorithm.
     This constraint conserves the optimal objective value of the previous solution
     """
-    y_variables = []
-    y_weights = []
-    x_variables = []
-    x_weights = []
-
-    if full:
-        for rid, weight in six.iteritems(reaction_weights):
-            if weight > 0:
-                y_pos = model.solver.variables['xf_' + rid]
-                y_neg = model.solver.variables['xr_' + rid]
-                y_variables.append([y_neg, y_pos])
-                y_weights.append(weight)
-            elif weight < 0:
-                x = sympify('1') - model.solver.variables['x_' + rid]
-                x_variables.append(x)
-                x_weights.append(abs(weight))
-    else:
-        for rid, weight in six.iteritems(reaction_weights):
-            if weight > 0:
-                y_neg = model.solver.variables['rh_' + rid + '_neg']
-                y_pos = model.solver.variables['rh_' + rid + '_pos']
-                y_variables.append([y_neg, y_pos])
-                y_weights.append(weight)
-            elif weight < 0:
-                x_variables.append(sympify('1') - model.solver.variables['rl_' + rid])
-                x_weights.append(abs(weight))
-
     lower_opt = prev_sol.objective_value - prev_sol.objective_value * obj_tol
-    rh_objective = [(y[0] + y[1]) * y_weights[idx] for idx, y in enumerate(y_variables)]
-    rl_objective = [x * x_weights[idx] for idx, x in enumerate(x_variables)]
-    opt_const = model.solver.interface.Constraint(Add(*rh_objective) + Add(*rl_objective), lb=lower_opt, name=name)
+    variables = []
+    weights = []
+    try:
+        for rid, weight in reaction_weights.items():
+            if weight > 0:
+                variables.append(model.solver.variables['x_' + rid])
+                weights.append(weight)
+            elif weight < 0:
+                variables.append(sympify('1') - model.solver.variables['x_' + rid])
+                weights.append(abs(weight))
+    except KeyError as e:
+        raise Exception('Searching for the reaction_weights in the model raised a KeyError, verify that all indexes '
+                        'from reaction_weights are present in the model and spelled correctly') from e
+    opt_const = model.solver.interface.Constraint(Add(*[x * w for x, w in zip(variables, weights)]), lb=lower_opt, name=name)
     return opt_const
 
 
@@ -69,17 +52,16 @@ def create_maxdist_objective(model, reaction_weights, prev_sol, prev_sol_bin, on
             elif not only_ones:
                 expr += 1 - x
     else:
-        for rid, weight in six.iteritems(reaction_weights):
+        for rid, weight in reaction_weights.items():
             rid_loc = prev_sol.fluxes.index.get_loc(rid)
             if weight > 0:
-                y_neg = model.solver.variables['rh_' + rid + '_neg']
-                y_pos = model.solver.variables['rh_' + rid + '_pos']
+                x = model.solver.variables['x_' + rid]
                 if prev_sol_bin[rid_loc] == 1:
-                    expr += y_neg + y_pos
+                    expr += x
                 elif not only_ones:
-                    expr += 1 - (y_neg + y_pos)
+                    expr += 1 - x
             elif weight < 0:
-                x_rl = sympify('1') - model.solver.variables['rl_' + rid]
+                x_rl = sympify('1') - model.solver.variables['x_' + rid]
                 if prev_sol_bin[rid_loc] == 1:
                     expr += 1 - x_rl
                 elif not only_ones:
@@ -118,6 +100,8 @@ def maxdist(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['epsilon'
     -------
     solution: EnumSolution object
     """
+    check_threshold_tolerance(model=model, epsilon=eps, threshold=thr)
+    check_reaction_weights(reaction_weights)
     if prev_sol is None:
         prev_sol = imat(model, reaction_weights, epsilon=eps, threshold=thr, full=full)
     else:
@@ -131,42 +115,65 @@ def maxdist(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['epsilon'
     opt_const = create_maxdist_constraint(model, reaction_weights, prev_sol, obj_tol,
                                           name='maxdist_optimality', full=full)
     model.solver.add(opt_const)
-    for i in range(maxiter):
+    for idx in range(1, maxiter+1):
         t0 = time.perf_counter()
         if icut:
             # adding the icut constraint to prevent the algorithm from finding the same solutions
-            const = create_icut_constraint(model, reaction_weights, thr, prev_sol, name='icut_'+str(i), full=full)
+            const = create_icut_constraint(model, reaction_weights, thr, prev_sol, name='icut_'+str(idx), full=full)
             model.solver.add(const)
             icut_constraints.append(const)
         # defining the objective: minimize the number of overlapping ones and zeros
         objective = create_maxdist_objective(model, reaction_weights, prev_sol, prev_sol_bin, only_ones, full)
         model.objective = objective
-        try:
-            with model:
+        with catch_warnings():
+            filterwarnings('error')
+            try:
+                # with model:
                 prev_sol = model.optimize()
-            prev_sol_bin = (np.abs(prev_sol.fluxes) >= thr-tol).values.astype(int)
-            all_solutions.append(prev_sol)
-            all_binary.append(prev_sol_bin)
-        except:
-            print('An error occured in iter %i of maxdist' % (i+1))
-        t1 = time.perf_counter()
-        print('time for iteration '+str(i+1)+': ', t1-t0)
+                prev_sol_bin = (np.abs(prev_sol.fluxes) >= thr-tol).values.astype(int)
+                all_solutions.append(prev_sol)
+                all_binary.append(prev_sol_bin)
+                t1 = time.perf_counter()
+                print('time for iteration ' + str(idx) + ':', t1 - t0)
+            except UserWarning as w:
+                resetwarnings()
+                prev_sol = all_solutions[-1]
+                if 'time_limit' in str(w):
+                    print('The solver has reached the timelimit in iteration %i. If this happens frequently, there may '
+                          'be too many constraints in the model. Alternatively, you can try modifying solver '
+                          'parameters such as the feasibility tolerance or the MIP gap tolerance.' % idx)
+                    warn('Solver status is "time_limit" in iteration %i' % idx)
+                elif 'infeasible' in str(w):
+                    print('The solver has encountered an infeasible optimization in iteration %i. If this happens '
+                          'frequently, there may be a problem with the starting solution. Alternatively, you can try '
+                          'modifying solver parameters such as the feasibility tolerance or the MIP gap tolerance.'
+                          % idx)
+                    warn('Solver status is "infeasible" in iteration %i' % idx)
+                else:
+                    print('An unexpected error has occured during the solver call in iteration %i.' % idx)
+                    warn(w)
+            except OptimizationError as e:
+                resetwarnings()
+                prev_sol = all_solutions[-1]
+                print('An unexpected error has occured during the solver call in iteration %i.' % idx)
+                warn(str(e), UserWarning)
     model.solver.remove([const for const in icut_constraints if const in model.solver.constraints])
     model.solver.remove(opt_const)
     solution = EnumSolution(all_solutions, all_binary, all_solutions[0].objective_value)
     return solution
 
 
-def main():
+def _main():
     """
     This function is called when you run this script from the commandline.
     It performs the distance-maximization enumeration algorithm
     Use --help to see commandline parameters
     """
     description = 'Performs the distance-maximization enumeration algorithm'
-    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument('-m', '--model', help='Metabolic model in sbml, matlab, or json format')
-    parser.add_argument('-r', '--reaction_weights', default=None,
+    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('-m', '--model', default=argparse.SUPPRESS,
+                        help='Metabolic model in sbml, matlab, or json format')
+    parser.add_argument('-r', '--reaction_weights', default=argparse.SUPPRESS,
                         help='Reaction weights in csv format (first row: reaction names, second row: weights)')
     parser.add_argument('-p', '--prev_sol', default=[], help='starting solution or directory of recent solutions')
     parser.add_argument('-e', '--epsilon', type=float, default=DEFAULT_VALUES['epsilon'],
@@ -190,35 +197,19 @@ def main():
     reaction_weights = {}
     if args.reaction_weights is not None:
         reaction_weights = load_reaction_weights(args.reaction_weights)
-
-    prev_sol_success = False
-    if args.prev_sol is not None:
-        prev_sol_path = Path(args.prev_sol)
-        if prev_sol_path.is_file():
-            prev_sol, prev_bin = read_solution(args.prev_sol, model)
-            model = create_enum_variables(model, reaction_weights, eps=args.epsilon, thr=args.threshold, full=args.full)
-            prev_sol_success = True
-        elif prev_sol_path.is_dir():
-            try:
-                prev_sol, i = get_recent_solution_and_iteration(args.prev_sol, args.startsol_num)
-            except:
-                warn('Could not find solution in directory %s, computing new starting solution' % args.prev_sol)
-            else:
-                model = create_enum_variables(model, reaction_weights, eps=args.epsilon, thr=args.threshold,
-                                              full=args.full)
-                prev_sol_success = True
-        else:
-            warn('Could not read previous solution at path %s, computing new starting solution' % args.prev_sol)
-    if not prev_sol_success:
-        prev_sol = imat(model, reaction_weights, epsilon=args.epsilon, threshold=args.threshold)
+    prev_sol, _ = read_prev_sol(prev_sol_arg=args.prev_sol, model=model, rw=reaction_weights, eps=args.epsilon,
+                                thr=args.threshold)
     icut = False if args.noicut else True
     maxdist_sol = maxdist(model=model, reaction_weights=reaction_weights, prev_sol=prev_sol, eps=args.epsilon,
                           thr=args.threshold, obj_tol=args.obj_tol, maxiter=args.maxiter, icut=icut, full=args.full,
                           only_ones=args.onlyones)
     sol = pd.DataFrame(maxdist_sol.binary)
+    sol.columns = [r.id for r in model.reactions]
     sol.to_csv(args.output+'_solutions.csv')
+    fluxes = pd.concat([s.fluxes for s in maxdist_sol.solutions], axis=1).T.reset_index().drop('index', axis=1)
+    fluxes.to_csv(args.output + '_fluxes.csv')
     return True
 
 
 if __name__ == '__main__':
-    main()
+    _main()

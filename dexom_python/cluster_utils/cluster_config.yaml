@@ -1,0 +1,75 @@
+
+approach: separate
+
+# rxn: just perform reaction-enumeration
+# div: just perform diversity-enumeration
+# grouped: Each batch contains some rxn-enum iterations, then some div-enum iterations, solutions are concatenated at the end
+# separate: (RECOMMENDED) Batches of rxn-enum, then the rxn-enum solutions are concatenated, then batches of div-enum
+# permutation: perform imat on multiple random permutations of the gene expression set
+
+model: toy_models/small4M.json
+# path to a cobrapy-compatible model (sbml, matlab or json format)
+
+reaction_weights: toy_models/small4M_weights.csv
+# path to a reaction-weight csv file with the following 2 columns (other columns are ignored):
+# - one columns called "reactions" which contains reaction IDs as present in the model
+# - one column called "weights" which contains a number
+# if you have a file with gene scores, the conversion into reaction-weights can be performed with dexom_python/gpr_rules.py
+# see documentation here: https://dexom-python.readthedocs.io/en/stable/dexom_python.html#module-dexom_python.gpr_rules
+# or see the commandline options by calling "python dexom_python/gpr_rules.py -h"
+
+output_path: cluster_small4M/
+# Folder to which the files are written. The folder will be created if not present
+
+parallel_batches: 5
+# number of parallel batches to run
+
+enum_iterations: 5
+# number of enumeration iterations per batch
+
+rxn_iterations: 5
+#ONLY for grouped & separate: number of reaction-enumeration iterations per batch
+
+starting_solution: false
+# an imat solution to be used as a starting point for enumeration, optional input
+# set to 'false' when not in use
+
+reaction_list: false
+# list of reactions in the model, optional input for reaction-enumeration
+# if absent, a shuffled list of reactions will be created at "output_path/modelID_reactions_shuffled.csv"
+# set to 'false' when not in use
+
+full: false
+# determines whether to use the full-DEXOM implementation.
+# This implementation requires much longer runtimes, but takes into account all reactions of the model
+
+
+# below are some cluster parameters which are used in the submit_slurm.sh script
+# Note that if the number of cores or allocated time is too low, the jobs may be terminated due to hitting the timelimit
+# However, using a larger number of cores & time than necessary usually increases the queue waiting time
+
+cores: 24
+# number of cores to assign for each job
+time: 01:00:00
+# maximum runtime per job
+memory: 64
+# allocated memory per job in gigabytes. Should not be reduced if handling large datasets and/or models
+
+suppress_slurmfiles: false
+# when set to "true", suppresses the slurm output files in the format "slurm-[jobID].out"
+# this is useful to avoid cluttering the cluster folder with many redundant output files
+# but if an error occurs the error message won't appear in the logs.
+
+
+# below are some parameters which are only used for the "permutation" mode.
+
+gene_file: false
+# a csv file with gene expression data, containing the following columns:
+# - the first column contains unique gene IDs
+# - the second column contains gene expression values
+
+gene_index: false
+# if the gene IDs in gene_file do not match the gene identifiers used in the metabolic model, use this input
+# This csv file should contain the following columns:
+# - the first column contains gene IDs which map onto the metabolic network
+# - the second column contains gene IDs from the gene_file

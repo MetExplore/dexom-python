@@ -1,22 +1,23 @@
 import argparse
-import six
 import time
-import os
 import numpy as np
 import pandas as pd
-from pathlib import Path
-from warnings import warn
+import os
+from warnings import catch_warnings, filterwarnings, resetwarnings, warn
+from cobra.exceptions import OptimizationError
 from dexom_python.imat_functions import imat
-from dexom_python.result_functions import read_solution, write_solution
-from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options, DEFAULT_VALUES
-from dexom_python.enum_functions.enumeration import EnumSolution, get_recent_solution_and_iteration, create_enum_variables
+from dexom_python.result_functions import write_solution
+from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options, check_threshold_tolerance
+from dexom_python.enum_functions.enumeration import EnumSolution, create_enum_variables, read_prev_sol, check_reaction_weights
 from dexom_python.enum_functions.icut_functions import create_icut_constraint
 from dexom_python.enum_functions.maxdist_functions import create_maxdist_constraint, create_maxdist_objective
+from dexom_python.default_parameter_values import DEFAULT_VALUES
 
 
-def diversity_enum(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['epsilon'], thr=DEFAULT_VALUES['threshold'],
-                   obj_tol=DEFAULT_VALUES['obj_tol'], maxiter=DEFAULT_VALUES['maxiter'],
-                   dist_anneal=DEFAULT_VALUES['dist_anneal'], out_path='enum_dexom', icut=True, full=False, save=False):
+def diversity_enum(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['epsilon'],
+                   thr=DEFAULT_VALUES['threshold'], obj_tol=DEFAULT_VALUES['obj_tol'],
+                   maxiter=DEFAULT_VALUES['maxiter'], dist_anneal=DEFAULT_VALUES['dist_anneal'],
+                   out_path='enum_dexom', icut=True, full=False, save=False):
     """
     diversity-based enumeration
 
@@ -48,10 +49,13 @@ def diversity_enum(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['e
     Returns
     -------
     solution: an EnumSolution object
+    stats: a pandas.DataFrame containing the number of selected reactions and runtime of each iteration
     """
     savetimes = []
     buildtimes = []
     runtimes = []
+    check_threshold_tolerance(model=model, epsilon=eps, threshold=thr)
+    check_reaction_weights(reaction_weights)
     if prev_sol is None:
         prev_sol, a, b = imat(model, reaction_weights, epsilon=eps, threshold=thr, full=full)
     else:
@@ -66,48 +70,70 @@ def diversity_enum(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['e
     # preserve the optimality of the original solution
     opt_const = create_maxdist_constraint(model, reaction_weights, prev_sol, obj_tol, 'dexom_optimality', full=full)
     model.solver.add(opt_const)
-    if save:  # when saving each individual solution, ensure that the out_path is a directory
-        os.makedirs(out_path, exist_ok=True)
     for idx in range(1, maxiter+1):
         t0 = time.perf_counter()
         if icut:
             # adding the icut constraint to prevent the algorithm from finding duplicate solutions
-            const = create_icut_constraint(model, reaction_weights, thr, prev_sol, 'icut_'+str(idx), full)
+            const = create_icut_constraint(model, reaction_weights, thr, prev_sol, 'icut_'+str(idx), full=full)
             model.solver.add(const)
             icut_constraints.append(const)
         # randomly selecting reactions with nonzero weights for the distance maximization step
         tempweights = {}
         i = 0
-        for rid, weight in six.iteritems(reaction_weights):
+        for rid, weight in reaction_weights.items():
             if np.random.random() > dist_anneal**idx and weight != 0:
                 tempweights[rid] = weight
                 i += 1
         selected_recs.append(i)
         objective = create_maxdist_objective(model, tempweights, prev_sol, prev_sol_bin, full=full)
         model.objective = objective
-        try:
-            t2 = time.perf_counter()
-            print('time before optimizing in iteration '+str(idx)+':', t2-t0)
-            buildtimes.append(str(t2-t0))
-            with model:
+        t2 = time.perf_counter()
+        print('time before optimizing in iteration ' + str(idx) + ':', t2 - t0)
+        with catch_warnings():
+            filterwarnings('error')
+            try:
+                t2 = time.perf_counter()
+                print('time before optimizing in iteration ' + str(idx) + ':', t2 - t0)
+                buildtimes.append(str(t2 - t0))
+                # with model:
                 prev_sol = model.optimize()
-            prev_sol_bin = (np.abs(prev_sol.fluxes) >= thr-tol).values.astype(int)
-            all_solutions.append(prev_sol)
-            all_binary.append(prev_sol_bin)
-            t1 = time.perf_counter()
-            print('time for optimizing in iteration ' + str(idx) + ':', t1 - t2)
-            times.append(t1 - t0)
-            runtimes.append(str(t1-t2))
-            if save:
-                write_solution(model, prev_sol, thr,
-                               filename=out_path+'_solution_'+time.strftime('%Y%m%d-%H%M%S')+'.csv')
+                prev_sol_bin = (np.abs(prev_sol.fluxes) >= thr-tol).values.astype(int)
+                all_solutions.append(prev_sol)
+                all_binary.append(prev_sol_bin)
+                t1 = time.perf_counter()
+                times.append(t1 - t0)
+                runtimes.append(str(t1 - t2))
+                if save:
+                    write_solution(model, prev_sol, thr,
+                                   filename=out_path+'_solution_'+time.strftime('%Y%m%d-%H%M%S')+'.csv')
                 t3 = time.perf_counter()
                 savetimes.append(str(t3-t1))
-        except:
-            print('An error occured in iteration %i of dexom, no solution was returned' % idx)
-            times.append(-1)
-            prev_sol = all_solutions[-1]
 
+                print('time for optimizing in iteration ' + str(idx) + ':', t1 - t2)
+            except UserWarning as w:
+                resetwarnings()
+                times.append(-1)
+                prev_sol = all_solutions[-1]
+                if 'time_limit' in str(w):
+                    print('The solver has reached the timelimit in iteration %i. If this happens frequently, there may '
+                          'be too many constraints in the model. Alternatively, you can try modifying solver '
+                          'parameters such as the feasibility tolerance or the MIP gap tolerance.' % idx)
+                    warn('Solver status is "time_limit" in iteration %i' % idx)
+                elif 'infeasible' in str(w):
+                    print('The solver has encountered an infeasible optimization in iteration %i. If this happens '
+                          'frequently, there may be a problem with the starting solution. Alternatively, you can try '
+                          'modifying solver parameters such as the feasibility tolerance or the MIP gap tolerance.'
+                          % idx)
+                    warn('Solver status is "infeasible" in iteration %i' % idx)
+                else:
+                    print('An unexpected error has occured during the solver call in iteration %i.' % idx)
+                    warn(w)
+            except OptimizationError as e:
+                resetwarnings()
+                times.append(-1)
+                prev_sol = all_solutions[-1]
+                print('An unexpected error has occured during the solver call in iteration %i.' % idx)
+                warn(str(e), UserWarning)
     model.solver.remove([const for const in icut_constraints if const in model.solver.constraints])
     model.solver.remove(opt_const)
     solution = EnumSolution(all_solutions, all_binary, all_solutions[0].objective_value)
@@ -119,7 +145,7 @@ def diversity_enum(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['e
     return solution, df, savetimes, buildtimes, runtimes
 
 
-def main():
+def _main():
     """
     This function is called when you run this script from the commandline.
     It performs the reaction-enumeration algorithm on a specified list of reactions
@@ -127,11 +153,12 @@ def main():
     """
     description = 'Performs the diversity-enumeration algorithm'
 
-    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument('-m', '--model', help='Metabolic model in sbml, matlab, or json format')
-    parser.add_argument('-r', '--reaction_weights', default=None,
+    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('-m', '--model', default=argparse.SUPPRESS,
+                        help='Metabolic model in sbml, matlab, or json format')
+    parser.add_argument('-r', '--reaction_weights', default=argparse.SUPPRESS,
                         help='Reaction weights in csv format (first row: reaction names, second row: weights)')
-    parser.add_argument('-p', '--prev_sol', default=[], help='starting solution or directory of recent solutions')
+    parser.add_argument('-p', '--prev_sol', default=None, help='starting solution or directory of recent solutions')
     parser.add_argument('-e', '--epsilon', type=float, default=DEFAULT_VALUES['epsilon'],
                         help='Activation threshold for highly expressed reactions')
     parser.add_argument('--threshold', type=float, default=DEFAULT_VALUES['threshold'],
@@ -146,8 +173,10 @@ def main():
     parser.add_argument('-a', '--dist_anneal', type=float, default=DEFAULT_VALUES['dist_anneal'],
                         help='this parameter 0<=a<=1 controls the distance between each successive solution, '
                              '0 meaning no distance and 1 maximal distance')
-    parser.add_argument('-s', '--startsol_num', type=int, default=1, help='number of starting solutions'
-                                                                          '(if prev_sol is a directory)')
+    parser.add_argument('-s', '--startsol', type=int, default=1, help='total number of starting solutions '
+                                                                      '(if prev_sol is a directory)'
+                                                                      'which solution to use as starting point'
+                                                                      '(if prev_sol is a binary solution file)')
     parser.add_argument('--noicut', action='store_true', help='Use this flag to remove the icut constraint')
     parser.add_argument('--full', action='store_true', help='Use this flag to assign non-zero weights to all reactions')
     parser.add_argument('--save', action='store_true', help='Use this flag to save each individual solution')
@@ -158,37 +187,21 @@ def main():
     reaction_weights = {}
     if args.reaction_weights is not None:
         reaction_weights = load_reaction_weights(args.reaction_weights)
-    a = args.dist_anneal
-    prev_sol_success = False
-    if args.prev_sol is not None:
-        prev_sol_path = Path(args.prev_sol)
-        if prev_sol_path.is_file():
-            prev_sol, prev_bin = read_solution(args.prev_sol, model)
-            model = create_enum_variables(model, reaction_weights, eps=args.epsilon, thr=args.threshold, full=args.full)
-            prev_sol_success = True
-        elif prev_sol_path.is_dir():
-            try:
-                prev_sol, i = get_recent_solution_and_iteration(args.prev_sol, args.startsol_num)
-            except:
-                warn('Could not find solution in directory %s, computing new starting solution' % args.prev_sol)
-            else:
-                a = a ** i
-                model = create_enum_variables(model, reaction_weights, eps=args.epsilon, thr=args.threshold,
-                                              full=args.full)
-                prev_sol_success = True
-        else:
-            warn('Could not read previous solution at path %s, computing new starting solution' % args.prev_sol)
-    if not prev_sol_success:
-        prev_sol = imat(model, reaction_weights, epsilon=args.epsilon, threshold=args.threshold)
     icut = False if args.noicut else True
-
+    prev_sol, dist_anneal = read_prev_sol(prev_sol_arg=args.prev_sol, model=model, rw=reaction_weights,
+                                          eps=args.epsilon, thr=args.threshold, a=args.dist_anneal,
+                                          startsol=args.startsol)
     dex_sol, dex_res = diversity_enum(model=model, reaction_weights=reaction_weights, prev_sol=prev_sol,
-                                      thr=args.threshold, maxiter=args.maxiter, obj_tol=args.obj_tol, dist_anneal=a,
-                                      icut=icut, full=args.full, save=args.save)
+                                      thr=args.threshold, maxiter=args.maxiter, obj_tol=args.obj_tol,
+                                      dist_anneal=dist_anneal, out_path=args.output, icut=icut, full=args.full,
+                                      save=args.save)
     dex_res.to_csv(args.output + '_results.csv')
-    pd.DataFrame(dex_sol.binary).to_csv(args.output + '_solutions.csv')
+    sol = pd.DataFrame(dex_sol.binary, columns=[r.id for r in model.reactions])
+    sol.to_csv(args.output + '_solutions.csv')
+    fluxes = pd.concat([s.fluxes for s in dex_sol.solutions], axis=1).T.reset_index().drop('index', axis=1)
+    fluxes.to_csv(args.output + '_fluxes.csv')
     return True
 
 
 if __name__ == '__main__':
-    main()
+    _main()

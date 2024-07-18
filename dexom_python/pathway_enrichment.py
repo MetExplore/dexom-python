@@ -8,26 +8,28 @@ from statsmodels.stats.multitest import fdrcorrection
 from dexom_python.model_functions import read_model, get_subsystems_from_model
 
 
-def Fischer_groups(model, solpath, outpath='test'):
+def Fisher_groups(model, solpath, outpath='Fisher_groups'):
     """
     !!! This only works if the pathway name is stored in the model.groups property !!!
-    For models where the pathways are stored in the model.reactions.subsystem property, use the Fischer_pathways function
+    For models where the pathways are stored in the model.reactions.subsystem property, use the Fischer_subsystems function
 
     Performs pathway over- and underrepresentation analysis
 
     Parameters
     ----------
-    solpath: file containing DEXOM solutions
-    subframe: csv file associating reactions with subsystems
-    sublist: list of subsystems
-    outpath: path to which results are saved
+    model: cobra.Model
+    solpath: str
+        file containing DEXOM solutions
+    outpath: str
+        path to which results are saved
 
     Returns
     -------
     over, under: pandas.DataFrames (saved as .csv files) containing -log10 BH-adjusted p-values
     """
     df = pd.read_csv(solpath, dtype=int, index_col=0)
-    df.columns = [r.id for r in model.reactions]
+    if df.columns[0] not in model.reactions:
+        df.columns = [r.id for r in model.reactions]
     pvalsu = {}
     pvalso = {}
     for path in model.groups:
@@ -54,19 +56,23 @@ def Fischer_groups(model, solpath, outpath='test'):
     return over, under
 
 
-def Fisher_pathways(solpath, subframe, sublist, outpath=''):
+def Fisher_subsystems(solpath, subframe, sublist, outpath='Fisher_subsystems'):
     """
     !!! This only works if the pathway name is stored in the model.reaction.subsystem property !!!
-    For models where the pathways are stored in the model.groups property, use the new Fischer_groups function
+    For models where the pathways are stored in the model.groups property, use the Fischer_groups function
 
     Performs pathway over- and underrepresentation analysis
 
     Parameters
     ----------
-    solpath: file containing DEXOM solutions
-    subframe: csv file associating reactions with subsystems
-    sublist: list of subsystems
-    outpath: path to which results are saved
+    solpath: str
+        file containing DEXOM solutions
+    subframe: pandas.DataFrame
+        dataframe with 'ID' column containing reaction IDs and one 'subsystem' column containing pathways
+    sublist: list
+        list of subsystems
+    outpath: str
+        path to which results are saved
 
     Returns
     -------
@@ -142,15 +148,16 @@ def plot_Fisher_pathways(filename_over, filename_under, sublist, outpath='pathwa
     return over, under
 
 
-def main():
+def _main():
     """
     This function is called when you run this script from the commandline.
     It performs pathway enrichment analysis using a hypergeometric test (Fischer exact test)
     Use --help to see commandline parameters
     """
     description = 'Performs pathway enrichment analysis using a hypergeometric test (Fischer exact test)'
-    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument('-s', '--solutions', help='csv file containing enumeration solutions')
+    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('-s', '--solutions', default=argparse.SUPPRESS,
+                        help='csv file containing enumeration solutions')
     parser.add_argument('-m', '--model', default=None, help='Metabolic model in sbml, json, or matlab format, '
                                                             'required if subframe & sublist are absent')
     parser.add_argument('--sublist', default=None, help='List of all pathways/subsystems in the model')
@@ -171,13 +178,13 @@ def main():
         sublist = pd.read_csv(args.sublist, sep=';').columns.to_list()
 
     if groups:
-        Fischer_groups(model=model, solpath=args.solution, outpath=args.out_path)
+        Fisher_groups(model=model, solpath=args.solutions, outpath=args.out_path)
     else:
-        Fisher_pathways(solpath=args.solutions, subframe=subframe, sublist=sublist, outpath=args.out_path)
+        Fisher_subsystems(solpath=args.solutions, subframe=subframe, sublist=sublist, outpath=args.out_path)
     plot_Fisher_pathways(filename_over=args.out_path+'pathways_pvalues_over.csv', sublist=sublist,
                          filename_under=args.out_path+'pathways_pvalues_under.csv', outpath=args.out_path)
     return True
 
 
 if __name__ == '__main__':
-    main()
+    _main()

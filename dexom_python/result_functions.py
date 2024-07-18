@@ -6,6 +6,7 @@ from pathlib import Path
 from warnings import warn
 from cobra import Solution
 from sklearn.decomposition import PCA
+from dexom_python.default_parameter_values import DEFAULT_VALUES
 
 
 def write_solution(model, solution, threshold, filename='imat_sol.csv'):
@@ -28,48 +29,84 @@ def write_solution(model, solution, threshold, filename='imat_sol.csv'):
     return solution, solution_binary
 
 
-def read_solution(filename, model=None):
+def read_solution(filename, model=None, reaction_weights=None, solution_index=0, eps=DEFAULT_VALUES['epsilon'],
+                  thr=DEFAULT_VALUES['threshold']):
     """
-    Reads a solution from a .csv file. If the provided file is a binary solutions file
-    (as output by enumeration methods), the first solution will be read
+    Reads a solution from a .csv file. If the provided file is a file containing fluxes
+    (as output by enumeration methods), the solution number solution_index will be read
 
     Parameters
     ----------
     filename: str
         name of the file containing the solution
     model: cobra.Model
-        required if the filename points to a binary solution file
+        optional unless the filename points to a solution file without reaction IDs
+    reaction_weights: dict
+        optional unless the filename points to a flux file, in which case it is needed for calculating objective values
+    solution_index: int
+        defines which solution will be read from the binary solution file
+    eps: float
+    thr: float
 
     Returns
     -------
     solution: cobra.Solution
     sol_bin: numpy.array
     """
-    binary = True
+    fluxflag = True
     with open(filename, 'r') as f:
         reader = f.read().split('\n')
         if reader[0] == 'reaction,fluxes,binary':
-            binary = False
+            fluxflag = False
             if reader[-1] == '':
                 reader.pop(-1)
             objective_value = float(reader[-2].split()[-1])
             status = reader[-1].split()[-1]
-    if binary:
-        fluxes = pd.read_csv(filename, index_col=0).iloc[0]
+    if fluxflag:
+        df = pd.read_csv(filename, index_col=0)
+        fluxes = df.iloc[solution_index % (len(df)-1)]
         if model is not None:
             fluxes.index = [rxn.id for rxn in model.reactions]
         else:
-            warn('A model is necessary for setting the reaction IDs in a binary solution.'
-                 'Disregard this warning if the columns of the binary solution are already reaction IDs')
+            print('A model is necessary for setting the reaction IDs in a flux solution. '
+                  'Disregard this message if the columns of the flux solution are already reaction IDs')
         sol_bin = np.array(fluxes.values)
-        objective_value = 0.
-        status = 'binary'
+        if reaction_weights is None or model is None:
+            objective_value = -1.
+        else:
+            objective_value = calc_objval_from_flux(fluxes, model=model, rw=reaction_weights, eps=eps, thr=thr)
+        status = 'flux'
     else:
         df = pd.read_csv(filename, index_col=0, skipfooter=2, engine='python')
         fluxes = df['fluxes']
         sol_bin = df['binary'].to_list()
     solution = Solution(objective_value, status, fluxes)
     return solution, sol_bin
+
+
+def calc_objval_from_flux(fluxsol, model, rw, eps=DEFAULT_VALUES['epsilon'], thr=DEFAULT_VALUES['threshold']):
+    """
+    Calculates the objective value of a solution based on the flux values
+    Parameters
+    ----------
+    fluxsol: pandas.Series
+        a flux solution in which the index contains the model reaction IDs
+    model: cobra.model
+    rw: dict
+    eps: float
+    thr: float
+
+    Returns
+    -------
+    objval: float
+    """
+    objval = 0
+    for r, w in rw.items():
+        if w > 0 and np.abs(fluxsol[r]) >= eps-model.tolerance:
+            objval += w
+        elif w < 0 and  np.abs(fluxsol[r]) < thr + model.tolerance:
+            objval -= w
+    return objval
 
 
 def compile_solutions(solutions, out_path='compiled_solutions', solution_pattern='*.csv', model=None, threshold=None):
@@ -167,12 +204,14 @@ def plot_pca(solution_path, rxn_enum_solutions=None, save=True, save_name=''):
     fig, ax = plt.subplots(figsize=(10, 10))
     plt.xticks(fontsize=12)
     plt.yticks(fontsize=14)
-    plt.xlabel('Principal Component 1', fontsize=20)
-    plt.ylabel('Principal Component 2', fontsize=20)
+    plt.xlabel(f'Principal Component 1 (explained variance: {np.around(pca.explained_variance_ratio_[0], 1)}%)', fontsize=20)
+    plt.ylabel(f'Principal Component 2 (explained variance: {np.around(pca.explained_variance_ratio_[1], 1)}%)', fontsize=20)
     plt.title('PCA of enumeration solutions', fontsize=20)
     if rxn_enum_solutions is not None:
         plt.scatter(x2, y2, color='g', label='rxn-enum solutions')
-    plt.scatter(x, y, color='b', label='div-enum solutions')
+        plt.scatter(x, y, color='b', label='div-enum solutions')
+    else:
+        plt.scatter(x, y, color='b', label='enumeration solutions')
     plt.scatter(x[0], y[0], color='r', label='iMAT solution')
     plt.legend(fontsize='large')
     if save:
@@ -180,17 +219,17 @@ def plot_pca(solution_path, rxn_enum_solutions=None, save=True, save_name=''):
     return pca
 
 
-def main():
+def _main():
     """
     This function is called when you run this script from the commandline.
     It plots a 2-dimensional PCA of enumeration solutions and saves as png
     Use --help to see commandline parameters
     """
     description = 'Plots a 2-dimensional PCA of enumeration solutions and saves as png'
-    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument('-s', '--solutions', help='csv file containing diversity-enumeration solutions')
+    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('-s', '--solutions', default=argparse.SUPPRESS, help='csv file of enumeration solutions')
     parser.add_argument('-r', '--rxn_solutions', default=None,
-                        help='(optional) csv file containing diversity-enumeration solutions')
+                        help='(optional) csv file containing reaction-enumeration solutions')
     parser.add_argument('-o', '--out_path', default='', help='name of the file which will be saved')
     args = parser.parse_args()
 
@@ -199,4 +238,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    _main()

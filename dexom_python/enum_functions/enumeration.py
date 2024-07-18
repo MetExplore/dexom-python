@@ -3,10 +3,12 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from warnings import warn
+from scipy.spatial.distance import pdist, squareform
 from dexom_python.result_functions import read_solution
 from dexom_python.imat_functions import create_new_partial_variable_single, create_full_variable_single
-from scipy.spatial.distance import pdist, squareform
-from dexom_python.model_functions import DEFAULT_VALUES
+from dexom_python.default_parameter_values import DEFAULT_VALUES
+from dexom_python.imat_functions import imat
 
 
 class EnumSolution(object):
@@ -36,14 +38,14 @@ def create_enum_variables(model, reaction_weights, eps=DEFAULT_VALUES['epsilon']
         elif full and 'x_' + rid not in model.solver.variables:
             model = create_full_variable_single(model=model, rid=rid, reaction_weights=reaction_weights, epsilon=eps,
                                                 threshold=thr)
-        elif reaction_weights[rid] > 0 and 'rh_' + rid + '_pos' not in model.solver.variables:
+        elif reaction_weights[rid] > 0:
             model = create_new_partial_variable_single(model=model, epsilon=eps, threshold=thr, rid=rid, pos=True)
-        elif reaction_weights[rid] < 0 and 'rl_' + rid not in model.solver.variables:
+        elif reaction_weights[rid] < 0:
             model = create_new_partial_variable_single(model=model, epsilon=eps, threshold=thr, rid=rid, pos=False)
     return model
 
 
-def get_recent_solution_and_iteration(dirpath, startsol_num):
+def get_recent_solution_and_iteration(dirpath, startsol_num=1, solution_pattern='*solution*.csv'):
     """
     This functions fetches a solution from a given directory. The solutions are ordered by creation time, and one
     solution is picked using an exponential distribution (meaning that the most recent solution has the highest
@@ -52,25 +54,29 @@ def get_recent_solution_and_iteration(dirpath, startsol_num):
     Parameters
     ----------
     dirpath: str
-        a directory containing imat or enumeration solutions
+        a directory containing imat solutions
     startsol_num: int
         the number of starting solutions present in the directory
-
+    solution_pattern: str
+        pattern which is used to find the solution files
     Returns
     -------
     solution: a Solution object
     iteration: int
         calculates the current iteration, based on how many solutions are already present in the folder
     """
-    paths = sorted(list(Path(dirpath).glob('*solution*.csv')), key=os.path.getctime)
+    paths = sorted(list(Path(dirpath).glob(solution_pattern)), key=os.path.getctime)
     paths.reverse()
-    solpath = paths[int(np.random.exponential(5))]
+    idx = int(np.random.exponential(5))
+    if idx > len(paths):
+        idx = len(paths)-1
+    solpath = paths[idx]
     solution, binary = read_solution(solpath)
     iteration = len(paths) + 1 - startsol_num
     return solution, iteration
 
 
-def combine_binary_solutions(sol_path, solution_pattern='*solutions*.csv', out_path=''):
+def combine_binary_solutions_and_fluxes(sol_path, solution_pattern='*solutions*.csv', out_path=''):
     """
     Combines several binary solution files into one
 
@@ -93,9 +99,44 @@ def combine_binary_solutions(sol_path, solution_pattern='*solutions*.csv', out_p
         sollist.append(pd.read_csv(sol, index_col=0))
     fullsol = pd.concat(sollist, ignore_index=True)
     uniquesol = fullsol.drop_duplicates()
+    fluxes = Path(sol_path).glob(solution_pattern.replace('solutions', 'fluxes'))
+    fluxlist = []
+    for flux in fluxes:
+        fluxlist.append(pd.read_csv(flux, index_col=0))
+    fullflux = pd.concat(fluxlist, ignore_index=True)
+    uniqueflux = fullflux.loc[uniquesol.index]
     print('There are %i unique solutions and %i duplicates.' % (len(uniquesol), len(fullsol) - len(uniquesol)))
-    uniquesol.to_csv(out_path+'combined_solutions.csv')
+    uniquesol.to_csv(out_path + 'unique_solutions.csv')
+    uniqueflux.to_csv(out_path + 'unique_fluxes.csv')
     return uniquesol
+
+
+def read_prev_sol(prev_sol_arg, model, rw, eps=DEFAULT_VALUES['epsilon'], thr=DEFAULT_VALUES['threshold'],
+                  a=DEFAULT_VALUES['dist_anneal'], startsol=1, pattern='*solution_*.csv'):
+    prev_sol_success = False
+    if prev_sol_arg is not None:
+        prev_sol_path = Path(prev_sol_arg)
+        if prev_sol_path.is_file():
+            prev_sol, prev_bin = read_solution(prev_sol_arg, model=model, reaction_weights=rw, solution_index=startsol,
+                                               eps=eps, thr=thr)
+            prev_sol_success = True
+        elif prev_sol_path.is_dir():
+            try:
+                prev_sol, i = get_recent_solution_and_iteration(prev_sol_arg, startsol_num=startsol,
+                                                                solution_pattern=pattern)
+                a = a ** i
+                prev_sol_success = True
+            except IndexError:
+                warn('Could not find any solutions in directory %s, computing new starting solution' % prev_sol_arg)
+        else:
+            warn('Could not read previous solution at path %s, computing new starting solution' % prev_sol_arg)
+    if prev_sol_success is False:
+        prev_sol = imat(model, rw, epsilon=eps, threshold=thr)
+    # if a flux solution was read, the optimal objective value must be calculated
+    if prev_sol.objective_value < 0.:
+        temp_sol = imat(model, rw, epsilon=eps, threshold=thr)
+        prev_sol.objective_value = temp_sol.objective_value
+    return prev_sol, a
 
 
 def analyze_div_enum_results(result_path, solution_path, out_path):
@@ -147,3 +188,20 @@ def analyze_div_enum_results(result_path, solution_path, out_path):
     fig = res['selected reactions'].plot().get_figure()
     fig.savefig(out_path + '_selected_reactions.png')
     return sol.T
+
+
+def check_reaction_weights(rw):
+    """
+    This function raises a TypeError if the reaction-weight object is not a dictionary
+    or a ValueError if the dictionary contains no nonzero values.
+
+    Parameters
+    ----------
+    rw: dict
+    """
+    if isinstance(rw, dict) or isinstance(rw, pd.Series):
+        df = pd.Series(rw, dtype=float)
+        if len(df) == 0 or (df.max() == df.min() == 0.):
+            raise ValueError('reaction_weight dictionary contains no non-zero entries')
+    else:
+        raise TypeError('reaction_weight is not a dictionary or pandas Series')

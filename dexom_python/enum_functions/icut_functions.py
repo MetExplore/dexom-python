@@ -1,16 +1,14 @@
 import argparse
-import six
 import time
-import os
 import numpy as np
 import pandas as pd
-from pathlib import Path
-from warnings import warn
 from symengine import sympify
+from warnings import warn, catch_warnings, filterwarnings, resetwarnings
+from cobra.exceptions import OptimizationError
 from dexom_python.imat_functions import imat
-from dexom_python.result_functions import read_solution, write_solution
-from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options, DEFAULT_VALUES
-from dexom_python.enum_functions.enumeration import EnumSolution, get_recent_solution_and_iteration, create_enum_variables
+from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options, check_threshold_tolerance
+from dexom_python.enum_functions.enumeration import EnumSolution, create_enum_variables, read_prev_sol, check_reaction_weights
+from dexom_python.default_parameter_values import DEFAULT_VALUES
 
 
 def create_icut_constraint(model, reaction_weights, threshold, prev_sol, name, full=False):
@@ -29,27 +27,22 @@ def create_icut_constraint(model, reaction_weights, threshold, prev_sol, name, f
     else:
         newbound = -1
         var_vals = []
-        for rid, weight in six.iteritems(reaction_weights):
-            if weight > 0:
-                y = model.solver.variables['rh_' + rid + '_pos']
-                x = model.solver.variables['rh_' + rid + '_neg']
-                if np.abs(prev_sol.fluxes[rid]) >= threshold-tol:
-                    var_vals.append(y + x)
-                    newbound += 1
-                elif np.abs(prev_sol.fluxes[rid]) < threshold-tol:  # else
-                    var_vals.append(-y - x)
-            elif weight < 0:
-                x = sympify('1') - model.solver.variables['rl_' + rid]
-                if np.abs(prev_sol.fluxes[rid]) < (threshold-tol):
+        for rid, weight in reaction_weights.items():
+            if weight != 0.:
+                x = model.solver.variables['x_' + rid]
+                if np.abs(prev_sol.fluxes[rid]) >= (threshold-tol):
                     var_vals.append(x)
                     newbound += 1
-                elif np.abs(prev_sol.fluxes[rid]) >= (threshold-tol):  # else
+                else:
                     var_vals.append(-x)
         expr = sum(var_vals)
     constraint = model.solver.interface.Constraint(expr, ub=newbound, name=name)
-    if expr.evalf() == 1:
-        print('No reactions were found in reaction_weights when attempting to create an icut constraint')
-        constraint = None
+    # if isinstance(expr, int):
+    #     print('No reactions were found in reaction_weights when attempting to create an icut constraint')
+    #     constraint = None
+    # elif expr.evalf() == 1:
+    #     print('This should not be reached')
+    #     constraint = None
     return constraint
 
 
@@ -80,6 +73,8 @@ def icut(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['epsilon'], 
     solution: EnumSolution object
         In the case of integer-cut, all_solutions and unique_solutions are identical
     """
+    check_threshold_tolerance(model=model, epsilon=eps, threshold=thr)
+    check_reaction_weights(reaction_weights)
     if prev_sol is None:
         prev_sol = imat(model, reaction_weights, epsilon=eps, threshold=thr, full=full)
     else:
@@ -92,44 +87,65 @@ def icut(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['epsilon'], 
     all_solutions_binary = [prev_sol_binary]
     icut_constraints = []
 
-    for i in range(maxiter):
+    for idx in range(1, maxiter+1):
         t0 = time.perf_counter()
-        const = create_icut_constraint(model, reaction_weights, thr, prev_sol, name='icut_'+str(i), full=full)
+        const = create_icut_constraint(model, reaction_weights, thr, prev_sol, name='icut_'+str(idx), full=full)
         model.solver.add(const)
         icut_constraints.append(const)
-        try:
-            prev_sol = imat(model, reaction_weights, epsilon=eps, threshold=thr, full=full)
-        except:
-            print('An error occured in iteration %i of icut, check if all feasible solutions have been found' % (i+1))
-            break
-        t1 = time.perf_counter()
-        print('time for iteration '+str(i+1)+': ', t1-t0)
-        if prev_sol.objective_value >= optimal_objective_value:
-            all_solutions.append(prev_sol)
-            prev_sol_binary = (np.abs(prev_sol.fluxes) >= thr-tol).values.astype(int)
-            all_solutions_binary.append(prev_sol_binary)
-        else:
-            break
-
+        with catch_warnings():
+            filterwarnings('error')
+            try:
+                prev_sol = imat(model, reaction_weights, epsilon=eps, threshold=thr, full=full)
+                t1 = time.perf_counter()
+                print('time for iteration ' + str(idx) + ':', t1 - t0)
+                if prev_sol.objective_value >= optimal_objective_value:
+                    all_solutions.append(prev_sol)
+                    prev_sol_binary = (np.abs(prev_sol.fluxes) >= thr - tol).values.astype(int)
+                    all_solutions_binary.append(prev_sol_binary)
+                else:
+                    break
+            except UserWarning as w:
+                resetwarnings()
+                prev_sol = all_solutions[-1]
+                if 'time_limit' in str(w):
+                    print('The solver has reached the timelimit in iteration %i. If this happens frequently, there may '
+                          'be too many constraints in the model. Alternatively, you can try modifying solver '
+                          'parameters such as the feasibility tolerance or the MIP gap tolerance.' % idx)
+                    warn('Solver status is "time_limit" in iteration %i' % idx)
+                elif 'infeasible' in str(w):
+                    print('The solver has encountered an infeasible optimization in iteration %i. If this happens '
+                          'frequently, there may be a problem with the starting solution. Alternatively, you can try '
+                          'modifying solver parameters such as the feasibility tolerance or the MIP gap tolerance.'
+                          % idx)
+                    warn('Solver status is "infeasible" in iteration %i' % idx)
+                else:
+                    print('An unexpected error has occured during the solver call in iteration %i.' % idx)
+                    warn(w)
+            except OptimizationError as e:
+                resetwarnings()
+                prev_sol = all_solutions[-1]
+                print('An unexpected error has occured during the solver call in iteration %i.' % idx)
+                warn(str(e), UserWarning)
     model.solver.remove([const for const in icut_constraints if const in model.solver.constraints])
     solution = EnumSolution(all_solutions, all_solutions_binary, all_solutions[0].objective_value)
     if full:
-        print('full icut iterations: ', i+1)
+        print('full icut iterations: ', idx)
     else:
-        print('partial icut iterations: ', i+1)
+        print('partial icut iterations: ', idx)
     return solution
 
 
-def main():
+def _main():
     """
     This function is called when you run this script from the commandline.
     It performs the integer-cut enumeration algorithm
     Use --help to see commandline parameters
     """
     description = 'Performs the integer-cut enumeration algorithm'
-    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument('-m', '--model', help='Metabolic model in sbml, matlab, or json format')
-    parser.add_argument('-r', '--reaction_weights', default=None,
+    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('-m', '--model', default=argparse.SUPPRESS,
+                        help='Metabolic model in sbml, matlab, or json format')
+    parser.add_argument('-r', '--reaction_weights', default=argparse.SUPPRESS,
                         help='Reaction weights in csv format (first row: reaction names, second row: weights)')
     parser.add_argument('-p', '--prev_sol', default=[], help='starting solution or directory of recent solutions')
     parser.add_argument('-e', '--epsilon', type=float, default=DEFAULT_VALUES['epsilon'],
@@ -151,34 +167,18 @@ def main():
     reaction_weights = {}
     if args.reaction_weights is not None:
         reaction_weights = load_reaction_weights(args.reaction_weights)
+    prev_sol, _ = read_prev_sol(prev_sol_arg=args.prev_sol, model=model, rw=reaction_weights, eps=args.epsilon,
+                                thr=args.threshold)
 
-    prev_sol_success = False
-    if args.prev_sol is not None:
-        prev_sol_path = Path(args.prev_sol)
-        if prev_sol_path.is_file():
-            prev_sol, prev_bin = read_solution(args.prev_sol, model)
-            model = create_enum_variables(model, reaction_weights, eps=args.epsilon, thr=args.threshold, full=args.full)
-            prev_sol_success = True
-        elif prev_sol_path.is_dir():
-            try:
-                prev_sol, i = get_recent_solution_and_iteration(args.prev_sol, args.startsol_num)
-            except:
-                warn('Could not find solution in directory %s, computing new starting solution' % args.prev_sol)
-            else:
-                model = create_enum_variables(model, reaction_weights, eps=args.epsilon, thr=args.threshold,
-                                              full=args.full)
-                prev_sol_success = True
-        else:
-            warn('Could not read previous solution at path %s, computing new starting solution' % args.prev_sol)
-    if not prev_sol_success:
-        prev_sol = imat(model, reaction_weights, epsilon=args.epsilon, threshold=args.threshold)
-
-    maxdist_sol = icut(model=model, reaction_weights=reaction_weights, prev_sol=prev_sol, eps=args.epsilon,
-                       thr=args.threshold, obj_tol=args.obj_tol, maxiter=args.maxiter, full=args.full)
-    sol = pd.DataFrame(maxdist_sol.binary)
+    icut_sol = icut(model=model, reaction_weights=reaction_weights, prev_sol=prev_sol, eps=args.epsilon,
+                    thr=args.threshold, obj_tol=args.obj_tol, maxiter=args.maxiter, full=args.full)
+    sol = pd.DataFrame(icut_sol.binary)
+    sol.columns = [r.id for r in model.reactions]
     sol.to_csv(args.output+'_solutions.csv')
+    fluxes = pd.concat([s.fluxes for s in icut_sol.solutions], axis=1).T.reset_index().drop('index', axis=1)
+    fluxes.to_csv(args.output + '_fluxes.csv')
     return True
 
 
 if __name__ == '__main__':
-    main()
+    _main()

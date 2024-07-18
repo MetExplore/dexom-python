@@ -117,9 +117,9 @@ def analyze_dexom_cluster_results(in_folder, out_folder, approach=1, filenums=10
             except FileNotFoundError:
                 pass
     elif approach == 2:
-        solname = Path(in_folder).glob('div_enum2021*_solutions.csv')
+        solname = Path(in_folder).glob('div*_solutions.csv')
         all_sol = [pd.read_csv(str(x), index_col=0) for x in solname]
-        resname = Path(in_folder).glob('div_enum2021*_results.csv')
+        resname = Path(in_folder).glob('div*_results.csv')
         all_res = [pd.read_csv(str(x), index_col=0) for x in resname]
     sol = pd.concat(all_sol, ignore_index=True)
     res = pd.concat(all_res, ignore_index=True)
@@ -154,14 +154,14 @@ def analyze_dexom_cluster_results(in_folder, out_folder, approach=1, filenums=10
     return full
 
 
-def main():
+def _main():
     """
     This function is called when you run this script from the commandline.
     It compiles and analyzes results from the DEXOM cluster pipelines
     Use --help to see commandline parameters
     """
     description = 'Compiles and analyzes results from parallel DEXOM'
-    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
+    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-i', '--in_path', default='', help='Path in which the cluster results were saved')
     parser.add_argument('-o', '--out_path', default='', help='Path in which to save compiled results')
     parser.add_argument('-n', '--filenums', type=int, default=100, help='number of parallel threads')
@@ -173,4 +173,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    _main()

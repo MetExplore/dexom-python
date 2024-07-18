@@ -1,8 +1,8 @@
 [tool.poetry]
 name = "dexom_python"
-version = "0.5"
+version = "1.1.1"
 description = "DEXOM implementation in python using cobrapy"
-authors = ["Maximilian Stingl <maximilian.h.a.stingl@gmail.com>"]
+authors = ["Maximilian Stingl <maximilian.stingl@inrae.fr>"]
 license = "GPL-3.0"
 readme="README.md"
 include=["LICENSE"]
@@ -10,17 +10,17 @@ repository = "https://forgemia.inra.fr/metexplore/cbm/dexom-python"
 homepage = "https://forgemia.inra.fr/metexplore/cbm/dexom-python"
 
 [tool.poetry.dependencies]
-python = ">=3.7,<3.10"
-cobra = "^0.25"
-numpy = "1.20"
-six = "^1.16"
-scipy = "1.7"
+python = ">=3.7,<3.11"
+cobra = "^0.26.3"
+numpy = ">=1.20,<1.24"
+scipy = "^1.7"
 symengine = "^0.9.2"
 matplotlib = "^3.5.1"
 scikit-learn = "^1.0.2"
 statsmodels = "^0.13.2"
 
 [tool.poetry.dev-dependencies]
+pytest = "^7.3"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

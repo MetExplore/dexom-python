@@ -1,12 +1,12 @@
 import argparse
-import os
 import pandas as pd
 import numpy as np
-from dexom_python.imat_functions import imat
-from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options, DEFAULT_VALUES
-from dexom_python.result_functions import read_solution, write_solution
-from dexom_python.enum_functions.enumeration import create_enum_variables
+from dexom_python.imat_functions import imat, ImatException
+from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options, check_threshold_tolerance
+from dexom_python.result_functions import write_solution
+from dexom_python.enum_functions.enumeration import create_enum_variables, read_prev_sol, check_reaction_weights
 from warnings import warn
+from dexom_python.default_parameter_values import DEFAULT_VALUES
 
 import time
 
@@ -23,7 +23,7 @@ class RxnEnumSolution(object):
         self.objective_value = objective_value
 
 
-def rxn_enum(model, reaction_weights, prev_sol=None, rxn_list=[], eps=DEFAULT_VALUES['epsilon'],
+def rxn_enum(model, reaction_weights, prev_sol=None, rxn_list=None, eps=DEFAULT_VALUES['epsilon'],
              thr=DEFAULT_VALUES['threshold'], obj_tol=DEFAULT_VALUES['obj_tol'], out_path='enum_rxn', save=False):
     """
     Reaction enumeration method
@@ -35,14 +35,12 @@ def rxn_enum(model, reaction_weights, prev_sol=None, rxn_list=[], eps=DEFAULT_VA
         keys = reactions and values = weights
     prev_sol: imat Solution object
         an imat solution used as a starting point
+    rxn_list: list
+        a list of reactions on which reaction-enumeration will be performed. By default, all reactions are used
     eps: float
         activation threshold in imat
     thr: float
         detection threshold of activated reactions
-    tlim: int
-        time limit for imat
-    tol: float
-        tolerance for imat
     obj_tol: float
         variance allowed in the objective_values of the solutions
     out_path: str
@@ -53,6 +51,8 @@ def rxn_enum(model, reaction_weights, prev_sol=None, rxn_list=[], eps=DEFAULT_VA
     -------
     solution: RxnEnumSolution object
     """
+    check_threshold_tolerance(model=model, epsilon=eps, threshold=thr)
+    check_reaction_weights(reaction_weights)
 
     savetimes = []
     buildtimes = []
@@ -72,107 +72,134 @@ def rxn_enum(model, reaction_weights, prev_sol=None, rxn_list=[], eps=DEFAULT_VA
     unique_solutions_binary = [prev_sol_bin]
     all_reactions = []  # for each solution, save which reaction was activated/inactived by the algorithm
     unique_reactions = []
-    if save:  # when saving each individual solution, ensure that the out_path is a directory
-        os.makedirs(out_path, exist_ok=True)
-    if not rxn_list:
+    if rxn_list is None:
         rxns = list(model.reactions)
         rxn_list = [r.id for r in rxns]
     for rid in rxn_list:
         if rid not in model.reactions:
-            warn('The following reaction ID was not found in the model: %s' % rid)
-        else:
-            idx = np.where(prev_sol.fluxes.index == rid)[0][0]
-            with model as model_temp:
-                if rid in model.reactions:
-                    rxn = model_temp.reactions.get_by_id(rid)
-                    # for active fluxes, check inactivation
-                    if prev_sol_bin[idx] == 1:
-                        rxn.bounds = (0., 0.)
-                    # for inactive fluxes, check activation
+            print('The following reaction ID was not found in the model: %s' % rid)
+            continue
+        idx = np.where(prev_sol.fluxes.index == rid)[0][0]
+        with model as model_temp:
+            if rid in model.reactions:
+                rxn = model_temp.reactions.get_by_id(rid)
+                # for active fluxes, check inactivation
+                if prev_sol_bin[idx] == 1:
+                    rxn.bounds = (0., 0.)
+                # for inactive fluxes, check activation
+                else:
+                    upper_bound_temp = rxn.upper_bound
+                    # for inactive reversible fluxes, check activation in backwards direction
+                    if rxn.lower_bound < 0.:
+                        try:
+                            rxn.upper_bound = -thr
+                            temp_sol, a, b = imat(model_temp, reaction_weights, epsilon=eps, threshold=thr)
+                            temp_sol_bin = (np.abs(temp_sol.fluxes) >= thr-tol).values.astype(int)
+                            if temp_sol.objective_value >= optimal_objective_value:
+                                all_solutions.append(temp_sol)
+                                all_solutions_binary.append(temp_sol_bin)
+                                if not np.any(np.all(temp_sol_bin == unique_solutions_binary, axis=1)):
+                                    unique_solutions.append(temp_sol)
+                                    unique_solutions_binary.append(temp_sol_bin)
+                                    unique_reactions.append(rid+'_backwards')
+                                    buildtimes.append(str(a))
+                                    runtimes.append(str(b))
+                                    if save:
+                                        t0 = time.perf_counter()
+                                        filename = out_path+'_solution_'+str(len(unique_solutions)-1)+'.csv'
+                                        write_solution(model, temp_sol, thr, filename)
+                                        t1 = time.perf_counter()
+                                        savetimes.append(str(t1-t0))
+                        except ImatException as w:
+                            if 'time_limit' in str(w):
+                                print('The solver has reached the timelimit for reaction %s_reverse. If this '
+                                      'happens frequently, there may be too many constraints in the model. '
+                                      'Alternatively, you can try modifying solver parameters such as the '
+                                      'feasibility tolerance or the MIP gap tolerance.' % rid)
+                                warn('Solver status is "time_limit" with reaction %s_reverse' % rid)
+                            elif 'feasibility' in str(w):
+                                print('The solver has encountered an infeasible optimization with reaction '
+                                      '%s_reverse. The model may be infeasible when this reaction is '
+                                      'irreversible. If this happens frequently, there may be a problem with '
+                                      'the starting solution, or the tolerance parameters.' % rid)
+                                warn('Solver status is "infeasible" when reaction %s_reverse is irreversible' % rid)
+                            else:
+                                print('An unexpected error has occured during the solver call with reaction '
+                                      '%s_reverse.' % rid)
+                                warn(str(w))
+                        finally:
+                            rxn.upper_bound = upper_bound_temp
+                    # for all inactive fluxes, check activation in forwards direction
+                    if rxn.upper_bound >= thr:
+                        rxn.lower_bound = thr
                     else:
-                        upper_bound_temp = rxn.upper_bound
-                        # for inactive reversible fluxes, check activation in backwards direction
-                        if rxn.lower_bound < 0.:
-                            try:
-                                rxn.upper_bound = -thr
-                                temp_sol, a, b = imat(model_temp, reaction_weights, epsilon=eps, threshold=thr)
-                                temp_sol_bin = (np.abs(temp_sol.fluxes) >= thr-tol).values.astype(int)
-                                if temp_sol.objective_value >= optimal_objective_value:
-                                    all_solutions.append(temp_sol)
-                                    all_solutions_binary.append(temp_sol_bin)
-                                    if not np.any(np.all(temp_sol_bin == unique_solutions_binary, axis=1)):
-                                        unique_solutions.append(temp_sol)
-                                        unique_solutions_binary.append(temp_sol_bin)
-                                        unique_reactions.append(rid+'_backwards')
+                        print('reaction %s has an upper bound below the detection limit, it cannot carry flux.' % rid)
+                        rxn.lower_bound = rxn.upper_bound
+                        continue
+                # for all fluxes: compute solution with new bounds
+                try:
+                    temp_sol, a, b  = imat(model_temp, reaction_weights, epsilon=eps, threshold=thr)
+                    temp_sol_bin = (np.abs(temp_sol.fluxes) >= thr-tol).values.astype(int)
+                    if temp_sol.objective_value >= optimal_objective_value:
+                        all_solutions.append(temp_sol)
+                        all_solutions_binary.append(temp_sol_bin)
+                        all_reactions.append(rid)
+                        if not np.any(np.all(temp_sol_bin == unique_solutions_binary, axis=1)):
+                            unique_solutions.append(temp_sol)
+                            unique_solutions_binary.append(temp_sol_bin)
+                            unique_reactions.append(rid)
+                            buildtimes.append(str(a))
+                            runtimes.append(str(b))
+                            if save:
+                                t0 = time.perf_counter()
+                                filename = out_path + '_solution_' + str(len(unique_solutions) - 1) + '.csv'
+                                write_solution(model, temp_sol, thr, filename)
+                                t1 = time.perf_counter()
+                                savetimes.append(str(t1 - t0))
 
-                                        buildtimes.append(str(a))
-                                        runtimes.append(str(b))
-
-                                        if save:
-                                            t0 = time.perf_counter()
-                                            filename = out_path+'_solution_'+str(len(unique_solutions)-1)+'.csv'
-                                            write_solution(model, temp_sol, thr, filename)
-                                            t1 = time.perf_counter()
-                                            savetimes.append(str(t1-t0))
-                            except:
-                                print('An error occurred with reaction %s_reverse. '
-                                      'Check feasibility of the model when this reaction is irreversible.' % rid)
-                            finally:
-                                rxn.upper_bound = upper_bound_temp
-                        # for all inactive fluxes, check activation in forwards direction
-                        if rxn.upper_bound >= thr:
-                            rxn.lower_bound = thr
-                        else:
-                            rxn.lower_bound = rxn.upper_bound
-                    # for all fluxes: compute solution with new bounds
-                    try:
-                        temp_sol, a, b = imat(model_temp, reaction_weights, epsilon=eps, threshold=thr)
-                        temp_sol_bin = (np.abs(temp_sol.fluxes) >= thr-tol).values.astype(int)
-                        if temp_sol.objective_value >= optimal_objective_value:
-                            all_solutions.append(temp_sol)
-                            all_solutions_binary.append(temp_sol_bin)
-                            all_reactions.append(rid)
-                            if not np.any(np.all(temp_sol_bin == unique_solutions_binary, axis=1)):
-                                unique_solutions.append(temp_sol)
-                                unique_solutions_binary.append(temp_sol_bin)
-                                unique_reactions.append(rid)
-
-                                buildtimes.append(str(a))
-                                runtimes.append(str(b))
-
-                                if save:
-                                    t0 = time.perf_counter()
-                                    filename = out_path + '_solution_' + str(len(unique_solutions) - 1) + '.csv'
-                                    write_solution(model, temp_sol, thr, filename)
-                                    t1 = time.perf_counter()
-                                    savetimes.append(str(t1 - t0))
-                    except:
-                        if prev_sol_bin[idx] == 1:
-                            print('An error occurred with reaction %s. '
-                                  'Check feasibility of the model when this reaction is blocked' % rid)
-                        else:
-                            print('An error occurred with reaction %s. '
-                                  'Check feasibility of the model when this reaction is irreversible' % rid)
+                except ImatException as w:
+                    if 'time_limit' in str(w):
+                        print('The solver has reached the timelimit for reaction %s. If this happens frequently, '
+                              'there may be too many constraints in the model. Alternatively, you can try '
+                              'modifying solver parameters such as the feasibility tolerance or the MIP gap '
+                              'tolerance.' % rid)
+                        warn('Solver status is "time_limit" with reaction %s' % rid)
+                    elif 'feasibility' in str(w) and prev_sol_bin[idx] == 1:
+                        print('The solver has encountered an infeasible optimization with reaction %s. '
+                              'The model may be infeasible when this reaction is blocked. If this happens '
+                              'frequently, the model may contain many blocked reactions, or there may be a problem '
+                              'with the starting solution, or the tolerance parameters.' % rid)
+                        warn('Solver status is "infeasible" when reaction %s is blocked' % rid)
+                    elif 'feasibility' in str(w) and prev_sol_bin[idx] == 0:
+                        print('The solver has encountered an infeasible optimization with reaction %s. '
+                              'The model may be infeasible when this reaction is irreversible. If this happens '
+                              'frequently, there may be a problem with the starting solution, or the tolerance '
+                              'parameters.' % rid)
+                        warn('Solver status is "infeasible" when reaction %s is irreversible' % rid)
+                    else:
+                        print('An unexpected error has occured during the solver call with reaction %s.' % rid)
+                        warn(str(w))
     solution = RxnEnumSolution(all_solutions, unique_solutions, all_solutions_binary, unique_solutions_binary,
                                all_reactions, unique_reactions, prev_sol.objective_value)
     return solution, savetimes, buildtimes, runtimes
 
 
-def main():
+def _main():
     """
     This function is called when you run this script from the commandline.
     It performs the reaction-enumeration algorithm on a specified list of reactions
     Use --help to see commandline parameters
     """
     description = 'Performs the reaction-enumeration algorithm on a specified list of reactions'
-    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument('-m', '--model', help='Metabolic model in sbml, matlab, or json format')
+    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('-m', '--model', default=argparse.SUPPRESS,
+                        help='Metabolic model in sbml, matlab, or json format')
+    parser.add_argument('-r', '--reaction_weights', default=argparse.SUPPRESS,
+                        help='Reaction weights in csv format (first row: reaction names, second row: weights)')
     parser.add_argument('-l', '--reaction_list', default=None, help='csv list of reactions to enumerate - if empty, '
                                                                     'will use all reactions in the model')
     parser.add_argument('--range', default='_',
                         help='range of reactions to use from the list, in the format "integer_integer", 0-indexed')
-    parser.add_argument('-r', '--reaction_weights', default=None,
-                        help='Reaction weights in csv format (first row: reaction names, second row: weights)')
     parser.add_argument('-p', '--prev_sol', default=None, help='initial imat solution in .txt format')
     parser.add_argument('-e', '--epsilon', type=float, default=DEFAULT_VALUES['epsilon'],
                         help='Activation threshold for highly expressed reactions')
@@ -211,20 +238,19 @@ def main():
         rxn_list = reactions[start:]
     else:
         rxn_list = reactions[start:int(rxn_range[1])]
+    prev_sol, _ = read_prev_sol(prev_sol_arg=args.prev_sol, model=model, rw=reaction_weights, eps=args.epsilon,
+                                thr=args.threshold)
 
-    if args.prev_sol is not None:
-        initial_solution, initial_binary = read_solution(args.prev_sol, model)
-        model = create_enum_variables(model, reaction_weights, eps=args.epsilon, thr=args.threshold, full=False)
-    else:
-        initial_solution, a, b = imat(model, reaction_weights, epsilon=args.epsilon, threshold=args.threshold)
-
-    solution = rxn_enum(model=model, rxn_list=rxn_list, prev_sol=initial_solution, reaction_weights=reaction_weights,
+    solution = rxn_enum(model=model, rxn_list=rxn_list, prev_sol=prev_sol, reaction_weights=reaction_weights,
                         eps=args.epsilon, thr=args.threshold, obj_tol=args.obj_tol, out_path=args.output,
                         save=args.save)
     uniques = pd.DataFrame(solution.unique_binary)
+    uniques.columns = [r.id for r in model.reactions]
     uniques.to_csv(args.output + '_solutions.csv')
+    fluxes = pd.concat([s.fluxes for s in solution.unique_solutions], axis=1).T.reset_index().drop('index', axis=1)
+    fluxes.to_csv(args.output + '_fluxes.csv')
     return True
 
 
 if __name__ == '__main__':
-    main()
+    _main()

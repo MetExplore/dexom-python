@@ -1,10 +1,10 @@
-
-from cobra import Model, Reaction, Metabolite
-from cobra.io import save_json_model
+from cobra.core import Model, Reaction, Metabolite, Group
+from cobra.io import save_json_model, write_sbml_model, save_matlab_model
 from dexom_python.model_functions import save_reaction_weights
 
 
-def create_reaction(model, rname, formula, gene_rule=None, fullname=None, lower_bound=0., upper_bound=1000.):
+def create_reaction(model, rname, formula, gene_rule=None, fullname=None, lower_bound=0., upper_bound=1000.,
+                    subsystem=''):
 
     rxn = Reaction(rname)
     model.add_reactions([rxn])
@@ -12,6 +12,7 @@ def create_reaction(model, rname, formula, gene_rule=None, fullname=None, lower_
     rxn.gene_reaction_rule = rname if gene_rule is None else gene_rule
     rxn.add_metabolites(formula)
     rxn.bounds = (lower_bound, upper_bound)
+    rxn.subsystem = subsystem
 
     return model
 
@@ -180,6 +181,7 @@ def dagNet(num_layers, num_metabolites_per_layer, export=False, solver='cplex'):
     create_reaction(model, 'R_out', {'MetSINK': -1.}, lower_bound=1.)
     # create reaction weights
     # for this simple example, all reactions are lowly expressed
+    # when that is the case, number_of_optimal_solutions == num_metabolites_per_layer ** (num_layers)
     reaction_weights = {}
     for rec in model.reactions:
         reaction_weights[rec.name] = -1.
@@ -192,11 +194,12 @@ def dagNet(num_layers, num_metabolites_per_layer, export=False, solver='cplex'):
 
 def r13m10(export=False, solver='cplex'):
     """
-    This is the model that is used for the unit tests in the tests folder
+    This is the model that is used for the unit tests in the tests/model folder
+
     Parameters
     ----------
     export: bool
-        if True, exports the model as .json and the reaction weights as .csv
+        if True, exports the model as .json, .xml and .mat, and the reaction weights as .csv
     solver: str
         a valid cobrapy solver
 
@@ -209,6 +212,8 @@ def r13m10(export=False, solver='cplex'):
     model.solver = solver
     metabolite_names = ['a', 'b', 'e', 'g', 'h', 'i', 'j', 'f', 'c', 'd']
     metabolites = [Metabolite(m) for m in metabolite_names]
+    for m in metabolites:
+        m.compartment = 'i'
     model.add_metabolites(metabolites)
     reaction_names = ['EX_a', 'EX_b', 'EX_e', 'EX_g', 'EX_h', 'EX_i', 'EX_j', 'R_a_f', 'R_ab_cd', 'R_ef_gh', 'R_f_i',
                       'R_cj_i', 'R_d_j']
@@ -243,10 +248,24 @@ def r13m10(export=False, solver='cplex'):
     ]
     gene_rules = ['G_IMP_A', 'G_IMP_B', 'G_IMP_E', 'G_IMP_G', 'G_IMP_H', 'G_IMP_I', 'G_IMP_J', 'G_A_F', 'G_AB_CD',
                   'G_EF_GH', 'G_F_I', 'G_CJ_I', 'G_D_J']
+    rxn_subsystems = {
+        'EX_a': 'Exchange', 'EX_b': 'Exchange', 'EX_e': 'Exchange', 'EX_g': 'Exchange', 'EX_h': 'Exchange',
+        'EX_i': 'Exchange', 'EX_j': 'Exchange', 'R_a_f': 'sidepath', 'R_ab_cd': 'mainpath', 'R_ef_gh': 'sidepath',
+        'R_f_i': 'sidepath', 'R_cj_i': 'mainpath', 'R_d_j': 'mainpath'
+    }
 
     for idx, react_name in enumerate(reaction_names):
         create_reaction(model, react_name, reaction_formulas[idx], gene_rule=gene_rules[idx],
-                        lower_bound=reaction_bounds[idx][0], upper_bound=reaction_bounds[idx][1])
+                        lower_bound=reaction_bounds[idx][0], upper_bound=reaction_bounds[idx][1],
+                        subsystem=rxn_subsystems[react_name])
+
+    groups = ['Exchange', 'mainpath', 'sidepath']
+    for gid in groups:
+        g = Group(gid)
+        g.name = gid
+        g.add_members([model.reactions.get_by_id(r) for r, k in rxn_subsystems.items() if k == gid])
+        model.add_groups([g])
+
     # create reaction weights
     reaction_weights = {}
     rh_reactions = ['EX_a', 'R_a_f']
@@ -259,10 +278,12 @@ def r13m10(export=False, solver='cplex'):
         else:
             reaction_weights[rname] = 0.
     if export:
-        save_json_model(model, "tests/model/example_r13m10.json")
-        save_reaction_weights(reaction_weights, "tests/model/example_r13m10_weights.csv")
+        save_json_model(model, 'tests/model/example_r13m10.json')
+        save_matlab_model(model, 'tests/model/example_r13m10.mat')
+        write_sbml_model(model, 'tests/model/example_r13m10.xml')
+        save_reaction_weights(reaction_weights, 'tests/model/example_r13m10_weights.csv')
     return model, reaction_weights
 
 
 if __name__ == '__main__':
-    m = r13m10(export=True)
+    model, weights = r13m10(export=True)
