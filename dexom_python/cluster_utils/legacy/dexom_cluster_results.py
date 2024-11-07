@@ -54,7 +54,7 @@ def analyze_dexom_cluster_results(in_folder, out_folder, approach=1, filenums=10
     print(output_file[-1])
     all_rxn = []
     if approach == 3:
-        rxn = pd.read_csv(in_folder+'rxn_enum_solutions.csv', index_col=0)
+        rxn = pd.read_csv(in_folder+'rxn_enum_solutions.csv', index_col=0, sep=';|,|\t', engine='python')
     else:
         for i in range(filenums):
             try:
@@ -63,7 +63,7 @@ def analyze_dexom_cluster_results(in_folder, out_folder, approach=1, filenums=10
                 elif approach == 2:
                     filename = Path(in_folder).glob('div_enum_%i_*_solutions.csv' % i)
                     filename = str(list(filename)[0])
-                rxn = pd.read_csv(filename, index_col=0)
+                rxn = pd.read_csv(filename, index_col=0, sep=';|,|\t', engine='python')
                 all_rxn.append(rxn)
             except FileNotFoundError:
                 pass  # if a file is absent, ignore it
@@ -93,7 +93,7 @@ def analyze_dexom_cluster_results(in_folder, out_folder, approach=1, filenums=10
             try:
                 filename = Path(in_folder).glob('div_enum_%i_*_results.csv' % i)
                 filename = str(list(filename)[0])
-                res = pd.read_csv(filename, index_col=0)
+                res = pd.read_csv(filename, index_col=0, sep=';|,|\t', engine='python')
                 all_res.append(res)
             except FileNotFoundError:
                 pass
@@ -110,17 +110,17 @@ def analyze_dexom_cluster_results(in_folder, out_folder, approach=1, filenums=10
             try:
                 solname = in_folder + 'div_enum_%i_solutions.csv' % i
                 resname = in_folder + 'div_enum_%i_results.csv' % i
-                sol = pd.read_csv(solname, index_col=0)
-                res = pd.read_csv(resname, index_col=0)
+                sol = pd.read_csv(solname, index_col=0, sep=';|,|\t', engine='python')
+                res = pd.read_csv(resname, index_col=0, sep=';|,|\t', engine='python')
                 all_sol.append(sol)
                 all_res.append(res)
             except FileNotFoundError:
                 pass
     elif approach == 2:
         solname = Path(in_folder).glob('div*_solutions.csv')
-        all_sol = [pd.read_csv(str(x), index_col=0) for x in solname]
+        all_sol = [pd.read_csv(str(x), index_col=0, sep=';|,|\t', engine='python') for x in solname]
         resname = Path(in_folder).glob('div*_results.csv')
-        all_res = [pd.read_csv(str(x), index_col=0) for x in resname]
+        all_res = [pd.read_csv(str(x), index_col=0, sep=';|,|\t', engine='python') for x in resname]
     sol = pd.concat(all_sol, ignore_index=True)
     res = pd.concat(all_res, ignore_index=True)
     res.to_csv(out_folder+'all_divenum_res.csv')

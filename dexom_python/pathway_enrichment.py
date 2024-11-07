@@ -27,7 +27,7 @@ def Fisher_groups(model, solpath, outpath='Fisher_groups'):
     -------
     over, under: pandas.DataFrames (saved as .csv files) containing -log10 BH-adjusted p-values
     """
-    df = pd.read_csv(solpath, dtype=int, index_col=0)
+    df = pd.read_csv(solpath, dtype=int, index_col=0, sep=';|,|\t', engine='python')
     if df.columns[0] not in model.reactions:
         df.columns = [r.id for r in model.reactions]
     pvalsu = {}
@@ -78,7 +78,7 @@ def Fisher_subsystems(solpath, subframe, sublist, outpath='Fisher_subsystems'):
     -------
     over, under: pandas.DataFrames (saved as .csv files) containing -log10 BH-adjusted p-values
     """
-    df = pd.read_csv(solpath, dtype=int, index_col=0)
+    df = pd.read_csv(solpath, dtype=int, index_col=0, sep=';|,|\t', engine='python')
 
     rxn_list = []
     rxnnumber = {}
@@ -116,8 +116,8 @@ def Fisher_subsystems(solpath, subframe, sublist, outpath='Fisher_subsystems'):
 
 def plot_Fisher_pathways(filename_over, filename_under, sublist, outpath='pathway_enrichment'):
     plt.ioff()
-    over = pd.read_csv(filename_over, index_col=0)
-    under = pd.read_csv(filename_under, index_col=0)
+    over = pd.read_csv(filename_over, index_col=0, sep=';|,|\t', engine='python')
+    under = pd.read_csv(filename_under, index_col=0, sep=';|,|\t', engine='python')
     over.columns = sublist
     under.columns = sublist
     over = over.sort_index(axis=1, ascending=False)
@@ -174,7 +174,7 @@ def _main():
         else:
             subframe, sublist = get_subsystems_from_model(model, save=True, out_path=args.out_path)
     else:
-        subframe = pd.read_csv(args.subframe, index_col=0)
+        subframe = pd.read_csv(args.subframe, index_col=0, sep=';|,|\t', engine='python')
         sublist = pd.read_csv(args.sublist, sep=';').columns.to_list()
 
     if groups:
