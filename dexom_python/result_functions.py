@@ -63,7 +63,7 @@ def read_solution(filename, model=None, reaction_weights=None, solution_index=0,
             objective_value = float(reader[-2].split()[-1])
             status = reader[-1].split()[-1]
     if fluxflag:
-        df = pd.read_csv(filename, index_col=0)
+        df = pd.read_csv(filename, index_col=0, sep=';|,|\t', engine='python')
         fluxes = df.iloc[solution_index % (len(df)-1)]
         if model is not None:
             fluxes.index = [rxn.id for rxn in model.reactions]
@@ -77,7 +77,7 @@ def read_solution(filename, model=None, reaction_weights=None, solution_index=0,
             objective_value = calc_objval_from_flux(fluxes, model=model, rw=reaction_weights, eps=eps, thr=thr)
         status = 'flux'
     else:
-        df = pd.read_csv(filename, index_col=0, skipfooter=2, engine='python')
+        df = pd.read_csv(filename, index_col=0, skipfooter=2, sep=';|,|\t', engine='python')
         fluxes = df['fluxes']
         sol_bin = df['binary'].to_list()
     solution = Solution(objective_value, status, fluxes)
@@ -180,10 +180,10 @@ def plot_pca(solution_path, rxn_enum_solutions=None, save=True, save_name=''):
     -------
     pca: sklearn.decomposition.PCA
     """
-    X = pd.read_csv(solution_path, index_col=0)
+    X = pd.read_csv(solution_path, index_col=0, sep=';|,|\t', engine='python')
 
     if rxn_enum_solutions is not None:
-        X2 = pd.read_csv(rxn_enum_solutions, index_col=0)
+        X2 = pd.read_csv(rxn_enum_solutions, index_col=0, sep=';|,|\t', engine='python')
         X_t = pd.concat([X, X2])
     else:
         X_t = X

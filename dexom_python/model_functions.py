@@ -188,7 +188,7 @@ def load_reaction_weights(filename, rxn_names='reactions', weight_names='weights
     -------
     reaction_weights: dict
     """
-    df = pd.read_csv(filename)
+    df = pd.read_csv(filename, sep=';|,|\t', engine='python')
     df.index = df[rxn_names]
     reaction_weights = df[weight_names].to_dict()
     return {str(k): float(v) for k, v in reaction_weights.items() if float(v) == float(v)}
