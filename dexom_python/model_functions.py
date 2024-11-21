@@ -11,6 +11,11 @@ from dexom_python.default_parameter_values import DEFAULT_VALUES
 
 
 def read_model(modelfile, solver='cplex'):
+    config = cobra.Configuration()
+    try:
+        config.solver=solver
+    except SolverNotFound:
+        warn('The solver: %s is not available or not properly installed\n' % solver)
     fileformat = Path(modelfile).suffix
     model = None
     if fileformat == '.sbml' or fileformat == '.xml':
