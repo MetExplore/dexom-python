@@ -28,6 +28,7 @@ before_script:
   - pip install wheel
   - apt-get update --yes
   - apt-get install --yes cmake
+  - pip install python-libsbml==5.19
   - pip install -e .
 
 
