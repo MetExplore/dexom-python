@@ -26,6 +26,8 @@ before_script:
   - source venv/bin/activate
   - pip install --upgrade pip
   - pip install wheel
+  - apt-get update --yes
+  - apt-get install --yes cmake
   - pip install -e .
 
 
