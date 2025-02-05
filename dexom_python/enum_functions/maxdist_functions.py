@@ -1,5 +1,6 @@
 import argparse
 import time
+import cobra
 import pandas as pd
 import numpy as np
 from symengine import Add, sympify
@@ -12,12 +13,31 @@ from dexom_python.enum_functions.enumeration import EnumSolution, create_enum_va
 from dexom_python.default_parameter_values import DEFAULT_VALUES
 
 
-def create_maxdist_constraint(model, reaction_weights, prev_sol, obj_tol, name='maxdist_optimality', full=False):
+def create_maxdist_constraint(model, reaction_weights, prev_sol, obj_tol=DEFAULT_VALUES['obj_tol'], name='maxdist_optimality', full=False):
     """
     Creates the optimality constraint for the maxdist algorithm.
     This constraint conserves the optimal objective value of the previous solution
+    For detailed explanation of parameters see documentation of maxdist function.
+
+    Parameters
+    ----------
+    model: cobra.Model
+    reaction_weights: dict
+    prev_sol: cobra.Solution or float
+        either the previous iMAT solution or the objective value of that solution
+    obj_tol: float
+    name: string
+    full: bool
+
+    Returns
+    -------
+    optlang Constraint object (dependent on current solver)
+
     """
-    lower_opt = prev_sol.objective_value - prev_sol.objective_value * obj_tol
+    if isinstance(prev_sol, cobra.core.solution.Solution):
+        lower_opt = prev_sol.objective_value - prev_sol.objective_value * obj_tol
+    else:
+        lower_opt = prev_sol - prev_sol * obj_tol
     variables = []
     weights = []
     try:
@@ -119,7 +139,7 @@ def maxdist(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['epsilon'
         t0 = time.perf_counter()
         if icut:
             # adding the icut constraint to prevent the algorithm from finding the same solutions
-            const = create_icut_constraint(model, reaction_weights, thr, prev_sol, name='icut_'+str(idx), full=full)
+            const = create_icut_constraint(model, reaction_weights, epsilon=eps, threshold=thr, prev_sol=prev_sol, name='icut_'+str(idx), full=full)
             model.solver.add(const)
             icut_constraints.append(const)
         # defining the objective: minimize the number of overlapping ones and zeros
@@ -193,7 +213,7 @@ def _main():
     args = parser.parse_args()
 
     model = read_model(args.model)
-    check_model_options(model, timelimit=args.timelimit, feasibility=args.tol, mipgaptol=args.mipgap)
+    check_model_options(model, timelimit=args.timelimit, tolerance=args.tol, mipgaptol=args.mipgap)
     reaction_weights = {}
     if args.reaction_weights is not None:
         reaction_weights = load_reaction_weights(args.reaction_weights)
