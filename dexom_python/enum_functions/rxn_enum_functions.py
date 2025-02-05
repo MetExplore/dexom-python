@@ -197,7 +197,7 @@ def _main():
     args = parser.parse_args()
 
     model = read_model(args.model)
-    check_model_options(model, timelimit=args.timelimit, feasibility=args.tol, mipgaptol=args.mipgap)
+    check_model_options(model, timelimit=args.timelimit, tolerance=args.tol, mipgaptol=args.mipgap)
 
     reaction_weights = {}
     if args.reaction_weights is not None:

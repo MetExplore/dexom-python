@@ -11,12 +11,12 @@ from dexom_python.enum_functions.enumeration import EnumSolution, create_enum_va
 from dexom_python.default_parameter_values import DEFAULT_VALUES
 
 
-def create_icut_constraint(model, reaction_weights, threshold, prev_sol, name, full=False):
+def create_icut_constraint(model, reaction_weights, epsilon, threshold, prev_sol, name, full=False):
     """
     Creates an icut constraint on the previously found solution.
     This solution is excluded from the solution space.
     """
-    tol = model.solver.configuration.tolerances.feasibility
+    tol = model.tolerance
     if full:
         prev_sol_binary = (np.abs(prev_sol.fluxes) >= threshold-tol).values.astype(int)
         expr = sympify('1')
@@ -29,8 +29,12 @@ def create_icut_constraint(model, reaction_weights, threshold, prev_sol, name, f
         var_vals = []
         for rid, weight in reaction_weights.items():
             if weight != 0.:
+                if weight > 0:
+                    limit = epsilon
+                else:
+                    limit = threshold
                 x = model.solver.variables['x_' + rid]
-                if np.abs(prev_sol.fluxes[rid]) >= (threshold-tol):
+                if np.abs(prev_sol.fluxes[rid]) >= limit:
                     var_vals.append(x)
                     newbound += 1
                 else:
@@ -89,7 +93,7 @@ def icut(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['epsilon'], 
 
     for idx in range(1, maxiter+1):
         t0 = time.perf_counter()
-        const = create_icut_constraint(model, reaction_weights, thr, prev_sol, name='icut_'+str(idx), full=full)
+        const = create_icut_constraint(model, reaction_weights, epsilon=eps, threshold=thr, prev_sol=prev_sol, name='icut_'+str(idx), full=full)
         model.solver.add(const)
         icut_constraints.append(const)
         with catch_warnings():
@@ -163,7 +167,7 @@ def _main():
     args = parser.parse_args()
 
     model = read_model(args.model)
-    check_model_options(model, timelimit=args.timelimit, feasibility=args.tol, mipgaptol=args.mipgap)
+    check_model_options(model, timelimit=args.timelimit, tolerance=args.tol, mipgaptol=args.mipgap)
     reaction_weights = {}
     if args.reaction_weights is not None:
         reaction_weights = load_reaction_weights(args.reaction_weights)

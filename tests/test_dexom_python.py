@@ -65,7 +65,7 @@ def test_read_model_mat():
 
 
 def test_check_model_options(model):
-    model = mf.check_model_options(model=model, timelimit=100, feasibility=1e-8, mipgaptol=1e-2, verbosity=3)
+    model = mf.check_model_options(model=model, timelimit=100, tolerance=1e-8, mipgaptol=1e-2, verbosity=3)
     assert model.solver.configuration.timeout == 100 and model.tolerance == 1e-8 and \
            model.solver.configuration.verbosity == 3
 
