@@ -205,27 +205,27 @@
     <groups:listOfGroups>
       <groups:group groups:id="G_Exchange" groups:name="Exchange" groups:kind="collection">
         <groups:listOfMembers>
-          <groups:member groups:name="EX_g" groups:idRef="R_EX_g"/>
           <groups:member groups:name="EX_b" groups:idRef="R_EX_b"/>
-          <groups:member groups:name="EX_e" groups:idRef="R_EX_e"/>
           <groups:member groups:name="EX_h" groups:idRef="R_EX_h"/>
-          <groups:member groups:name="EX_a" groups:idRef="R_EX_a"/>
           <groups:member groups:name="EX_i" groups:idRef="R_EX_i"/>
           <groups:member groups:name="EX_j" groups:idRef="R_EX_j"/>
+          <groups:member groups:name="EX_a" groups:idRef="R_EX_a"/>
+          <groups:member groups:name="EX_g" groups:idRef="R_EX_g"/>
+          <groups:member groups:name="EX_e" groups:idRef="R_EX_e"/>
         </groups:listOfMembers>
       </groups:group>
       <groups:group groups:id="G_mainpath" groups:name="mainpath" groups:kind="collection">
         <groups:listOfMembers>
-          <groups:member groups:name="R_d_j" groups:idRef="R_R_d_j"/>
           <groups:member groups:name="R_ab_cd" groups:idRef="R_R_ab_cd"/>
           <groups:member groups:name="R_cj_i" groups:idRef="R_R_cj_i"/>
+          <groups:member groups:name="R_d_j" groups:idRef="R_R_d_j"/>
         </groups:listOfMembers>
       </groups:group>
       <groups:group groups:id="G_sidepath" groups:name="sidepath" groups:kind="collection">
         <groups:listOfMembers>
-          <groups:member groups:name="R_ef_gh" groups:idRef="R_R_ef_gh"/>
           <groups:member groups:name="R_a_f" groups:idRef="R_R_a_f"/>
           <groups:member groups:name="R_f_i" groups:idRef="R_R_f_i"/>
+          <groups:member groups:name="R_ef_gh" groups:idRef="R_R_ef_gh"/>
         </groups:listOfMembers>
       </groups:group>
     </groups:listOfGroups>
