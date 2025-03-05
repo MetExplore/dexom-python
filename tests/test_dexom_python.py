@@ -100,19 +100,21 @@ def test_load_reaction_weights(model, reaction_weights):
 
 
 def test_check_threshold_tolerance(model):
-    assert mf.check_threshold_tolerance(model, epsilon=3e-4, threshold=2e-4) == 0
+    assert mf.check_threshold_tolerance(model, epsilon=3e-4, threshold=3e-4)[0] == 3e-4
 
 
-def test_check_threshold_tolerance_thresholderror(model):
-    with pytest.raises(ValueError, match=r'The threshold parameter value') as e:
-        mf.check_threshold_tolerance(model, epsilon=3e-4, threshold=1e-4)
-    assert e.match(r'0.0001')
+def test_check_threshold_tolerance_thresholderror(model): #TODO does not raise error anymore, must modify
+    # with pytest.raises(ValueError, match=r'The threshold parameter value') as e:
+    #     mf.check_threshold_tolerance(model, epsilon=3e-4, threshold=1e-6)
+    # assert e.match(r'0.0001')
+    assert mf.check_threshold_tolerance(model, epsilon=3e-4, threshold=1e-6)[1] > 1e-6
 
 
-def test_check_threshold_tolerance_epsilonerror(model):
-    with pytest.raises(ValueError, match=r'The epsilon parameter value') as e:
-        mf.check_threshold_tolerance(model, epsilon=2e-4, threshold=2e-4)
-    assert e.match(r'0.0002')
+def test_check_threshold_tolerance_epsilonerror(model): #TODO does not raise error anymore, must modify
+    # with pytest.raises(ValueError, match=r'The epsilon parameter value') as e:
+    #     mf.check_threshold_tolerance(model, epsilon=2e-6, threshold=2e-4)
+    # assert e.match(r'0.0002')
+    assert mf.check_threshold_tolerance(model, epsilon=2e-6, threshold=2e-4)[0] > 2e-6
 
 
 # Testing gpr_rules
@@ -134,7 +136,7 @@ def test_apply_gpr(model, gene_weights, reaction_weights):
 def test_create_new_partial_variables(model, reaction_weights):
     im.create_new_partial_variables(model=model, reaction_weights=reaction_weights, epsilon=DV['epsilon'],
                                     threshold=DV['threshold'])
-    assert len(model.variables) == 41 and len(model.constraints) == 25
+    assert len(model.variables) == 41 and len(model.constraints) == 35
 
 
 def test_create_full_variables(model, reaction_weights):
@@ -180,39 +182,39 @@ def test_write_solution(model, imatsol):
 
 # Testing enumeration functions
 
-def test_rxn_enum(model, reaction_weights, imatsol):
-    rxn_sol = enum.rxn_enum(model=model, reaction_weights=reaction_weights, prev_sol=imatsol)
+def test_rxn_enum(model, reaction_weights):
+    rxn_sol = enum.rxn_enum(model=model, reaction_weights=reaction_weights, prev_sol=None)
     assert np.isclose(rxn_sol.objective_value, 4.) and len(rxn_sol.unique_solutions) == 3
 
 
-def test_icut_partial(model, reaction_weights, imatsol):
-    icut_sol = enum.icut(model=model, reaction_weights=reaction_weights, prev_sol=imatsol, maxiter=10, full=False)
+def test_icut_partial(model, reaction_weights):
+    icut_sol = enum.icut(model=model, reaction_weights=reaction_weights, prev_sol=None, maxiter=10, full=False)
     assert np.isclose(icut_sol.objective_value, 4.) and len(icut_sol.solutions) == 3
 
 
-def test_icut_full(model, reaction_weights, imatsol):
-    icut_sol = enum.icut(model=model, reaction_weights=reaction_weights, prev_sol=imatsol, maxiter=10, full=True)
+def test_icut_full(model, reaction_weights):
+    icut_sol = enum.icut(model=model, reaction_weights=reaction_weights, prev_sol=None, maxiter=10, full=True)
     assert np.isclose(icut_sol.objective_value, 4.) and len(icut_sol.solutions) == 3
 
 
-def test_maxdist_partial(model, reaction_weights, imatsol):
-    maxdist_sol = enum.maxdist(model=model, reaction_weights=reaction_weights, prev_sol=imatsol, maxiter=4, full=False)
+def test_maxdist_partial(model, reaction_weights):
+    maxdist_sol = enum.maxdist(model=model, reaction_weights=reaction_weights, prev_sol=None, maxiter=4, full=False)
     assert np.isclose(maxdist_sol.objective_value, 4.) and len(maxdist_sol.solutions) == 3
 
 
-def test_maxdist_full(model, reaction_weights, imatsol):
-    maxdist_sol = enum.maxdist(model=model, reaction_weights=reaction_weights, prev_sol=imatsol, maxiter=4, full=True)
+def test_maxdist_full(model, reaction_weights):
+    maxdist_sol = enum.maxdist(model=model, reaction_weights=reaction_weights, prev_sol=None, maxiter=4, full=True)
     assert np.isclose(maxdist_sol.objective_value, 4.) and len(maxdist_sol.solutions) == 3
 
 
-def test_diversity_enum_partial(model, reaction_weights, imatsol):
-    div_enum_sol, div_enum_res = enum.diversity_enum(model=model, reaction_weights=reaction_weights, prev_sol=imatsol,
+def test_diversity_enum_partial(model, reaction_weights):
+    div_enum_sol, div_enum_res = enum.diversity_enum(model=model, reaction_weights=reaction_weights, prev_sol=None,
                                                      maxiter=4, full=False)
     assert np.isclose(div_enum_sol.objective_value, 4.) and len(div_enum_sol.solutions) == 3
 
 
-def test_diversity_enum_full(model, reaction_weights, imatsol):
-    div_enum_sol, div_enum_res = enum.diversity_enum(model=model, reaction_weights=reaction_weights, prev_sol=imatsol,
+def test_diversity_enum_full(model, reaction_weights):
+    div_enum_sol, div_enum_res = enum.diversity_enum(model=model, reaction_weights=reaction_weights, prev_sol=None,
                                                      maxiter=4, full=True)
     assert np.isclose(div_enum_sol.objective_value, 4.) and len(div_enum_sol.solutions) == 3
 

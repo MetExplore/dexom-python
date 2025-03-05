@@ -159,10 +159,10 @@
 "id":"R_ef_gh",
 "name":"R_ef_gh",
 "metabolites":{
-"e":-1.0,
+"e":-2.0,
 "f":-1.0,
 "g":1.0,
-"h":5.0
+"h":1.0
 },
 "lower_bound":0.0,
 "upper_bound":100.0,
@@ -186,7 +186,7 @@
 "name":"R_cj_i",
 "metabolites":{
 "c":-2.0,
-"i":3.0,
+"i":1.0,
 "j":-1.0
 },
 "lower_bound":0.0,
