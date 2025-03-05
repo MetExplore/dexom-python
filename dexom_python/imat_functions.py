@@ -4,10 +4,9 @@ import cobra.util.array
 import optlang
 from symengine import Add, sympify
 from numpy import abs, max
-from statistics import median
 from warnings import catch_warnings, filterwarnings, resetwarnings
 from cobra.exceptions import OptimizationError
-from dexom_python.model_functions import read_model, check_model_options, load_reaction_weights, check_threshold_tolerance, check_constraint_primal_values
+from dexom_python.model_functions import read_model, check_model_options, load_reaction_weights, check_threshold_tolerance, check_constraint_values, check_model_primals
 from dexom_python.result_functions import write_solution
 from dexom_python.default_parameter_values import DEFAULT_VALUES
 
@@ -87,9 +86,9 @@ def create_new_partial_variable_single(model, rid, epsilon, threshold, pos):
         up = model.solver.interface.Constraint(rxn.forward_variable - rxn.reverse_variable
                                                - xtot * rxn.upper_bound, ub=threshold, name='%s_upper' % rid)
         lofo = model.solver.interface.Constraint(rxn.forward_variable - rxn.reverse_variable
-                                                 + xr * rxn.upper_bound + xr * threshold, ub=rxn.upper_bound, name='_%s_forcelower' % rid)
+                                                 + xr * rxn.upper_bound + xr * (threshold), ub=rxn.upper_bound, name='_%s_forcelower' % rid)
         upfo = model.solver.interface.Constraint(rxn.forward_variable - rxn.reverse_variable
-                                                 + xf * rxn.lower_bound - xf * threshold, lb=rxn.lower_bound, name='_%s_forceupper' % rid)
+                                                 + xf * rxn.lower_bound - xf * (threshold), lb=rxn.lower_bound, name='_%s_forceupper' % rid)
         model.solver.add(up)
         model.solver.add(lo)
         model.solver.add(lofo)
@@ -132,7 +131,7 @@ def _imat_call_model_optimizer(model):
             print('%.2fs during optimize call' % (t2 - t1))
             if isinstance(model.solver, optlang.glpk_interface.Model):
                 # during reaction-enumeration, GLPK sometimes returns invalid solutions
-                check_constraint_primal_values(model)
+                check_constraint_values(model)
             return solution
         except UserWarning as w:
             resetwarnings()
@@ -180,7 +179,7 @@ def imat(model, reaction_weights=None, epsilon=DEFAULT_VALUES['epsilon'], thresh
     -------
     solution: cobra.Solution
     """
-    check_threshold_tolerance(model=model, epsilon=epsilon, threshold=threshold)
+    epsilon, threshold = check_threshold_tolerance(model=model, epsilon=epsilon, threshold=threshold)
     if reaction_weights is None:
         reaction_weights = {}
     y_variables = list()
@@ -220,17 +219,18 @@ def imat(model, reaction_weights=None, epsilon=DEFAULT_VALUES['epsilon'], thresh
             if weight > 0:
                 x = var_primals['x_' + rid]
                 rhtot += 1
-                rh += x
+                rh += int(x)
             elif weight < 0:
                 x = var_primals['x_' + rid]
                 rltot += 1
-                rl += 1 - x
+                rl += 1 - int(x)
         print('Objective value: ', solution.objective_value)
-        print(f'Fraction of optimal objective value: {100*(rh+rl)/(rhtot+rltot)}%')
+        if rhtot + rltot == 0 :
+            print('No valid reaction-weights in model, optimal objective is zero.')
+        else:
+            print(f'Fraction of optimal objective value: {100*(rh+rl)/(rhtot+rltot)}%')
         print(f'RH: {rh} out of {rhtot} reactions active')
         print(f'RL: {rl} out of {rltot} reactions inactive')
-
-
         return solution
     finally:
         pass

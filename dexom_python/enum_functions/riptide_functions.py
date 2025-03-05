@@ -7,7 +7,7 @@ from numpy import abs, max
 from statistics import median
 from warnings import catch_warnings, filterwarnings, resetwarnings
 from cobra.exceptions import OptimizationError
-from dexom_python.model_functions import read_model, check_model_options, load_reaction_weights, check_threshold_tolerance, check_constraint_primal_values
+from dexom_python.model_functions import read_model, check_model_options, load_reaction_weights, check_threshold_tolerance, check_constraint_values
 from dexom_python.result_functions import write_solution
 from dexom_python.default_parameter_values import DEFAULT_VALUES
 from dexom_python.imat_functions import _imat_call_model_optimizer

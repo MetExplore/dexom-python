@@ -50,7 +50,7 @@ def diversity_enum(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['e
     solution: an EnumSolution object
     stats: a pandas.DataFrame containing the number of selected reactions and runtime of each iteration
     """
-    check_threshold_tolerance(model=model, epsilon=eps, threshold=thr)
+    eps, thr = check_threshold_tolerance(model=model, epsilon=eps, threshold=thr)
     check_reaction_weights(reaction_weights)
     if prev_sol is None:
         prev_sol = imat(model, reaction_weights, epsilon=eps, threshold=thr, full=full)
@@ -59,7 +59,7 @@ def diversity_enum(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['e
     tol = model.solver.configuration.tolerances.feasibility
     times = []
     selected_recs = []
-    prev_sol_bin = (np.abs(prev_sol.fluxes) >= thr-tol).values.astype(int)
+    prev_sol_bin = (np.abs(prev_sol.fluxes) >= thr+tol).values.astype(int)
     all_solutions = [prev_sol]
     all_binary = [prev_sol_bin]
     icut_constraints = []
@@ -90,7 +90,7 @@ def diversity_enum(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['e
             try:
                 # with model:
                 prev_sol = model.optimize()
-                prev_sol_bin = (np.abs(prev_sol.fluxes) >= thr-tol).values.astype(int)
+                prev_sol_bin = (np.abs(prev_sol.fluxes) >= thr+tol).values.astype(int)
                 all_solutions.append(prev_sol)
                 all_binary.append(prev_sol_bin)
                 if save:

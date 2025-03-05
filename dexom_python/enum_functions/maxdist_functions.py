@@ -8,7 +8,7 @@ from warnings import warn, catch_warnings, filterwarnings, resetwarnings
 from cobra.exceptions import OptimizationError
 from dexom_python.enum_functions.icut_functions import create_icut_constraint
 from dexom_python.imat_functions import imat
-from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options, check_threshold_tolerance
+from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options, check_threshold_tolerance, check_model_primals
 from dexom_python.enum_functions.enumeration import EnumSolution, create_enum_variables, read_prev_sol, check_reaction_weights
 from dexom_python.default_parameter_values import DEFAULT_VALUES
 
@@ -79,11 +79,11 @@ def create_maxdist_objective(model, reaction_weights, prev_sol, prev_sol_bin, on
                 if prev_sol_bin[rid_loc] == 1:
                     expr += x
                 elif not only_ones:
-                    expr += 1 - x
+                    expr -= x
             elif weight < 0:
-                x_rl = sympify('1') - model.solver.variables['x_' + rid]
+                x_rl = model.solver.variables['x_' + rid] #sympify('1') -
                 if prev_sol_bin[rid_loc] == 1:
-                    expr += 1 - x_rl
+                    expr -= - x_rl
                 elif not only_ones:
                     expr += x_rl
     objective = model.solver.interface.Objective(expr, direction='min')
@@ -120,7 +120,7 @@ def maxdist(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['epsilon'
     -------
     solution: EnumSolution object
     """
-    check_threshold_tolerance(model=model, epsilon=eps, threshold=thr)
+    eps, thr = check_threshold_tolerance(model=model, epsilon=eps, threshold=thr)
     check_reaction_weights(reaction_weights)
     if prev_sol is None:
         prev_sol = imat(model, reaction_weights, epsilon=eps, threshold=thr, full=full)
@@ -129,7 +129,7 @@ def maxdist(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['epsilon'
     tol = model.solver.configuration.tolerances.feasibility
     icut_constraints = []
     all_solutions = [prev_sol]
-    prev_sol_bin = (np.abs(prev_sol.fluxes) >= thr-tol).values.astype(int)
+    prev_sol_bin = (np.abs(prev_sol.fluxes) >= thr+tol).values.astype(int)
     all_binary = [prev_sol_bin]
     # adding the optimality constraint: the new objective value must be equal to the previous objective value
     opt_const = create_maxdist_constraint(model, reaction_weights, prev_sol, obj_tol,
@@ -150,7 +150,6 @@ def maxdist(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['epsilon'
             try:
                 # with model:
                 prev_sol = model.optimize()
-                prev_sol_bin = (np.abs(prev_sol.fluxes) >= thr-tol).values.astype(int)
                 all_solutions.append(prev_sol)
                 all_binary.append(prev_sol_bin)
                 t1 = time.perf_counter()

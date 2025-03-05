@@ -15,7 +15,7 @@ def read_model(modelfile, solver='cplex'):
     try:
         config.solver=solver
     except SolverNotFound:
-        warn('The solver: %s is not available or not properly installed\n' % solver)
+        warn(f'The solver: {solver} is not available or not properly installed, the model will be read with the default solver {config.solver.__name__}')
     fileformat = Path(modelfile).suffix
     model = None
     if fileformat == '.sbml' or fileformat == '.xml':
@@ -28,10 +28,6 @@ def read_model(modelfile, solver='cplex'):
         warn('Wrong model path')
     else:
         raise TypeError('Only SBML, JSON, and Matlab formats are supported for the models')
-    try:
-        model.solver = solver
-    except SolverNotFound:
-        warn('The solver: %s is not available or not properly installed\n' % solver)
     return model
 
 
@@ -55,6 +51,10 @@ def check_threshold_tolerance(model, epsilon, threshold):
     limit = model.solver.configuration.tolerances.integrality * np.max([r.bounds for r in model.reactions]) + model.solver.configuration.tolerances.feasibility
     if threshold < limit:
         UserWarning(f'The threshold parameter is below the detection limit for RL reactions. RL reactions can only have guaranteed flux < {limit}')
+        threshold = limit
+    elif threshold > limit:
+        print(f'The threshold parameter is above the detection limit for RL reactions. It can be set up to {limit}')
+        # threshold = limit
     limit = (limit + 1e-6) / (1 - limit - model.solver.configuration.tolerances.feasibility)
     if epsilon < limit:
         UserWarning(f'The epsilon parameter value is too low compared the detection limit for RH reactions. RH reactions can only have guaranteed flux > {limit}')
@@ -72,7 +72,7 @@ def check_threshold_tolerance(model, epsilon, threshold):
     return epsilon, threshold
 
 
-def check_constraint_primal_values(model):
+def check_constraint_values(model):
     for c in model.constraints:
         error = False
         if c.ub is None:
@@ -205,7 +205,7 @@ def load_reaction_weights(filename, rxn_names='reactions', weight_names='weights
     reaction_weights = df[weight_names].to_dict()
     return {str(k): float(v) for k, v in reaction_weights.items() if float(v) == float(v)}
 
-def check_model_primals(model, rw, eps, thr, savename = 'primal_check.csv'):
+def check_model_primals(model, rw, eps=DEFAULT_VALUES['epsilon'], thr=DEFAULT_VALUES['threshold'], savename = 'primal_check.csv'):
     integ = model.solver.configuration.tolerances.integrality
     feasib = model.solver.configuration.tolerances.feasibility
     rllimit = integ * np.max([r.bounds for r in model.reactions]) + feasib *2
@@ -224,6 +224,8 @@ def check_model_primals(model, rw, eps, thr, savename = 'primal_check.csv'):
     for i, r in enumerate(model.reactions):
         rid = r.id
         flux[i] = var_primals[r.id] - var_primals[r.reverse_id]
+        if rid not in rw:
+            continue
         # forward[i] = var_primals[r.id]
         # reverse[i] = var_primals[r.reverse_id]
         if rw[r.id] > 0:
@@ -279,7 +281,7 @@ def check_model_primals(model, rw, eps, thr, savename = 'primal_check.csv'):
                 # print(r.id + ' ok')
                 # if forward[i] >  0 and reverse[i] > 0:
                 #     status[rid] = 'wrong noflux: both directions'
-                if np.abs(flux[i]) <= rllimit:
+                if np.abs(flux[i]) <= thr+feasib:
                     if x[i] < integ:
                         status[rid] = 'correct noflux'
                     else:
@@ -309,5 +311,6 @@ def check_model_primals(model, rw, eps, thr, savename = 'primal_check.csv'):
     df['rw'] = rw
     status = pd.Series(status)
     df['status'] = status
-    df.to_csv(savename, sep=';')
+    if savename is not None:
+        df.to_csv(savename, sep=';')
     return df
