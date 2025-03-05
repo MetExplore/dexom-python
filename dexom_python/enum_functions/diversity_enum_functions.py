@@ -99,7 +99,7 @@ def diversity_enum(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['e
                 t1 = time.perf_counter()
                 print('time for optimizing in iteration ' + str(idx) + ':', t1 - t2)
                 times.append(t1 - t0)
-                temp = check_model_primals(model=model, rw=reaction_weights, eps=eps,thr=thr, savename=f'divenum_{idx}_primals.csv')
+                temp = check_model_primals(model=model, rw=reaction_weights, eps=eps,thr=thr, savename=None)
             except UserWarning as w:
                 resetwarnings()
                 times.append(-1)
