@@ -6,7 +6,7 @@ from warnings import catch_warnings, filterwarnings, resetwarnings, warn
 from cobra.exceptions import OptimizationError
 from dexom_python.imat_functions import imat
 from dexom_python.result_functions import write_solution
-from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options, check_threshold_tolerance
+from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options, check_threshold_tolerance, check_model_primals
 from dexom_python.enum_functions.enumeration import EnumSolution, create_enum_variables, read_prev_sol, check_reaction_weights
 from dexom_python.enum_functions.icut_functions import create_icut_constraint
 from dexom_python.enum_functions.maxdist_functions import create_maxdist_constraint, create_maxdist_objective
@@ -50,7 +50,7 @@ def diversity_enum(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['e
     solution: an EnumSolution object
     stats: a pandas.DataFrame containing the number of selected reactions and runtime of each iteration
     """
-    check_threshold_tolerance(model=model, epsilon=eps, threshold=thr)
+    eps, thr = check_threshold_tolerance(model=model, epsilon=eps, threshold=thr)
     check_reaction_weights(reaction_weights)
     if prev_sol is None:
         prev_sol = imat(model, reaction_weights, epsilon=eps, threshold=thr, full=full)
@@ -59,7 +59,7 @@ def diversity_enum(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['e
     tol = model.solver.configuration.tolerances.feasibility
     times = []
     selected_recs = []
-    prev_sol_bin = (np.abs(prev_sol.fluxes) >= thr-tol).values.astype(int)
+    prev_sol_bin = (np.abs(prev_sol.fluxes) >= thr+tol).values.astype(int)
     all_solutions = [prev_sol]
     all_binary = [prev_sol_bin]
     icut_constraints = []
@@ -70,7 +70,7 @@ def diversity_enum(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['e
         t0 = time.perf_counter()
         if icut:
             # adding the icut constraint to prevent the algorithm from finding duplicate solutions
-            const = create_icut_constraint(model, reaction_weights, thr, prev_sol, 'icut_'+str(idx), full=full)
+            const = create_icut_constraint(model, reaction_weights, epsilon=eps, threshold=thr, prev_sol=prev_sol, name='icut_'+str(idx), full=full)
             model.solver.add(const)
             icut_constraints.append(const)
         # randomly selecting reactions with nonzero weights for the distance maximization step
@@ -90,7 +90,7 @@ def diversity_enum(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['e
             try:
                 # with model:
                 prev_sol = model.optimize()
-                prev_sol_bin = (np.abs(prev_sol.fluxes) >= thr-tol).values.astype(int)
+                prev_sol_bin = (np.abs(prev_sol.fluxes) >= thr+tol).values.astype(int)
                 all_solutions.append(prev_sol)
                 all_binary.append(prev_sol_bin)
                 if save:
@@ -99,6 +99,7 @@ def diversity_enum(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['e
                 t1 = time.perf_counter()
                 print('time for optimizing in iteration ' + str(idx) + ':', t1 - t2)
                 times.append(t1 - t0)
+                temp = check_model_primals(model=model, rw=reaction_weights, eps=eps,thr=thr, savename=None)
             except UserWarning as w:
                 resetwarnings()
                 times.append(-1)
@@ -172,7 +173,7 @@ def _main():
     args = parser.parse_args()
 
     model = read_model(args.model)
-    check_model_options(model, timelimit=args.timelimit, feasibility=args.tol, mipgaptol=args.mipgap)
+    check_model_options(model, timelimit=args.timelimit, tolerance=args.tol, mipgaptol=args.mipgap)
     reaction_weights = {}
     if args.reaction_weights is not None:
         reaction_weights = load_reaction_weights(args.reaction_weights)

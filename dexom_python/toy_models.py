@@ -37,6 +37,8 @@ def small4M(export=False, solver='cplex'):
     model.solver = solver
     metabolite_names = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'T', 'X', 'Y', 'Z']
     metabolites = [Metabolite(m) for m in metabolite_names]
+    for m in metabolites:
+        m.compartment = 'i'
     model.add_metabolites(metabolites)
     reaction_names = ['EX_A', 'EX_D', 'EX_X', 'EX_C', 'EX_Z', 'EX_G', 'EX_Y', 'EX_T', 'RAB', 'RBC', 'RFG', 'RCF',
                       'RDE', 'REF1', 'REF2', 'REF3', 'RBE']
@@ -76,8 +78,10 @@ def small4M(export=False, solver='cplex'):
         elif rname in rl_reactions:
             reaction_weights[rname] = -1.
     if export:
-        save_json_model(model, "small4M.json")
-        save_reaction_weights(reaction_weights, "small4M_weights.csv")
+        save_json_model(model, 'small4M.json')
+        save_matlab_model(model, 'small4M.mat')
+        write_sbml_model(model, 'small4M.xml')
+        save_reaction_weights(reaction_weights, 'small4M_weights.csv')
     return model, reaction_weights
 
 
@@ -101,6 +105,8 @@ def small4S(export=False, solver='cplex'):
     model.solver = solver
     metabolite_names = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
     metabolites = [Metabolite(m) for m in metabolite_names]
+    for m in metabolites:
+        m.compartment = 'i'
     model.add_metabolites(metabolites)
     reaction_names = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9', 'R10', 'R11']
     reaction_formulas = [
@@ -225,11 +231,11 @@ def r13m10(export=False, solver='cplex'):
          {'h': -1.},
          {'i': -1.},
          {'j': -1.},
-         {'a': -2., 'f': 1.},
-         {'a': -1., 'b': -1., 'c': 2., 'd': 3.},
-         {'e': -1., 'f': -1., 'g': 1., 'h': 5.},
+         {'a': -1., 'f': 1.},
+         {'a': -1., 'b': -1., 'd': 1.},
+         {'e': -1., 'f': -1., 'g': 1., 'h':1.},
          {'f': -1., 'i': 1.},
-         {'c': -2., 'j': -1., 'i': 3.},
+         {'j': -1., 'i': 1.},
          {'d': -1., 'j': 1.}]
     reaction_bounds = [
         (-10., 50.),
@@ -238,7 +244,7 @@ def r13m10(export=False, solver='cplex'):
         (-50., 50.),
         (-50., 50.),
         (-20., 50.),
-        (-50., 50.),
+        (0., 50.),
         (-50., 50.),
         (0., 50.),
         (0., 100.),

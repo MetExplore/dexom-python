@@ -11,29 +11,34 @@ from dexom_python.enum_functions.enumeration import EnumSolution, create_enum_va
 from dexom_python.default_parameter_values import DEFAULT_VALUES
 
 
-def create_icut_constraint(model, reaction_weights, threshold, prev_sol, name, full=False):
+def create_icut_constraint(model, reaction_weights, epsilon, threshold, prev_sol, name, full=False):
     """
     Creates an icut constraint on the previously found solution.
     This solution is excluded from the solution space.
     """
-    tol = model.solver.configuration.tolerances.feasibility
+    tol = model.tolerance
     if full:
         prev_sol_binary = (np.abs(prev_sol.fluxes) >= threshold-tol).values.astype(int)
-        expr = sympify('1')
+        expr = sympify('2')
         newbound = sum(prev_sol_binary)
         cvector = [1 if x else -1 for x in prev_sol_binary]
         for idx, rxn in enumerate(model.reactions):
             expr += cvector[idx] * model.solver.variables['x_' + rxn.id]
     else:
-        newbound = -1
+        newbound = -2
         var_vals = []
         for rid, weight in reaction_weights.items():
             if weight != 0.:
+                if weight > 0:
+                    limit = epsilon
+                else:
+                    limit = threshold
                 x = model.solver.variables['x_' + rid]
-                if np.abs(prev_sol.fluxes[rid]) >= (threshold-tol):
+                if np.abs(prev_sol.fluxes[rid]) >= limit-tol:
                     var_vals.append(x)
                     newbound += 1
                 else:
+
                     var_vals.append(-x)
         expr = sum(var_vals)
     constraint = model.solver.interface.Constraint(expr, ub=newbound, name=name)
@@ -73,14 +78,14 @@ def icut(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['epsilon'], 
     solution: EnumSolution object
         In the case of integer-cut, all_solutions and unique_solutions are identical
     """
-    check_threshold_tolerance(model=model, epsilon=eps, threshold=thr)
+    eps, thr = check_threshold_tolerance(model=model, epsilon=eps, threshold=thr)
     check_reaction_weights(reaction_weights)
     if prev_sol is None:
         prev_sol = imat(model, reaction_weights, epsilon=eps, threshold=thr, full=full)
     else:
         model = create_enum_variables(model=model, reaction_weights=reaction_weights, eps=eps, thr=thr, full=full)
     tol = model.solver.configuration.tolerances.feasibility
-    prev_sol_binary = (np.abs(prev_sol.fluxes) >= thr-tol).values.astype(int)
+    prev_sol_binary = (np.abs(prev_sol.fluxes) >= thr+tol).values.astype(int)
     optimal_objective_value = prev_sol.objective_value - obj_tol*prev_sol.objective_value
 
     all_solutions = [prev_sol]
@@ -89,7 +94,7 @@ def icut(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['epsilon'], 
 
     for idx in range(1, maxiter+1):
         t0 = time.perf_counter()
-        const = create_icut_constraint(model, reaction_weights, thr, prev_sol, name='icut_'+str(idx), full=full)
+        const = create_icut_constraint(model, reaction_weights, epsilon=eps, threshold=thr, prev_sol=prev_sol, name='icut_'+str(idx), full=full)
         model.solver.add(const)
         icut_constraints.append(const)
         with catch_warnings():
@@ -163,7 +168,7 @@ def _main():
     args = parser.parse_args()
 
     model = read_model(args.model)
-    check_model_options(model, timelimit=args.timelimit, feasibility=args.tol, mipgaptol=args.mipgap)
+    check_model_options(model, timelimit=args.timelimit, tolerance=args.tol, mipgaptol=args.mipgap)
     reaction_weights = {}
     if args.reaction_weights is not None:
         reaction_weights = load_reaction_weights(args.reaction_weights)

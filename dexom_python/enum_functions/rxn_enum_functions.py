@@ -49,14 +49,14 @@ def rxn_enum(model, reaction_weights, prev_sol=None, rxn_list=None, eps=DEFAULT_
     -------
     solution: RxnEnumSolution object
     """
-    check_threshold_tolerance(model=model, epsilon=eps, threshold=thr)
+    eps, thr = check_threshold_tolerance(model=model, epsilon=eps, threshold=thr)
     check_reaction_weights(reaction_weights)
     if prev_sol is None:
         prev_sol = imat(model, reaction_weights, epsilon=eps, threshold=thr, full=False)
     else:
         model = create_enum_variables(model=model, reaction_weights=reaction_weights, eps=eps, thr=thr, full=False)
     tol = model.solver.configuration.tolerances.feasibility
-    prev_sol_bin = (np.abs(prev_sol.fluxes) >= thr-tol).values.astype(int)
+    prev_sol_bin = (np.abs(prev_sol.fluxes) >= thr+tol).values.astype(int)
     optimal_objective_value = prev_sol.objective_value - prev_sol.objective_value * obj_tol
 
     all_solutions = [prev_sol]
@@ -87,7 +87,7 @@ def rxn_enum(model, reaction_weights, prev_sol=None, rxn_list=None, eps=DEFAULT_
                         try:
                             rxn.upper_bound = -thr
                             temp_sol = imat(model_temp, reaction_weights, epsilon=eps, threshold=thr)
-                            temp_sol_bin = (np.abs(temp_sol.fluxes) >= thr-tol).values.astype(int)
+                            temp_sol_bin = (np.abs(temp_sol.fluxes) >= thr+tol).values.astype(int)
                             if temp_sol.objective_value >= optimal_objective_value:
                                 all_solutions.append(temp_sol)
                                 all_solutions_binary.append(temp_sol_bin)
@@ -127,7 +127,7 @@ def rxn_enum(model, reaction_weights, prev_sol=None, rxn_list=None, eps=DEFAULT_
                 # for all fluxes: compute solution with new bounds
                 try:
                     temp_sol = imat(model_temp, reaction_weights, epsilon=eps, threshold=thr)
-                    temp_sol_bin = (np.abs(temp_sol.fluxes) >= thr-tol).values.astype(int)
+                    temp_sol_bin = (np.abs(temp_sol.fluxes) >= thr+tol).values.astype(int)
                     if temp_sol.objective_value >= optimal_objective_value:
                         all_solutions.append(temp_sol)
                         all_solutions_binary.append(temp_sol_bin)
@@ -197,7 +197,7 @@ def _main():
     args = parser.parse_args()
 
     model = read_model(args.model)
-    check_model_options(model, timelimit=args.timelimit, feasibility=args.tol, mipgaptol=args.mipgap)
+    check_model_options(model, timelimit=args.timelimit, tolerance=args.tol, mipgaptol=args.mipgap)
 
     reaction_weights = {}
     if args.reaction_weights is not None:

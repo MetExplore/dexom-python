@@ -96,13 +96,13 @@ def combine_binary_solutions_and_fluxes(sol_path, solution_pattern='*solutions*.
     solutions = Path(sol_path).glob(solution_pattern)
     sollist = []
     for sol in solutions:
-        sollist.append(pd.read_csv(sol, index_col=0))
+        sollist.append(pd.read_csv(sol, index_col=0, sep=';|,|\t', engine='python'))
     fullsol = pd.concat(sollist, ignore_index=True)
     uniquesol = fullsol.drop_duplicates()
     fluxes = Path(sol_path).glob(solution_pattern.replace('solutions', 'fluxes'))
     fluxlist = []
     for flux in fluxes:
-        fluxlist.append(pd.read_csv(flux, index_col=0))
+        fluxlist.append(pd.read_csv(flux, index_col=0, sep=';|,|\t', engine='python'))
     fullflux = pd.concat(fluxlist, ignore_index=True)
     uniqueflux = fullflux.loc[uniquesol.index]
     print('There are %i unique solutions and %i duplicates.' % (len(uniquesol), len(fullsol) - len(uniquesol)))
@@ -154,8 +154,8 @@ def analyze_div_enum_results(result_path, solution_path, out_path):
     -------
 
     """
-    res = pd.read_csv(result_path, index_col=0)
-    sol = pd.read_csv(solution_path, index_col=0)
+    res = pd.read_csv(result_path, index_col=0, sep=';|,|\t', engine='python')
+    sol = pd.read_csv(solution_path, index_col=0, sep=';|,|\t', engine='python')
     unique = len(sol.drop_duplicates())
     print('There are %i unique solutions and %i duplicates' % (unique, len(sol)-unique))
     time = res['time'].cumsum()

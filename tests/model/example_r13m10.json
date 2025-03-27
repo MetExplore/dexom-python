@@ -124,7 +124,7 @@
 "metabolites":{
 "j":-1.0
 },
-"lower_bound":-50.0,
+"lower_bound":0.0,
 "upper_bound":50.0,
 "gene_reaction_rule":"G_IMP_J",
 "subsystem":"Exchange"
@@ -133,7 +133,7 @@
 "id":"R_a_f",
 "name":"R_a_f",
 "metabolites":{
-"a":-2.0,
+"a":-1.0,
 "f":1.0
 },
 "lower_bound":-50.0,
@@ -147,8 +147,7 @@
 "metabolites":{
 "a":-1.0,
 "b":-1.0,
-"c":2.0,
-"d":3.0
+"d":1.0
 },
 "lower_bound":0.0,
 "upper_bound":50.0,
@@ -162,7 +161,7 @@
 "e":-1.0,
 "f":-1.0,
 "g":1.0,
-"h":5.0
+"h":1.0
 },
 "lower_bound":0.0,
 "upper_bound":100.0,
@@ -185,8 +184,7 @@
 "id":"R_cj_i",
 "name":"R_cj_i",
 "metabolites":{
-"c":-2.0,
-"i":3.0,
+"i":1.0,
 "j":-1.0
 },
 "lower_bound":0.0,

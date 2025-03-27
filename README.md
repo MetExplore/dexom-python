@@ -156,6 +156,6 @@ The `.png` files in the `example_data` folder contain boxplots of the pathway en
 
 ### Cell-specific reconstruction
 
-An example of how to use DEXOM-python as a part of a cell-specific network reconstruction pipeline, including a more complete snakemake workflow, can be found here: https://forgemia.inra.fr/metexplore/cbm/ocmmed (work in progress)
+An example of how to use DEXOM-python as a part of a cell-specific network reconstruction pipeline, including a more complete snakemake workflow, can be found here: https://forgemia.inra.fr/metexplore/cbm/ocmmed
 
-### Latest version: v1.1.1
+### Latest version: v2.0.0

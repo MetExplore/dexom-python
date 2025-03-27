@@ -26,8 +26,8 @@
       <species id="M_d" compartment="i" hasOnlySubstanceUnits="false" boundaryCondition="false" constant="false"/>
     </listOfSpecies>
     <listOfParameters>
-      <parameter sboTerm="SBO:0000626" id="cobra_default_lb" value="-100" constant="true"/>
-      <parameter sboTerm="SBO:0000626" id="cobra_default_ub" value="100" constant="true"/>
+      <parameter sboTerm="SBO:0000626" id="cobra_default_lb" value="-1000" constant="true"/>
+      <parameter sboTerm="SBO:0000626" id="cobra_default_ub" value="1000" constant="true"/>
       <parameter sboTerm="SBO:0000626" id="cobra_0_bound" value="0" constant="true"/>
       <parameter sboTerm="SBO:0000626" id="minus_inf" value="-INF" constant="true"/>
       <parameter sboTerm="SBO:0000626" id="plus_inf" value="INF" constant="true"/>
@@ -43,7 +43,6 @@
       <parameter sboTerm="SBO:0000625" id="R_EX_h_upper_bound" value="50" units="mmol_per_gDW_per_hr" constant="true"/>
       <parameter sboTerm="SBO:0000625" id="R_EX_i_lower_bound" value="-20" units="mmol_per_gDW_per_hr" constant="true"/>
       <parameter sboTerm="SBO:0000625" id="R_EX_i_upper_bound" value="50" units="mmol_per_gDW_per_hr" constant="true"/>
-      <parameter sboTerm="SBO:0000625" id="R_EX_j_lower_bound" value="-50" units="mmol_per_gDW_per_hr" constant="true"/>
       <parameter sboTerm="SBO:0000625" id="R_EX_j_upper_bound" value="50" units="mmol_per_gDW_per_hr" constant="true"/>
       <parameter sboTerm="SBO:0000625" id="R_R_a_f_lower_bound" value="-50" units="mmol_per_gDW_per_hr" constant="true"/>
       <parameter sboTerm="SBO:0000625" id="R_R_a_f_upper_bound" value="50" units="mmol_per_gDW_per_hr" constant="true"/>
@@ -104,7 +103,7 @@
           <fbc:geneProductRef fbc:geneProduct="G_G_IMP_I"/>
         </fbc:geneProductAssociation>
       </reaction>
-      <reaction id="R_EX_j" name="EX_j" reversible="true" fast="false" fbc:lowerFluxBound="R_EX_j_lower_bound" fbc:upperFluxBound="R_EX_j_upper_bound">
+      <reaction id="R_EX_j" name="EX_j" reversible="false" fast="false" fbc:lowerFluxBound="cobra_0_bound" fbc:upperFluxBound="R_EX_j_upper_bound">
         <listOfReactants>
           <speciesReference species="M_j" stoichiometry="1" constant="true"/>
         </listOfReactants>
@@ -114,7 +113,7 @@
       </reaction>
       <reaction id="R_R_a_f" name="R_a_f" reversible="true" fast="false" fbc:lowerFluxBound="R_R_a_f_lower_bound" fbc:upperFluxBound="R_R_a_f_upper_bound">
         <listOfReactants>
-          <speciesReference species="M_a" stoichiometry="2" constant="true"/>
+          <speciesReference species="M_a" stoichiometry="1" constant="true"/>
         </listOfReactants>
         <listOfProducts>
           <speciesReference species="M_f" stoichiometry="1" constant="true"/>
@@ -129,8 +128,7 @@
           <speciesReference species="M_b" stoichiometry="1" constant="true"/>
         </listOfReactants>
         <listOfProducts>
-          <speciesReference species="M_c" stoichiometry="2" constant="true"/>
-          <speciesReference species="M_d" stoichiometry="3" constant="true"/>
+          <speciesReference species="M_d" stoichiometry="1" constant="true"/>
         </listOfProducts>
         <fbc:geneProductAssociation>
           <fbc:geneProductRef fbc:geneProduct="G_G_AB_CD"/>
@@ -143,7 +141,7 @@
         </listOfReactants>
         <listOfProducts>
           <speciesReference species="M_g" stoichiometry="1" constant="true"/>
-          <speciesReference species="M_h" stoichiometry="5" constant="true"/>
+          <speciesReference species="M_h" stoichiometry="1" constant="true"/>
         </listOfProducts>
         <fbc:geneProductAssociation>
           <fbc:geneProductRef fbc:geneProduct="G_G_EF_GH"/>
@@ -162,11 +160,10 @@
       </reaction>
       <reaction id="R_R_cj_i" name="R_cj_i" reversible="false" fast="false" fbc:lowerFluxBound="cobra_0_bound" fbc:upperFluxBound="R_R_cj_i_upper_bound">
         <listOfReactants>
-          <speciesReference species="M_c" stoichiometry="2" constant="true"/>
           <speciesReference species="M_j" stoichiometry="1" constant="true"/>
         </listOfReactants>
         <listOfProducts>
-          <speciesReference species="M_i" stoichiometry="3" constant="true"/>
+          <speciesReference species="M_i" stoichiometry="1" constant="true"/>
         </listOfProducts>
         <fbc:geneProductAssociation>
           <fbc:geneProductRef fbc:geneProduct="G_G_CJ_I"/>
@@ -205,27 +202,27 @@
     <groups:listOfGroups>
       <groups:group groups:id="G_Exchange" groups:name="Exchange" groups:kind="collection">
         <groups:listOfMembers>
+          <groups:member groups:name="EX_i" groups:idRef="R_EX_i"/>
           <groups:member groups:name="EX_a" groups:idRef="R_EX_a"/>
+          <groups:member groups:name="EX_j" groups:idRef="R_EX_j"/>
+          <groups:member groups:name="EX_g" groups:idRef="R_EX_g"/>
           <groups:member groups:name="EX_b" groups:idRef="R_EX_b"/>
           <groups:member groups:name="EX_e" groups:idRef="R_EX_e"/>
-          <groups:member groups:name="EX_g" groups:idRef="R_EX_g"/>
           <groups:member groups:name="EX_h" groups:idRef="R_EX_h"/>
-          <groups:member groups:name="EX_i" groups:idRef="R_EX_i"/>
-          <groups:member groups:name="EX_j" groups:idRef="R_EX_j"/>
         </groups:listOfMembers>
       </groups:group>
       <groups:group groups:id="G_mainpath" groups:name="mainpath" groups:kind="collection">
         <groups:listOfMembers>
           <groups:member groups:name="R_ab_cd" groups:idRef="R_R_ab_cd"/>
-          <groups:member groups:name="R_cj_i" groups:idRef="R_R_cj_i"/>
           <groups:member groups:name="R_d_j" groups:idRef="R_R_d_j"/>
+          <groups:member groups:name="R_cj_i" groups:idRef="R_R_cj_i"/>
         </groups:listOfMembers>
       </groups:group>
       <groups:group groups:id="G_sidepath" groups:name="sidepath" groups:kind="collection">
         <groups:listOfMembers>
           <groups:member groups:name="R_a_f" groups:idRef="R_R_a_f"/>
-          <groups:member groups:name="R_ef_gh" groups:idRef="R_R_ef_gh"/>
           <groups:member groups:name="R_f_i" groups:idRef="R_R_f_i"/>
+          <groups:member groups:name="R_ef_gh" groups:idRef="R_R_ef_gh"/>
         </groups:listOfMembers>
       </groups:group>
     </groups:listOfGroups>

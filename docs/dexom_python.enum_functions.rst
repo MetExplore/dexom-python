@@ -51,6 +51,14 @@ permutation\_functions module
    :undoc-members:
    :show-inheritance:
 
+riptide\_functions module
+----------------------------------------------------
+
+.. automodule:: dexom_python.enum_functions.riptide_functions
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Module contents
 ---------------
 
