@@ -15,7 +15,8 @@ from dexom_python.imat_functions import _imat_call_model_optimizer
 
 def imat_riptide_like(model, reaction_weights=None, objective_direction='max'):
     """
-    Modified version of the integrative Metabolic Analysis Tool with reaction weights
+    Modified version of the integrative Metabolic Analysis Tool with reaction weights.
+    This function is currently still in testing phase.
 
     Parameters
     ----------
