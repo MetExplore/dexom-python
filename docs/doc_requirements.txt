@@ -1,3 +1,5 @@
+wheel
+cmake
 Sphinx
 sphinx-rtd-theme
 sphinxcontrib-applehelp
