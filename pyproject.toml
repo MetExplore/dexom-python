@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "dexom_python"
-version = "2.0.0"
+version = "2.0.2"
 description = "DEXOM implementation in python using cobrapy"
 authors = ["Maximilian Stingl <maximilian.stingl@inrae.fr>"]
 license = "GPL-3.0"
@@ -11,7 +11,6 @@ homepage = "https://forgemia.inra.fr/metexplore/cbm/dexom-python"
 
 [tool.poetry.dependencies]
 python = ">=3.7,<3.11"
-wheel = "0.36.2"
 cobra = "^0.26.3"
 numpy = ">=1.20,<1.24"
 scipy = "^1.7"
