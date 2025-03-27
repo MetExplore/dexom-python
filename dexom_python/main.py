@@ -24,7 +24,7 @@ def _main():
     maxiter = 5  # maximum number of iterations
     dist_anneal = 0.9  # diversity-enumeration parameter
 
-    check_model_options(model, timelimit=tlim, feasibility=tol, mipgaptol=mipgap)
+    check_model_options(model, timelimit=tlim, tolerance=tol, mipgaptol=mipgap)
 
     imat_solution = imat(model=model, reaction_weights=reaction_weights, epsilon=eps, threshold=thr)
     write_solution(model=model, solution=imat_solution, threshold=thr, filename='toy_models/small4M_imatsol.csv')
