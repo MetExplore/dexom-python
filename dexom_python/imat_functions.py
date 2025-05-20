@@ -1,5 +1,7 @@
 import argparse
 import time
+
+import cobra
 import cobra.util.array
 import optlang
 from symengine import Add, sympify
@@ -13,6 +15,49 @@ from dexom_python.default_parameter_values import DEFAULT_VALUES
 
 class ImatException(Exception):
     pass
+
+
+def create_optimality_constraint(model, reaction_weights, prev_sol, obj_tol=DEFAULT_VALUES['obj_tol'], name='optimality', full=False):
+    """
+    Creates the optimality constraint  based on the imat objective function
+    This constraint conserves the optimal objective value of the previous solution
+    For detailed explanation of parameters see documentation of imat function.
+
+    Parameters
+    ----------
+    model: cobra.Model
+    reaction_weights: dict
+    prev_sol: cobra.Solution or float
+        either the previous iMAT solution or the objective value of that solution
+    obj_tol: float
+        variance allowed in the objective_value of the solution
+    name: string
+    full: bool
+
+    Returns
+    -------
+    optlang Constraint object (dependent on current solver)
+
+    """
+    if isinstance(prev_sol, cobra.core.solution.Solution):
+        lower_opt = prev_sol.objective_value - prev_sol.objective_value * obj_tol
+    else:
+        lower_opt = prev_sol - prev_sol * obj_tol
+    variables = []
+    weights = []
+    try:
+        for rid, weight in reaction_weights.items():
+            if weight > 0:
+                variables.append(model.solver.variables['x_' + rid])
+                weights.append(weight)
+            elif weight < 0:
+                variables.append(sympify('1') - model.solver.variables['x_' + rid])
+                weights.append(abs(weight))
+    except KeyError as e:
+        raise Exception('Searching for the reaction_weights in the model raised a KeyError, verify that all indexes '
+                        'from reaction_weights are present in the model and spelled correctly') from e
+    opt_const = model.solver.interface.Constraint(Add(*[x * w for x, w in zip(variables, weights)]), lb=lower_opt, name=name)
+    return opt_const
 
 
 def create_full_variable_single(model, rid, reaction_weights, epsilon, threshold):
