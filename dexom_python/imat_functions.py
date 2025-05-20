@@ -202,6 +202,45 @@ def _imat_call_model_optimizer(model):
             raise ImatException(str(e))
 
 
+def parsimonious_imat(model, reaction_weights=None, prev_sol=None, obj_tol=0., epsilon=DEFAULT_VALUES['epsilon'],
+                      threshold=DEFAULT_VALUES['threshold'], full=False):
+    """
+    This function applies parsimonious iMAT:
+    Parameters
+    ----------
+    model
+    reaction_weights
+    prev_sol
+    obj_tol
+    epsilon
+    threshold
+    full
+
+    Returns
+    -------
+    solution: a cobrapy Solution
+    """
+    epsilon, threshold = check_threshold_tolerance(model=model, epsilon=epsilon, threshold=threshold)
+    if reaction_weights is None:
+        reaction_weights = {}
+    if prev_sol is None:
+        prev_sol = imat(model=model, reaction_weights=reaction_weights, epsilon=epsilon, threshold=threshold, full=full)
+
+    opt_const = create_optimality_constraint(model=model, reaction_weights=reaction_weights, prev_sol=prev_sol,
+                                             obj_tol=obj_tol)
+    model.solver.add(opt_const)
+
+    reaction_variables = []
+    for rxn in model.reactions:
+        reaction_variables.extend([rxn.forward_variable, rxn.reverse_variable])
+    objective = model.solver.interface.Objective(Add(*reaction_variables), direction='min')
+    model.objective = objective
+
+    solution = model.optimize()
+
+    return solution
+
+
 def imat(model, reaction_weights=None, epsilon=DEFAULT_VALUES['epsilon'], threshold=DEFAULT_VALUES['threshold'],
          full=False):
     """
