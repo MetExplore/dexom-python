@@ -193,12 +193,14 @@ def imat(model, reaction_weights=None, epsilon=DEFAULT_VALUES['epsilon'], thresh
         else:
             model = create_new_partial_variables(model, reaction_weights, epsilon, threshold)
         for rid, weight in reaction_weights.items():
-            if weight > 0 and rid in model.reactions:
+            if rid not in model.reactions:
+                UserWarning(f'reactions {rid} is not present in the model, will be ignored')
+            elif weight > 0:
                 y_pos = model.solver.variables['xf_' + rid]
                 y_neg = model.solver.variables['xr_' + rid]
                 y_variables.append([y_neg, y_pos])
                 y_weights.append(weight)
-            elif weight < 0 and rid in model.reactions:
+            elif weight < 0 :
                 x = sympify('1') - model.solver.variables['x_' + rid]
                 # x = model.solver.variables['x_' + rid]
                 x_variables.append(x)
@@ -216,14 +218,15 @@ def imat(model, reaction_weights=None, epsilon=DEFAULT_VALUES['epsilon'], thresh
         rhtot = 0
         rltot = 0
         for rid, weight in reaction_weights.items():
-            if weight > 0:
-                x = var_primals['x_' + rid]
-                rhtot += 1
-                rh += int(x)
-            elif weight < 0:
-                x = var_primals['x_' + rid]
-                rltot += 1
-                rl += 1 - int(x)
+            if rid in model.reactions:
+                if weight > 0:
+                    x = var_primals['x_' + rid]
+                    rhtot += 1
+                    rh += int(x)
+                elif weight < 0:
+                    x = var_primals['x_' + rid]
+                    rltot += 1
+                    rl += 1 - int(x)
         print('Objective value: ', solution.objective_value)
         if rhtot + rltot == 0 :
             print('No valid reaction-weights in model, optimal objective is zero.')
