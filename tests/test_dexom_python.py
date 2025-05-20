@@ -295,7 +295,8 @@ def test_gpr_main_dataframe(mock_args):
                                             reaction_weights=GLOB_weightstring, tol=DV['tolerance'],
                                             threshold=DV['threshold'], timelimit=DV['timelimit'], mipgap=DV['mipgap'],
                                             output=str(pathlib.Path(__file__).parent.joinpath(
-                                                'model', 'results', 'example_r13m10_imatsolution'))))
+                                                'model', 'results', 'example_r13m10_imatsolution')),
+                                            parsimony=False))
 def test_imat_main(mock_args):
     res = im._main()
     assert res is True

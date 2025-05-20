@@ -343,6 +343,7 @@ def _main():
     parser.add_argument('--tol', type=float, default=DEFAULT_VALUES['tolerance'], help='Solver feasibility tolerance')
     parser.add_argument('--mipgap', type=float, default=DEFAULT_VALUES['mipgap'], help='Solver MIP gap tolerance')
     parser.add_argument('-o', '--output', default='imat_solution', help='Path of the output file, without format')
+    parser.add_argument('-p', '--parsimony', action='store_true', help='Use this flag to perform parsimonious imat')
     args = parser.parse_args()
     model = read_model(args.model)
     check_model_options(model, timelimit=args.timelimit, tolerance=args.tol, mipgaptol=args.mipgap)
@@ -350,6 +351,11 @@ def _main():
     if args.reaction_weights:
         reaction_weights = load_reaction_weights(args.reaction_weights)
     solution = imat(model, reaction_weights, epsilon=args.epsilon, threshold=args.threshold)
+    if args.parsimony:
+        objective_value = solution.objective_value
+        solution = parsimonious_imat(model, reaction_weights, prev_sol=solution, obj_tol=0.,
+                                     epsilon=args.epsilon, threshold=args.threshold)
+        solution.objective_value = objective_value
     write_solution(model, solution, args.threshold, args.output+'.csv')
     return True
 
