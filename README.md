@@ -7,14 +7,12 @@
 
 This is a python implementation of DEXOM (Diversity-based enumeration of optimal context-specific metabolic networks)  
 The original project, which was developped in MATLAB, can be found here: https://github.com/MetExplore/dexom  
-Parts of the imat code were taken from the driven package for data-driven constraint-based analysis: https://github.com/opencobra/driven
+The imat implementation was partially inspired by the driven package for data-driven constraint-based analysis: https://github.com/opencobra/driven
 
 The package can be installed using pip: `pip install dexom-python`
 
 You can also clone the git repository with `git clone https://forgemia.inra.fr/metexplore/cbm/dexom-python`  
 Then install dependencies with `poetry install` (if poetry is already installed in your python environment) or `pip install -e .` 
-
-To view changes between versions, see [changelog](docs/changelog.rst)
 
 API documentation is available here: https://dexom-python.readthedocs.io/en/stable/  
 All of the commandline scripts can be called with the `-h` option to display help messages.
@@ -65,6 +63,8 @@ note: the feasibility determines the solver's capacity to return correct results
 
 By default, imat uses the `create_new_partial_variables` function. In this version, binary flux indicator variables are created for each reaction with a non-zero weight.  
 In the full-DEXOM implementation, binary flux indicator variables are created for every reaction in the model. This does not change the result of the imat function, but can be used for the enumeration methods below.
+
+There is additionally a  `parsimonious_imat` function, which first maximizes the original iMAT objective, then minimizes the absolute sum of all reaction fluxes, thus producing a parsimonious flux distribution.
 
 ### enum_functions
 
