@@ -1,9 +1,6 @@
 DEXOM in python
 ===============
 
-| 
-| 
-
 | This is a python implementation of DEXOM (Diversity-based enumeration
   of optimal context-specific metabolic networks)
 | The original project, which was developped in MATLAB, can be found
@@ -18,8 +15,6 @@ The package can be installed using pip: ``pip install dexom-python``
   ``git clone https://forgemia.inra.fr/metexplore/cbm/dexom-python``
 | Then install dependencies with ``poetry install`` (if poetry is
   already installed in your python environment) or ``pip install -e .``
-
-To view changes between versions, see `changelog <docs/changelog.rst>`__
 
 | API documentation is available here:
   https://dexom-python.readthedocs.io/en/stable/
@@ -111,6 +106,11 @@ tolerance
   created for every reaction in the model. This does not change the
   result of the imat function, but can be used for the enumeration
   methods below.
+
+| There is additionally a  ``parsimonious_imat`` function, which first maximizes
+  the original iMAT objective, then minimizes the absolute sum of all reaction fluxes,
+  thus producing a parsimonious flux distribution.
+
 
 enum_functions
 ~~~~~~~~~~~~~~
@@ -285,4 +285,4 @@ https://forgemia.inra.fr/metexplore/cbm/ocmmed
 
 Latest version
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-2.0.3
+2.1
