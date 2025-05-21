@@ -112,7 +112,7 @@ def combine_binary_solutions_and_fluxes(sol_path, solution_pattern='*solutions*.
 
 
 def read_prev_sol(prev_sol_arg, model, rw, eps=DEFAULT_VALUES['epsilon'], thr=DEFAULT_VALUES['threshold'],
-                  a=DEFAULT_VALUES['dist_anneal'], startsol=1, pattern='*solution_*.csv', allowerrors=True):
+                  a=DEFAULT_VALUES['dist_anneal'], startsol=1, pattern='*solution_*.csv', allowerrors=False):
     prev_sol_success = False
     if prev_sol_arg is not None:
         prev_sol_path = Path(prev_sol_arg)
