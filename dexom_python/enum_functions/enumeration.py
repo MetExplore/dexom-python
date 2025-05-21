@@ -112,7 +112,7 @@ def combine_binary_solutions_and_fluxes(sol_path, solution_pattern='*solutions*.
 
 
 def read_prev_sol(prev_sol_arg, model, rw, eps=DEFAULT_VALUES['epsilon'], thr=DEFAULT_VALUES['threshold'],
-                  a=DEFAULT_VALUES['dist_anneal'], startsol=1, pattern='*solution_*.csv'):
+                  a=DEFAULT_VALUES['dist_anneal'], startsol=1, pattern='*solution_*.csv', allowerrors=False):
     prev_sol_success = False
     if prev_sol_arg is not None:
         prev_sol_path = Path(prev_sol_arg)
@@ -126,10 +126,16 @@ def read_prev_sol(prev_sol_arg, model, rw, eps=DEFAULT_VALUES['epsilon'], thr=DE
                                                                 solution_pattern=pattern)
                 a = a ** i
                 prev_sol_success = True
-            except IndexError:
-                warn('Could not find any solutions in directory %s, computing new starting solution' % prev_sol_arg)
+            except IndexError as e:
+                if allowerrors:
+                    warn('Could not find any solutions in directory %s, computing new starting solution' % prev_sol_arg)
+                else:
+                    raise e
         else:
-            warn('Could not read previous solution at path %s, computing new starting solution' % prev_sol_arg)
+            if allowerrors:
+                warn('Could not read previous solution at path %s, computing new starting solution' % prev_sol_arg)
+            else:
+                raise IndexError('Could not read previous solution at path %s' % prev_sol_arg)
     if prev_sol_success is False:
         prev_sol = imat(model, rw, epsilon=eps, threshold=thr)
     # if a flux solution was read, the optimal objective value must be calculated
