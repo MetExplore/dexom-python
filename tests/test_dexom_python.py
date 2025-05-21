@@ -167,6 +167,11 @@ def test_imat_noflux(model):
     assert len(np.nonzero(sol.fluxes.values)[0]) == 0
 
 
+def test_parsimonious_imat(model, reaction_weights):
+    sol = im.parsimonious_imat(model=model, reaction_weights=reaction_weights)
+    assert (len(np.nonzero(sol.fluxes.values)[0]) == 4) & (np.isclose(sol.objective_value, 0.04))
+
+
 # Testing result_functions
 
 
