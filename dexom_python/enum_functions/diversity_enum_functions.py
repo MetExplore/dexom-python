@@ -4,12 +4,12 @@ import numpy as np
 import pandas as pd
 from warnings import catch_warnings, filterwarnings, resetwarnings, warn
 from cobra.exceptions import OptimizationError
-from dexom_python.imat_functions import imat
+from dexom_python.imat_functions import imat, create_optimality_constraint
 from dexom_python.result_functions import write_solution
 from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options, check_threshold_tolerance, check_model_primals
 from dexom_python.enum_functions.enumeration import EnumSolution, create_enum_variables, read_prev_sol, check_reaction_weights
 from dexom_python.enum_functions.icut_functions import create_icut_constraint
-from dexom_python.enum_functions.maxdist_functions import create_maxdist_constraint, create_maxdist_objective
+from dexom_python.enum_functions.maxdist_functions import create_maxdist_objective
 from dexom_python.default_parameter_values import DEFAULT_VALUES
 
 
@@ -64,7 +64,7 @@ def diversity_enum(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['e
     all_binary = [prev_sol_bin]
     icut_constraints = []
     # preserve the optimality of the original solution
-    opt_const = create_maxdist_constraint(model, reaction_weights, prev_sol, obj_tol, 'dexom_optimality', full=full)
+    opt_const = create_optimality_constraint(model, reaction_weights, prev_sol, obj_tol, 'dexom_optimality', full=full)
     model.solver.add(opt_const)
     for idx in range(1, maxiter+1):
         t0 = time.perf_counter()

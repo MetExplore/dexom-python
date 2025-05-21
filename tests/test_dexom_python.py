@@ -167,6 +167,11 @@ def test_imat_noflux(model):
     assert len(np.nonzero(sol.fluxes.values)[0]) == 0
 
 
+def test_parsimonious_imat(model, reaction_weights):
+    sol = im.parsimonious_imat(model=model, reaction_weights=reaction_weights)
+    assert (len(np.nonzero(sol.fluxes.values)[0]) == 4) & (np.isclose(sol.objective_value, 0.04))
+
+
 # Testing result_functions
 
 
@@ -295,7 +300,8 @@ def test_gpr_main_dataframe(mock_args):
                                             reaction_weights=GLOB_weightstring, tol=DV['tolerance'],
                                             threshold=DV['threshold'], timelimit=DV['timelimit'], mipgap=DV['mipgap'],
                                             output=str(pathlib.Path(__file__).parent.joinpath(
-                                                'model', 'results', 'example_r13m10_imatsolution'))))
+                                                'model', 'results', 'example_r13m10_imatsolution')),
+                                            parsimony=False))
 def test_imat_main(mock_args):
     res = im._main()
     assert res is True

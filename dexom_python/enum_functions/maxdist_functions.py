@@ -1,58 +1,15 @@
 import argparse
 import time
-import cobra
 import pandas as pd
 import numpy as np
-from symengine import Add, sympify
+from symengine import sympify
 from warnings import warn, catch_warnings, filterwarnings, resetwarnings
 from cobra.exceptions import OptimizationError
 from dexom_python.enum_functions.icut_functions import create_icut_constraint
-from dexom_python.imat_functions import imat
-from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options, check_threshold_tolerance, check_model_primals
+from dexom_python.imat_functions import imat, create_optimality_constraint
+from dexom_python.model_functions import load_reaction_weights, read_model, check_model_options, check_threshold_tolerance
 from dexom_python.enum_functions.enumeration import EnumSolution, create_enum_variables, read_prev_sol, check_reaction_weights
 from dexom_python.default_parameter_values import DEFAULT_VALUES
-
-
-def create_maxdist_constraint(model, reaction_weights, prev_sol, obj_tol=DEFAULT_VALUES['obj_tol'], name='maxdist_optimality', full=False):
-    """
-    Creates the optimality constraint for the maxdist algorithm.
-    This constraint conserves the optimal objective value of the previous solution
-    For detailed explanation of parameters see documentation of maxdist function.
-
-    Parameters
-    ----------
-    model: cobra.Model
-    reaction_weights: dict
-    prev_sol: cobra.Solution or float
-        either the previous iMAT solution or the objective value of that solution
-    obj_tol: float
-    name: string
-    full: bool
-
-    Returns
-    -------
-    optlang Constraint object (dependent on current solver)
-
-    """
-    if isinstance(prev_sol, cobra.core.solution.Solution):
-        lower_opt = prev_sol.objective_value - prev_sol.objective_value * obj_tol
-    else:
-        lower_opt = prev_sol - prev_sol * obj_tol
-    variables = []
-    weights = []
-    try:
-        for rid, weight in reaction_weights.items():
-            if weight > 0:
-                variables.append(model.solver.variables['x_' + rid])
-                weights.append(weight)
-            elif weight < 0:
-                variables.append(sympify('1') - model.solver.variables['x_' + rid])
-                weights.append(abs(weight))
-    except KeyError as e:
-        raise Exception('Searching for the reaction_weights in the model raised a KeyError, verify that all indexes '
-                        'from reaction_weights are present in the model and spelled correctly') from e
-    opt_const = model.solver.interface.Constraint(Add(*[x * w for x, w in zip(variables, weights)]), lb=lower_opt, name=name)
-    return opt_const
 
 
 def create_maxdist_objective(model, reaction_weights, prev_sol, prev_sol_bin, only_ones=False, full=False):
@@ -132,8 +89,8 @@ def maxdist(model, reaction_weights, prev_sol=None, eps=DEFAULT_VALUES['epsilon'
     prev_sol_bin = (np.abs(prev_sol.fluxes) >= thr+tol).values.astype(int)
     all_binary = [prev_sol_bin]
     # adding the optimality constraint: the new objective value must be equal to the previous objective value
-    opt_const = create_maxdist_constraint(model, reaction_weights, prev_sol, obj_tol,
-                                          name='maxdist_optimality', full=full)
+    opt_const = create_optimality_constraint(model, reaction_weights, prev_sol, obj_tol,
+                                             name='maxdist_optimality', full=full)
     model.solver.add(opt_const)
     for idx in range(1, maxiter+1):
         t0 = time.perf_counter()

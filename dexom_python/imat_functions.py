@@ -1,5 +1,7 @@
 import argparse
 import time
+
+import cobra
 import cobra.util.array
 import optlang
 from symengine import Add, sympify
@@ -13,6 +15,49 @@ from dexom_python.default_parameter_values import DEFAULT_VALUES
 
 class ImatException(Exception):
     pass
+
+
+def create_optimality_constraint(model, reaction_weights, prev_sol, obj_tol=DEFAULT_VALUES['obj_tol'], name='optimality', full=False):
+    """
+    Creates the optimality constraint  based on the imat objective function
+    This constraint conserves the optimal objective value of the previous solution
+    For detailed explanation of parameters see documentation of imat function.
+
+    Parameters
+    ----------
+    model: cobra.Model
+    reaction_weights: dict
+    prev_sol: cobra.Solution or float
+        either the previous iMAT solution or the objective value of that solution
+    obj_tol: float
+        variance allowed in the objective_value of the solution
+    name: string
+    full: bool
+
+    Returns
+    -------
+    optlang Constraint object (dependent on current solver)
+
+    """
+    if isinstance(prev_sol, cobra.core.solution.Solution):
+        lower_opt = prev_sol.objective_value - prev_sol.objective_value * obj_tol
+    else:
+        lower_opt = prev_sol - prev_sol * obj_tol
+    variables = []
+    weights = []
+    try:
+        for rid, weight in reaction_weights.items():
+            if weight > 0:
+                variables.append(model.solver.variables['x_' + rid])
+                weights.append(weight)
+            elif weight < 0:
+                variables.append(sympify('1') - model.solver.variables['x_' + rid])
+                weights.append(abs(weight))
+    except KeyError as e:
+        raise Exception('Searching for the reaction_weights in the model raised a KeyError, verify that all indexes '
+                        'from reaction_weights are present in the model and spelled correctly') from e
+    opt_const = model.solver.interface.Constraint(Add(*[x * w for x, w in zip(variables, weights)]), lb=lower_opt, name=name)
+    return opt_const
 
 
 def create_full_variable_single(model, rid, reaction_weights, epsilon, threshold):
@@ -157,6 +202,45 @@ def _imat_call_model_optimizer(model):
             raise ImatException(str(e))
 
 
+def parsimonious_imat(model, reaction_weights=None, prev_sol=None, obj_tol=0., epsilon=DEFAULT_VALUES['epsilon'],
+                      threshold=DEFAULT_VALUES['threshold'], full=False):
+    """
+    This function applies parsimonious iMAT:
+    Parameters
+    ----------
+    model
+    reaction_weights
+    prev_sol
+    obj_tol
+    epsilon
+    threshold
+    full
+
+    Returns
+    -------
+    solution: a cobrapy Solution
+    """
+    epsilon, threshold = check_threshold_tolerance(model=model, epsilon=epsilon, threshold=threshold)
+    if reaction_weights is None:
+        reaction_weights = {}
+    if prev_sol is None:
+        prev_sol = imat(model=model, reaction_weights=reaction_weights, epsilon=epsilon, threshold=threshold, full=full)
+
+    opt_const = create_optimality_constraint(model=model, reaction_weights=reaction_weights, prev_sol=prev_sol,
+                                             obj_tol=obj_tol)
+    model.solver.add(opt_const)
+
+    reaction_variables = []
+    for rxn in model.reactions:
+        reaction_variables.extend([rxn.forward_variable, rxn.reverse_variable])
+    objective = model.solver.interface.Objective(Add(*reaction_variables), direction='min')
+    model.objective = objective
+
+    solution = model.optimize()
+
+    return solution
+
+
 def imat(model, reaction_weights=None, epsilon=DEFAULT_VALUES['epsilon'], threshold=DEFAULT_VALUES['threshold'],
          full=False):
     """
@@ -193,12 +277,14 @@ def imat(model, reaction_weights=None, epsilon=DEFAULT_VALUES['epsilon'], thresh
         else:
             model = create_new_partial_variables(model, reaction_weights, epsilon, threshold)
         for rid, weight in reaction_weights.items():
-            if weight > 0 and rid in model.reactions:
+            if rid not in model.reactions:
+                UserWarning(f'reactions {rid} is not present in the model, will be ignored')
+            elif weight > 0:
                 y_pos = model.solver.variables['xf_' + rid]
                 y_neg = model.solver.variables['xr_' + rid]
                 y_variables.append([y_neg, y_pos])
                 y_weights.append(weight)
-            elif weight < 0 and rid in model.reactions:
+            elif weight < 0 :
                 x = sympify('1') - model.solver.variables['x_' + rid]
                 # x = model.solver.variables['x_' + rid]
                 x_variables.append(x)
@@ -216,14 +302,15 @@ def imat(model, reaction_weights=None, epsilon=DEFAULT_VALUES['epsilon'], thresh
         rhtot = 0
         rltot = 0
         for rid, weight in reaction_weights.items():
-            if weight > 0:
-                x = var_primals['x_' + rid]
-                rhtot += 1
-                rh += int(x)
-            elif weight < 0:
-                x = var_primals['x_' + rid]
-                rltot += 1
-                rl += 1 - int(x)
+            if rid in model.reactions:
+                if weight > 0:
+                    x = var_primals['x_' + rid]
+                    rhtot += 1
+                    rh += int(x)
+                elif weight < 0:
+                    x = var_primals['x_' + rid]
+                    rltot += 1
+                    rl += 1 - int(x)
         print('Objective value: ', solution.objective_value)
         if rhtot + rltot == 0 :
             print('No valid reaction-weights in model, optimal objective is zero.')
@@ -256,6 +343,7 @@ def _main():
     parser.add_argument('--tol', type=float, default=DEFAULT_VALUES['tolerance'], help='Solver feasibility tolerance')
     parser.add_argument('--mipgap', type=float, default=DEFAULT_VALUES['mipgap'], help='Solver MIP gap tolerance')
     parser.add_argument('-o', '--output', default='imat_solution', help='Path of the output file, without format')
+    parser.add_argument('-p', '--parsimony', action='store_true', help='Use this flag to perform parsimonious imat')
     args = parser.parse_args()
     model = read_model(args.model)
     check_model_options(model, timelimit=args.timelimit, tolerance=args.tol, mipgaptol=args.mipgap)
@@ -263,6 +351,11 @@ def _main():
     if args.reaction_weights:
         reaction_weights = load_reaction_weights(args.reaction_weights)
     solution = imat(model, reaction_weights, epsilon=args.epsilon, threshold=args.threshold)
+    if args.parsimony:
+        objective_value = solution.objective_value
+        solution = parsimonious_imat(model, reaction_weights, prev_sol=solution, obj_tol=0.,
+                                     epsilon=args.epsilon, threshold=args.threshold)
+        solution.objective_value = objective_value
     write_solution(model, solution, args.threshold, args.output+'.csv')
     return True
 
