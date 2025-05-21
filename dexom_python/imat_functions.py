@@ -205,20 +205,25 @@ def _imat_call_model_optimizer(model):
 def parsimonious_imat(model, reaction_weights=None, prev_sol=None, obj_tol=0., epsilon=DEFAULT_VALUES['epsilon'],
                       threshold=DEFAULT_VALUES['threshold'], full=False):
     """
-    This function applies parsimonious iMAT:
+    This function applies parsimonious iMAT. If no previous solution is supplied, an imat solution is computed.
+    Then, the absoulte sum of reaction fluxes is minimzed, while maintaining the original objective value within a certain tolerance.
+    For more complete description of parameters, see imat function.
     Parameters
     ----------
-    model
-    reaction_weights
-    prev_sol
-    obj_tol
-    epsilon
-    threshold
-    full
+    model: cobra.Model
+    reaction_weights: dict
+    prev_sol: cobra.Solution
+        (optional) a previously computed imat solution
+    obj_tol: float
+        the relative tolerance on the objective function. By default, no tolerance is allowed
+    epsilon: float
+    threshold: float
+    full: bool
 
     Returns
     -------
-    solution: a cobrapy Solution
+    solution: cobra.Solution
+        a solution which maintains the imat objective while minimizing the absolute sum of fluxes
     """
     epsilon, threshold = check_threshold_tolerance(model=model, epsilon=epsilon, threshold=threshold)
     if reaction_weights is None:
