@@ -12,6 +12,7 @@ from dexom_python.default_parameter_values import DEFAULT_VALUES
 def write_solution(model, solution, threshold, filename='imat_sol.csv'):
     """
     Writes an optimize solution as a txt file. The solution is written in a column format
+
     Parameters
     ----------
     solution: cobra.Solution
@@ -87,6 +88,7 @@ def read_solution(filename, model=None, reaction_weights=None, solution_index=0,
 def calc_objval_from_flux(fluxsol, model, rw, eps=DEFAULT_VALUES['epsilon'], thr=DEFAULT_VALUES['threshold']):
     """
     Calculates the objective value of a solution based on the flux values
+
     Parameters
     ----------
     fluxsol: pandas.Series

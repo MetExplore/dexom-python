@@ -208,6 +208,7 @@ def parsimonious_imat(model, reaction_weights=None, prev_sol=None, obj_tol=0., e
     This function applies parsimonious iMAT. If no previous solution is supplied, an imat solution is computed.
     Then, the absoulte sum of reaction fluxes is minimzed, while maintaining the original objective value within a certain tolerance.
     For more complete description of parameters, see imat function.
+
     Parameters
     ----------
     model: cobra.Model
