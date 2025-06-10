@@ -12,7 +12,7 @@ DEXOM in python
 The package can be installed using pip: ``pip install dexom-python``
 
 | You can also clone the git repository with
-  ``git clone https://forgemia.inra.fr/metexplore/cbm/dexom-python``
+  ``git clone https://forge.inrae.fr/metexplore/cbm/dexom-python``
 | Then install dependencies with ``poetry install`` (if poetry is
   already installed in your python environment) or ``pip install -e .``
 
@@ -281,8 +281,8 @@ Cell-specific reconstruction
 An example of how to use DEXOM-python as a part of a cell-specific
 network reconstruction pipeline, including a more complete snakemake
 workflow, can be found here:
-https://forgemia.inra.fr/metexplore/cbm/ocmmed
+https://forge.inrae.fr/metexplore/cbm/ocmmed
 
 Latest version
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-2.1
+2.1.1
