@@ -31,7 +31,7 @@ def replace_MulMax_AddMin(expression):
             # return expression.func(*replaced_args)
 
 
-def expression2qualitative(genes, column_list=None, proportion=0.25, significant_genes='both', save=True,
+def expression2qualitative(genes, column_list=None, proportion=0.25, significant_genes='both', relative=True, save=True,
                            outpath='geneweights'):
     """
     Transforms gene expression values/ gene scores into qualitative gene weights
@@ -47,6 +47,9 @@ def expression2qualitative(genes, column_list=None, proportion=0.25, significant
     significant_genes: str
         one of "high", "low" or "both". chooses whether the conversion is applied only for the genes with
         highest expression, lowest epxression, or both
+    relative: bool
+        if True, proportion parameter will be interpreted as a percentile
+        if False, proportion parameter will be interpreted as an absolute value of gene expression
     save: bool
         if True, saves the resulting gene weights
     outpath: str
@@ -68,20 +71,31 @@ def expression2qualitative(genes, column_list=None, proportion=0.25, significant
         for col in column_list:
             if col not in genes.columns:
                 raise KeyError('Column %s is not present in gene expression file' % col)
+
     if isinstance(proportion, float):
-        lowthreshold = proportion
-        highthreshold = 1-proportion
+        if relative:
+            lowthreshold = proportion
+            highthreshold = 1-proportion
+        else:
+            lowthreshold = proportion
+            highthreshold = proportion
     else:
         lowthreshold, highthreshold = proportion
+
     genes = genes.reset_index().dropna()
     for col in column_list:
         genecol = genes[col].copy()
         newgenes = genes[col].copy()
         newgenes.sort_values(inplace=True)
         genecol.sort_values(inplace=True)
-        newgenes[genecol < genecol.quantile(lowthreshold)] = -1.
-        newgenes[(genecol >= genecol.quantile(lowthreshold)) & (genecol < genecol.quantile(highthreshold))] = 0.
-        newgenes[genecol >= genecol.quantile(highthreshold)] = 1.
+        if relative:
+            newgenes[genecol < genecol.quantile(lowthreshold)] = -1.
+            newgenes[(genecol >= genecol.quantile(lowthreshold)) & (genecol < genecol.quantile(highthreshold))] = 0.
+            newgenes[genecol >= genecol.quantile(highthreshold)] = 1.
+        else:
+            newgenes[genecol <= lowthreshold] = -1.
+            newgenes[(genecol >= lowthreshold) & (genecol < highthreshold)] = 0.
+            newgenes[genecol >= highthreshold] = 1.
         if significant_genes == 'high':
             print('applying expression2qualitative only on genes with highest expression')
             newgenes[newgenes == -1.] = 0.
@@ -196,6 +210,9 @@ def _main():
     parser.add_argument('-s', '--significant', default='both',
                         help='which genes have significant expression (either "high", "low" or "both", '
                              'only if --convert is selected)')
+    parser.add_argument('--absolute', action='store_true',
+                        help='if set, the quantiles provided with -q/--quantiles are interpreted as absolute values '
+                             'only if --convert is selected)')
     args = parser.parse_args()
 
     model = read_model(args.model)
@@ -218,7 +235,7 @@ def _main():
         else:
             ValueError('The quantiles argument was provided in an incorrect format.')
         genes = expression2qualitative(genes=genes, column_list=score_columns, proportion=proportion,
-                                       significant_genes=args.significant, save=True,
+                                       significant_genes=args.significant, relative=(not args.absolute), save=True,
                                        outpath=args.output+'_qual_geneweights')
     if len(score_columns) == 1:
         gene_weights = pd.Series(genes[score_columns[0]].values, index=genes.index)
