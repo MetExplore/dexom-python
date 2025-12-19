@@ -275,7 +275,7 @@ def test_permute_genelabels(model, gene_weights):
 
 @mock.patch('argparse.ArgumentParser.parse_args',
             return_value=argparse.Namespace(model=GLOB_modelstring, gene_ID='ID', gene_score='expr',
-                                            gene_file=GLOB_expressionstring, duplicates='remove',
+                                            gene_file=GLOB_expressionstring, duplicates='remove', absolute=False,
                                             convert=True, quantiles='0.25', null=0., significant='both',
                                             output=str(pathlib.Path(__file__).parent.joinpath(
                                                 'model', 'example_r13m10_weights'))))
