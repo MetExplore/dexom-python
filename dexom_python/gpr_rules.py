@@ -72,7 +72,7 @@ def expression2qualitative(genes, column_list=None, proportion=0.25, significant
             if col not in genes.columns:
                 raise KeyError('Column %s is not present in gene expression file' % col)
 
-    if isinstance(proportion, float):
+    if isinstance(proportion, (float, int)):
         if relative:
             lowthreshold = proportion
             highthreshold = 1-proportion
@@ -93,8 +93,8 @@ def expression2qualitative(genes, column_list=None, proportion=0.25, significant
             newgenes[(genecol >= genecol.quantile(lowthreshold)) & (genecol < genecol.quantile(highthreshold))] = 0.
             newgenes[genecol >= genecol.quantile(highthreshold)] = 1.
         else:
-            newgenes[genecol <= lowthreshold] = -1.
-            newgenes[(genecol > lowthreshold) & (genecol < highthreshold)] = 0.
+            newgenes[genecol < lowthreshold] = -1.
+            newgenes[(genecol >= lowthreshold) & (genecol < highthreshold)] = 0.
             newgenes[genecol >= highthreshold] = 1.
         if significant_genes == 'high':
             print('applying expression2qualitative only on genes with highest expression')
