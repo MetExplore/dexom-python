@@ -15,9 +15,15 @@ def write_solution(model, solution, threshold, filename='imat_sol.csv'):
 
     Parameters
     ----------
+    model: cobra.Model
     solution: cobra.Solution
     threshold: float
     filename: str
+
+    Returns
+    ----------
+    solution: cobra.Solution
+    solution_binary: numpy.array
     """
     tol = model.solver.configuration.tolerances.feasibility
     solution_binary = (np.abs(solution.fluxes) >= threshold-tol).values.astype(int)

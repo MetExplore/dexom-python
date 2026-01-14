@@ -11,6 +11,19 @@ from dexom_python.default_parameter_values import DEFAULT_VALUES
 
 
 def read_model(modelfile, solver='cplex'):
+    """
+    Read a model from a file. Supported formats are SBML (.xml, .sbml), JSON (.json), and Matlab (.mat).
+    Must use a cobrapy compatible solver.
+
+    Parameters
+    ----------
+    modelfile: str
+    solver: str
+
+    Returns
+    -------
+    model: cobra.Model
+    """
     config = cobra.Configuration()
     try:
         config.solver=solver
@@ -33,6 +46,21 @@ def read_model(modelfile, solver='cplex'):
 
 def check_model_options(model, timelimit=DEFAULT_VALUES['timelimit'], tolerance=DEFAULT_VALUES['tolerance'],
                         mipgaptol=DEFAULT_VALUES['mipgap'], verbosity=DEFAULT_VALUES['verbosity']):
+    """
+    Sets model options such as timelimit, tolerance, mipgapt tolerance, and verbosity
+
+    Parameters
+    ----------
+    model: cobra.Model
+    timelimit: int
+    tolerance: float
+    mipgaptol: float
+    verbosity: int
+
+    Returns
+    -------
+    model: cobra.Model
+    """
     model.solver.configuration.timeout = timelimit
     model.tolerance = tolerance
     model.solver.configuration.verbosity = verbosity
@@ -46,6 +74,21 @@ def check_model_options(model, timelimit=DEFAULT_VALUES['timelimit'], tolerance=
 
 
 def check_threshold_tolerance(model, epsilon, threshold):
+    """
+    Checks if model.tolerance, epsilon and threshold parameters are compatible.
+    If not, new epsilon and threshold values are returned.
+
+    Parameters
+    ----------
+    model: cobra.Model
+    epsilon: float
+    threshold: float
+
+    Returns
+    -------
+    epsilon: float
+    threshold: float
+    """
     cobra_config = cobra.Configuration()
     # limit = model.tolerance * max(abs(cobra_config.upper_bound), abs(cobra_config.lower_bound))
     limit = model.solver.configuration.tolerances.integrality * np.max([r.bounds for r in model.reactions]) + model.solver.configuration.tolerances.feasibility

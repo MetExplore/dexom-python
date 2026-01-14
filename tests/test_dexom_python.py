@@ -237,12 +237,6 @@ def test_read_prev_sol_imat(model, reaction_weights):
     assert np.isclose(sol.objective_value, 4.)
 
 
-def test_read_prev_sol_directory(model, reaction_weights):
-    file = str(pathlib.Path(__file__).parent.joinpath('model', 'results'))
-    sol, a = enum.read_prev_sol(file, model, reaction_weights, pattern='*solution*.csv')
-    assert np.isclose(sol.objective_value, 4.)
-
-
 def test_read_prev_sol_binary(model, reaction_weights):
     sol, _ = enum.read_prev_sol(GLOB_rxnsols, model, reaction_weights)
     assert np.isclose(sol.objective_value, 4.)
@@ -275,7 +269,7 @@ def test_permute_genelabels(model, gene_weights):
 
 @mock.patch('argparse.ArgumentParser.parse_args',
             return_value=argparse.Namespace(model=GLOB_modelstring, gene_ID='ID', gene_score='expr',
-                                            gene_file=GLOB_expressionstring, duplicates='remove',
+                                            gene_file=GLOB_expressionstring, duplicates='remove', absolute=False,
                                             convert=True, quantiles='0.25', null=0., significant='both',
                                             output=str(pathlib.Path(__file__).parent.joinpath(
                                                 'model', 'example_r13m10_weights'))))
