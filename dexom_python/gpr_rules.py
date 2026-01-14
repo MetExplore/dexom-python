@@ -94,7 +94,7 @@ def expression2qualitative(genes, column_list=None, proportion=0.25, significant
             newgenes[genecol >= genecol.quantile(highthreshold)] = 1.
         else:
             newgenes[genecol <= lowthreshold] = -1.
-            newgenes[(genecol >= lowthreshold) & (genecol < highthreshold)] = 0.
+            newgenes[(genecol > lowthreshold) & (genecol < highthreshold)] = 0.
             newgenes[genecol >= highthreshold] = 1.
         if significant_genes == 'high':
             print('applying expression2qualitative only on genes with highest expression')
