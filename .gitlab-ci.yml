@@ -26,8 +26,6 @@ before_script:
   - source venv/bin/activate
   - pip install --upgrade pip
   - pip install wheel
-  - apt-get upgrade --yes
-  - apt-get update --yes
   - apt-get install --yes cmake
   - pip install python-libsbml==5.19
   - pip install -e .
