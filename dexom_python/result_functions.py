@@ -71,7 +71,12 @@ def read_solution(filename, model=None, reaction_weights=None, solution_index=0,
             status = reader[-1].split()[-1]
     if fluxflag:
         df = pd.read_csv(filename, index_col=0, sep=';|,|\t', engine='python')
-        fluxes = df.iloc[solution_index % (len(df)-1)]
+        if len(df)>1:
+            fluxes = df.iloc[solution_index % (len(df)-1)]
+        elif len(df)==1:
+            fluxes = df.iloc[0]
+        else:
+            raise ValueError('The provided solution file %s does not contain any solutions.' % filename)
         if model is not None:
             fluxes.index = [rxn.id for rxn in model.reactions]
         else:

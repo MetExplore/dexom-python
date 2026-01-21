@@ -285,4 +285,4 @@ https://forge.inrae.fr/metexplore/cbm/ocmmed
 
 Latest version
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-2.2
+2.2.1
