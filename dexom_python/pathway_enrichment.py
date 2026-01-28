@@ -2,10 +2,43 @@ import argparse
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.stats import fisher_exact
+from scipy.stats import fisher_exact, hypergeom
 from matplotlib import rcParams
 from statsmodels.stats.multitest import fdrcorrection
 from dexom_python.model_functions import read_model, get_subsystems_from_model
+
+
+def perform_ora(gene_list, pathway_genes_dict, total_genes):
+    """
+    Smaller function for performing ORA without reading files
+
+    Parameters
+    ----------
+    gene_list: list
+        list of genes
+    pathway_genes_dict: dict
+        dictionary with pathway names as keys and list of genes as values
+    total_genes: int
+        total number of genes in the background set
+
+    Returns
+    -------
+    pandas.Series: sorted p-values with BH-correction
+    """
+    results = {}
+    for pathway, pathway_genes in pathway_genes_dict.items():
+
+        gene_list_size = len(gene_list)
+        pathway_size = len(pathway_genes)
+        overlap_size = len(set(gene_list) & set(pathway_genes))
+
+        p_value = hypergeom.sf(overlap_size -1, total_genes, pathway_size, gene_list_size)
+        results[pathway] = p_value
+    _, corrected_p_values = fdrcorrection(list(results.values()))
+    corrected_results = {}
+    for i, (pathway, p_value) in enumerate(results.items()):
+        corrected_results[pathway] = corrected_p_values[i]
+    return pd.Series(corrected_results).sort_values()
 
 
 def Fisher_groups(model, solpath, outpath='Fisher_groups'):
