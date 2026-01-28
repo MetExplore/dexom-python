@@ -1,8 +1,8 @@
 [tool.poetry]
 name = "dexom_python"
-version = "2.2.1"
+version = "2.3"
 description = "DEXOM implementation in python using cobrapy"
-authors = ["Maximilian Stingl", "Nathalie Poupin <nathalie.poupin@inrae.fr>"]
+authors = ["Nathalie Poupin <nathalie.poupin@inrae.fr>"]
 license = "GPL-3.0"
 readme="README.md"
 include=["LICENSE"]
